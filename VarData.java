@@ -6,17 +6,15 @@ public class VarData {
     int H_LINES  = 1;   //Number of header lines
     int S_FIELDS = 3;   //Number of columns for each sample
 
-    String[][] data;
+    private String[][] data;      // Fields: [line][var_annotations]
     String[] dataNames;
-    String[][][] samples;
+    private String[][][] samples; // Fields: [line][sampleName][genotype:MPGscore:coverage]
     String[] sampleNames;
 
      /*    
     *    Constructor reads in the file specified by full path in String inFile.
     *    It first reads through the file just to count lines for first dimension
-    *     of data[][][].  Then, it reads again to fill in the array.  First dimension
-    *    (i) is rows, second (j) is columns separated by tab (\t), third is mutations,
-    *    separated by a semicolon (;).
+    *     of data[][] and samples[][][].  Then, it reads again to fill in the array.
     */
 
     public VarData(String inFile) {
@@ -106,37 +104,66 @@ public class VarData {
                 
     }
 
+    public String[][] returnData() {
+        return data;
+    }
+
+    public String[] returnDataNames() {
+        return dataNames;
+    }
+
+    public String[][] returnSample(int i) {
+        String[][] outSamples = new String[2][sampleNames.length];
+        for (int j = 0; j < sampleNames.length; j++) {
+            outSamples[0][j] = samples[i][j][0];
+            outSamples[1][j] = (samples[i][j][1] + ":" + samples[i][j][2]);
+        }
+        return outSamples;
+    }
+    
+    public String[] returnSampleNames() {
+        return sampleNames;
+    }
+
 
     public static void main(String args[]) {
-        String input = "test_data";
+        String input = "test_data.txt";
         if (args.length > 0) {
             input = args[0];
         }
         VarData vdat = new VarData(input);
-
-        //for (int i = 0; i < vdat.data.length; i++) {
-        //    System.out.print((i+1) + "\t");
-        //    for (int j = 0; j < vdat.data[i].length; j++) {
-        //        System.out.print(vdat.data[i][j] + "\t");
-        //    }
-        //    System.out.println();
-        //}
-
-        for (int i = 0; i < vdat.samples.length; i++) {
-            if (!vdat.samples[i][0][0].equals(vdat.samples[i][1][0]) && (!vdat.samples[i][0][0].equals("NA") 
-                && !vdat.samples[i][1][0].equals("NA"))) {
-
-                StringBuilder out = new StringBuilder();
-                for (String s : vdat.data[i]) {
-                    out.append(s + "\t");
-                }
-                for (String[] s : vdat.samples[i]) {
-                    out.append((String)s[0] + "\t");
-                }
-                out.delete((out.length()-1), (out.length()));
-                System.out.println(out.toString());
-            }
+        String[][] outData = vdat.returnData();
+        String[] outNames = vdat.returnDataNames();
+        
+        for (String title : outNames) {
+            System.out.print( title + "\t");
         }
+        System.out.println();
+
+        for (int i = 0; i < outData.length; i++) {
+            System.out.print((i+1) + "\t");
+            for (int j = 0; j < outData[i].length; j++) {
+                System.out.print(outData[i][j] + "\t");
+            }
+            System.out.println();
+        }
+
+        //Test - unique and not NA between first 2 samples
+        //for (int i = 0; i < vdat.samples.length; i++) {
+        //    if (!vdat.samples[i][0][0].equals(vdat.samples[i][1][0]) && (!vdat.samples[i][0][0].equals("NA") 
+        //        && !vdat.samples[i][1][0].equals("NA"))) {
+
+        //        StringBuilder out = new StringBuilder();
+        //        for (String s : vdat.data[i]) {
+        //            out.append(s + "\t");
+        //        }
+        //        for (String[] s : vdat.samples[i]) {
+        //            out.append((String)s[0] + "\t");
+        //        }
+        //        out.delete((out.length()-1), (out.length()));
+        //        System.out.println(out.toString());
+        //    }
+        //}
 
     }
 }
