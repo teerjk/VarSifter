@@ -67,16 +67,6 @@ public class VarData {
                     sampleNames = sampleTemp.split("\t");
                     dataNames = dataTemp.split("\t");
 
-                    //System.out.println(sampleNames.length + "\t" + dataNames.length);
-                    //for (int i = 0; i < samples.length; i++) {
-                    //    samples[i] = new String[sampleNames.length][S_FIELDS];
-                    //}
-
-                    
-                    //for ( String x : dataNames ) {
-                    //    System.out.println(x);
-                    //}
-                    
                     first = false;
                     continue;
                 }
@@ -90,7 +80,7 @@ public class VarData {
                 
                 //System.out.println(temp.length);
                 for (int i = 0; i < sampleNames.length; i++) {
-                    System.arraycopy(temp, (dataNames.length + (i * S_FIELDS)), samples[lineCount][i], 0, 3);
+                    System.arraycopy(temp, (dataNames.length + (i * S_FIELDS)), samples[lineCount][i], 0, S_FIELDS);
                 }
                 
                 lineCount++;
@@ -143,7 +133,12 @@ public class VarData {
         for (int i = 0; i < outData.length; i++) {
             System.out.print((i+1) + "\t");
             for (int j = 0; j < outData[i].length; j++) {
-                System.out.print(outData[i][j] + "\t");
+                if (outData[i][j].equals("")) {
+                    System.out.print( "Err" + "\t");
+                }
+                else {
+                    System.out.print(outData[i][j] + "\t");
+                }
             }
             System.out.println();
         }

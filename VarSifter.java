@@ -11,7 +11,7 @@ import java.awt.event.*;
 *  ****************
 */
 
-public class VarSifter extends JFrame implements ListSelectionListener {
+public class VarSifter extends JFrame implements ListSelectionListener, ActionListener {
     
     final String version = "0.1";
     final String id = "$Id$";
@@ -32,6 +32,38 @@ public class VarSifter extends JFrame implements ListSelectionListener {
     "In any work or product derived from this material, proper attribution of the authors\n" +
     "as the source of the software or data should be made.";
 
+    //This class uses TableSorter.java, a class to sort a JTable.
+    //The two subsequent statements are required to be distributed with the 
+    //source and binary re-distributions of the TableSorter class,
+
+    final String sunCopyright = "Copyright (c) 1995 - 2008 Sun Microsystems, Inc.  All rights reserved.";
+    final String sunDisclaimer = "Redistribution and use in source and binary forms, with or without\n" +
+    "modification, are permitted provided that the following conditions\n" +
+    "are met:\n" +
+    "    \n" +
+    "  - Redistributions of source code must retain the above copyright\n" +
+    "    notice, this list of conditions and the following disclaimer.\n" +
+    "       \n" +
+    "  - Redistributions in binary form must reproduce the above copyright\n" +
+    "    notice, this list of conditions and the following disclaimer in the\n" +
+    "    documentation and/or other materials provided with the distribution.\n" +
+    "           \n" +
+    "  - Neither the name of Sun Microsystems nor the names of its\n" +
+    "    contributors may be used to endorse or promote products derived\n" +
+    "    from this software without specific prior written permission.\n\n" +
+    "THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS \"AS\n" +
+    "IS\" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,\n" +
+    "THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR\n" +
+    "PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR\n" +
+    "CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,\n" +
+    "EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,\n" +
+    "PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR\n" +
+    "PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF\n" +
+    "LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING\n" +
+    "NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS\n" +
+    "SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.";
+
+
     Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
     int w = (int)dim.getWidth();
     int h = (int)dim.getHeight();
@@ -40,11 +72,14 @@ public class VarSifter extends JFrame implements ListSelectionListener {
     // Test using object[][], titles[]
     VarData vdat;
     JTable outTable;
+    TableSorter sorter;
     JTable sampleTable;
     JScrollPane dataScroller;
     JScrollPane sampleScroller;
     ListSelectionModel lsm;
     JLabel lines = new JLabel();
+    int lastRow = 0;    //Last row selected
+    JButton check = new JButton("Check");
 
     /* ******************
     *   Initiate GUI, instantiate VarData
@@ -62,10 +97,14 @@ public class VarSifter extends JFrame implements ListSelectionListener {
         pane.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
 
         vdat = new VarData(inFile);
-        outTable = new JTable(vdat.returnData(), vdat.returnDataNames());
+        sorter = new TableSorter(new VarTableModel(vdat.returnData(), vdat.returnDataNames()));
+        //outTable = new JTable(vdat.returnData(), vdat.returnDataNames());
+        outTable = new JTable(sorter);
+        sorter.setTableHeader(outTable.getTableHeader());
         outTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         outTable.setRowSelectionInterval(0,0);
         outTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+        //outTable.setDefaultRenderer(Number.class, new VarScoreRenderer());
         lsm = outTable.getSelectionModel();
         lsm.addListSelectionListener(this);
         //lsm.addListSelectionListener(new SharedListSelectionHandler());
@@ -89,16 +128,35 @@ public class VarSifter extends JFrame implements ListSelectionListener {
         stats.add(linesl);
         stats.add(lines);
         
+        check.addActionListener(this);
                 
         pane.add(dataScroller);
         pane.add(Box.createRigidArea(new Dimension(0,15)));
         pane.add(sampleScroller);
         pane.add(stats);
+        pane.add(check);
         add(pane);
         setVisible(true);
 
     }
+    
 
+    /* *************
+    *   Handle Actions
+    *  *************
+    */
+
+    public void actionPerformed(ActionEvent e) {
+        Object es = e.getSource();
+
+        if (es == check) {
+            int row = outTable.getSelectedRow();
+            int col = outTable.getSelectedColumn();
+            System.out.println(row + "\t" + col + "\t" + outTable.getValueAt(row,col).getClass() +
+                "\t" + outTable.getColumnClass(col));
+        }
+    }
+    
 
     /* *************
     *   Handle List Actions
@@ -107,13 +165,22 @@ public class VarSifter extends JFrame implements ListSelectionListener {
 
     public void valueChanged(ListSelectionEvent e) {
         ListSelectionModel lsme = (ListSelectionModel)e.getSource();
-        
+
         //May remove this test if its the only List Action
         if ( e.getSource() == lsm && lsme.getValueIsAdjusting() == false) {
-            sampleTable.setModel(new DefaultTableModel(vdat.returnSample(outTable.getSelectedRow()),
+            int rowIndex = outTable.getSelectedRow();
+            if (rowIndex < 0) {
+                rowIndex = lastRow;
+            }
+            int dataIndex = sorter.modelIndex(rowIndex);
+
+            sampleTable.setModel(new DefaultTableModel(vdat.returnSample(dataIndex),
                 vdat.returnSampleNames()));
             
-            //System.out.println(outTable.getSelectedRow());
+            outTable.setRowSelectionInterval(rowIndex,rowIndex);
+            lastRow = rowIndex;
+            
+            //System.out.println(outTable.getSelectedRow() + "\t" + rowIndex + "\t" + dataIndex);
         }
     }
 
