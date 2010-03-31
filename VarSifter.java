@@ -78,6 +78,12 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     JScrollPane sampleScroller;
     ListSelectionModel lsm;
     JLabel lines = new JLabel();
+
+    JCheckBox div = new JCheckBox("DIV");
+    JCheckBox splice = new JCheckBox("Splice-Site");
+    JCheckBox nonsyn = new JCheckBox("Non-synonymous");
+    JCheckBox dbsnp = new JCheckBox("dbSNP130");
+    
     int lastRow = 0;    //Last row selected
     JButton check = new JButton("Check");
 
@@ -93,7 +99,6 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         setBounds(0, (h/4), (w/2), (h/2));
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         JPanel pane = new JPanel();
-        pane.setLayout(new BoxLayout(pane, BoxLayout.Y_AXIS));
         pane.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
 
         vdat = new VarData(inFile);
@@ -103,8 +108,9 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         sorter.setTableHeader(outTable.getTableHeader());
         outTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         outTable.setRowSelectionInterval(0,0);
-        outTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+        //outTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
         outTable.setDefaultRenderer(Number.class, new VarScoreRenderer());
+        initColSizes(outTable, (VarTableModel)((TableSorter)outTable.getModel()).getTableModel() );
         lsm = outTable.getSelectionModel();
         lsm.addListSelectionListener(this);
         //lsm.addListSelectionListener(new SharedListSelectionHandler());
@@ -113,32 +119,53 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         dataScroller = new JScrollPane(outTable,
             ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS,
             ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-        dataScroller.setPreferredSize(new Dimension((w/2), (h/4)));
+        //dataScroller.setPreferredSize(new Dimension((w/2), (h/4)));
         
         //sampleTable = new JTable( vdat.returnSample(outTable.getSelectedRow()), 
         //    vdat.returnSampleNames() );
         sampleTable = new JTable( new VarTableModel(vdat.returnSample(outTable.getSelectedRow()),
             vdat.returnSampleNames() ));
-        sampleTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+        //sampleTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
         sampleScroller = new JScrollPane(sampleTable,
             ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER,
             ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-        sampleScroller.setPreferredSize(new Dimension((w/2), 40));
+        //sampleScroller.setPreferredSize(new Dimension((w/2), 80));
         sampleTable.setDefaultRenderer(Object.class, new SampleScoreRenderer());
+        initColSizes(sampleTable, (VarTableModel)sampleTable.getModel());
+        
+        //Filters
+        JPanel filtPane = new JPanel();
+        filtPane.setLayout(new BoxLayout(filtPane, BoxLayout.Y_AXIS));
+        filtPane.setBorder(BorderFactory.createLineBorder(Color.black));
+        filtPane.add(div);
+        filtPane.add(splice);
+        filtPane.add(nonsyn);
+        filtPane.add(dbsnp);
 
+        //Stats (line count)
         JPanel stats = new JPanel();
         JLabel linesl = new JLabel("Number of Variant Positions: ");
         stats.add(linesl);
         stats.add(lines);
+
+
+        JPanel tablePanel = new JPanel();
+        tablePanel.setLayout(new BoxLayout(tablePanel, BoxLayout.Y_AXIS));
+        tablePanel.setPreferredSize(new Dimension((w/2), (h/3)));
+        tablePanel.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
+        tablePanel.add(dataScroller);
+        tablePanel.add(Box.createRigidArea(new Dimension(0,15)));
+        tablePanel.add(sampleScroller);
+        tablePanel.add(stats);
+
         
         check.addActionListener(this);
                 
-        pane.add(dataScroller);
-        pane.add(Box.createRigidArea(new Dimension(0,15)));
-        pane.add(sampleScroller);
-        pane.add(stats);
-        pane.add(check);
+        pane.add(tablePanel, BorderLayout.CENTER);
+        pane.add(filtPane, BorderLayout.LINE_END);
+        pane.add(check, BorderLayout.PAGE_END);
         add(pane);
+        pack();
         setVisible(true);
 
     }
@@ -182,8 +209,39 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             
             outTable.setRowSelectionInterval(rowIndex,rowIndex);
             lastRow = rowIndex;
+            initColSizes(sampleTable, (VarTableModel)sampleTable.getModel());
             
             //System.out.println(outTable.getSelectedRow() + "\t" + rowIndex + "\t" + dataIndex);
+        }
+    }
+
+
+    /* *************
+    *   Sets fitted column sizes
+    *  *************
+    */
+
+    public void initColSizes(JTable table, VarTableModel model) {
+        
+        TableColumn col = null;
+        Component comp = null;
+        int headerWidth = 0;
+        int cellWidth = 0;
+        Object[] largestInCol = model.getLargestInColumn();
+        TableCellRenderer headerRenderer = table.getTableHeader().getDefaultRenderer();
+
+        for (int i = 0; i < largestInCol.length; i++) {
+            col = table.getColumnModel().getColumn(i);
+
+            comp = headerRenderer.getTableCellRendererComponent(
+                table, col.getHeaderValue(), false, false, 0, 0);
+            headerWidth = comp.getPreferredSize().width;
+
+            comp = table.getDefaultRenderer(model.getColumnClass(i)).getTableCellRendererComponent(
+                table, largestInCol[i], false, false, 0, i);
+            cellWidth = comp.getPreferredSize().width;
+
+            col.setPreferredWidth( (Math.max(headerWidth, cellWidth) + 25) );
         }
     }
 
