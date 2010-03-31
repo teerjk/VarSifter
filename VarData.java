@@ -103,10 +103,11 @@ public class VarData {
     }
 
     public String[][] returnSample(int i) {
-        String[][] outSamples = new String[2][sampleNames.length];
+        String[][] outSamples = new String[3][sampleNames.length];
         for (int j = 0; j < sampleNames.length; j++) {
             outSamples[0][j] = samples[i][j][0];
-            outSamples[1][j] = (samples[i][j][1] + ":" + samples[i][j][2]);
+            outSamples[1][j] = samples[i][j][1];
+            outSamples[2][j] = samples[i][j][2];
         }
         return outSamples;
     }

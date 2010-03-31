@@ -9,6 +9,7 @@ import java.util.regex.*;
 public class VarTableModel extends AbstractTableModel {
     private Object[][] data;
     private String[] columnNames;
+    public final static int HIDDEN = 301;   //use this flag to hide a cell
     
     private Pattern digits = Pattern.compile("^-?\\d+$");
     

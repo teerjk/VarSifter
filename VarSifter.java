@@ -104,7 +104,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         outTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         outTable.setRowSelectionInterval(0,0);
         outTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
-        //outTable.setDefaultRenderer(Number.class, new VarScoreRenderer());
+        outTable.setDefaultRenderer(Number.class, new VarScoreRenderer());
         lsm = outTable.getSelectionModel();
         lsm.addListSelectionListener(this);
         //lsm.addListSelectionListener(new SharedListSelectionHandler());
@@ -115,13 +115,16 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
         dataScroller.setPreferredSize(new Dimension((w/2), (h/4)));
         
-        sampleTable = new JTable( vdat.returnSample(outTable.getSelectedRow()), 
-            vdat.returnSampleNames() );
+        //sampleTable = new JTable( vdat.returnSample(outTable.getSelectedRow()), 
+        //    vdat.returnSampleNames() );
+        sampleTable = new JTable( new VarTableModel(vdat.returnSample(outTable.getSelectedRow()),
+            vdat.returnSampleNames() ));
         sampleTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
         sampleScroller = new JScrollPane(sampleTable,
             ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER,
             ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
         sampleScroller.setPreferredSize(new Dimension((w/2), 40));
+        sampleTable.setDefaultRenderer(Object.class, new SampleScoreRenderer());
 
         JPanel stats = new JPanel();
         JLabel linesl = new JLabel("Number of Variant Positions: ");
@@ -174,7 +177,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             }
             int dataIndex = sorter.modelIndex(rowIndex);
 
-            sampleTable.setModel(new DefaultTableModel(vdat.returnSample(dataIndex),
+            sampleTable.setModel(new VarTableModel(vdat.returnSample(dataIndex),
                 vdat.returnSampleNames()));
             
             outTable.setRowSelectionInterval(rowIndex,rowIndex);

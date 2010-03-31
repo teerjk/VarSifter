@@ -5,9 +5,9 @@ public class VarScoreRenderer extends DefaultTableCellRenderer {
 
     public VarScoreRenderer() { super(); }
 
-    public void setValue(Object negVal) {
-        int nv = ((Integer)negVal).intValue();
-        if (nv < 0) {
+    public void setValue(Object val) {
+        int nv = ((Integer)val).intValue();
+        if (nv == VarTableModel.HIDDEN) {
             setText("");
         }
         else {
