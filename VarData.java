@@ -1,15 +1,19 @@
 import java.io.*;
 import java.util.regex.*;
+import java.util.BitSet;
 
 public class VarData {
     
     int H_LINES  = 1;   //Number of header lines
     int S_FIELDS = 3;   //Number of columns for each sample
 
-    private String[][] data;      // Fields: [line][var_annotations]
-    String[] dataNames;
-    private String[][][] samples; // Fields: [line][sampleName][genotype:MPGscore:coverage]
-    String[] sampleNames;
+    private String[][] data;            // Fields: [line][var_annotations]
+    private String[][] outData;         // Gets returned (can be filtered)
+    private String[] dataNames;
+    private String[][][] samples;       // Fields: [line][sampleName][genotype:MPGscore:coverage]
+    private String[][][] outSamples;    // Gets returned (can be filtered)
+    private String[] sampleNames;
+    private BitSet dataIsIncluded;      // A mask used to filter data, samples
 
      /*    
     *    Constructor reads in the file specified by full path in String inFile.
@@ -27,6 +31,7 @@ public class VarData {
             }
             data = new String[lineCount - H_LINES][];
             samples = new String[lineCount - H_LINES][][];
+            dataIsIncluded = new BitSet(lineCount - H_LINES);
             br.close();
             lineCount = 0;
         }
@@ -91,25 +96,105 @@ public class VarData {
             System.exit(1);
         }
 
+        resetOutput();  //Initialize outData and outSamples
+
                 
     }
 
-    public String[][] returnData() {
-        return data;
+    
+    /* ***********
+    *   Filtera mutation type
+    *  ***********
+    */
+    public void filterData(BitSet mask) {
+        dataIsIncluded.clear();
+        BitSet temp = new BitSet(data.length);
+        for (int i = 0; i < data.length; i++) {
+           
+            if ( (mask.get(0) && data[i][4].equals("DIV")            ) ||
+                 (mask.get(1) && data[i][4].equals("Splice-site")    ) ||
+                 (mask.get(2) && data[i][4].equals("Non-synonymous") ) ||
+                 (mask.get(4) && data[i][4].equals("Stop")           )
+                ) {
+
+                dataIsIncluded.set(i);
+            }
+
+            if ( (mask.get(3) && data[i][12].equals("-")             )
+                ) {
+                temp.set(i);
+            }
+                        
+        }
+        
+        if (! temp.isEmpty()) {
+            dataIsIncluded.and(temp);
+        }
+        filterOutput();
     }
+
+    /* ***********
+    *   Handle the filtering
+    *  ***********
+    */
+    private void filterOutput() {
+         
+        outData = new String[dataIsIncluded.cardinality()][];
+        outSamples = new String[dataIsIncluded.cardinality()][][];
+        int j = 0;
+        for (int i=0; i < data.length; i++) {
+            if (dataIsIncluded.get(i)) {
+                outData[j] = data[i];
+                outSamples[j] = samples[i];
+                j++;
+            }
+        }
+    }
+
+    /* ************
+    *   Remove all filtering
+    *  ************
+    */
+    public void resetOutput() {
+        dataIsIncluded.clear();
+        dataIsIncluded.flip(0, data.length);
+        filterOutput();
+    }
+
+    
+
+    /* ************
+    *   Return annotation data
+    *  ************
+    */
+    public String[][] returnData() {
+        return outData;
+    }
+
 
     public String[] returnDataNames() {
         return dataNames;
     }
 
+    /* **********
+    *   Return samples
+    *  **********
+    */
     public String[][] returnSample(int i) {
-        String[][] outSamples = new String[3][sampleNames.length];
-        for (int j = 0; j < sampleNames.length; j++) {
-            outSamples[0][j] = samples[i][j][0];
-            outSamples[1][j] = samples[i][j][1];
-            outSamples[2][j] = samples[i][j][2];
+        String[][] tempOutSamples;
+        
+        if (outSamples.length == 0) {
+            tempOutSamples = new String[0][];
         }
-        return outSamples;
+        else {
+            tempOutSamples = new String[3][sampleNames.length];
+            for (int j = 0; j < sampleNames.length; j++) {
+                for (int k = 0; k < 3; k++) {
+                    tempOutSamples[k][j] = outSamples[i][j][k];
+                }
+            }
+        }
+        return tempOutSamples;
     }
     
     public String[] returnSampleNames() {

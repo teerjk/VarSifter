@@ -15,31 +15,38 @@ public class VarTableModel extends AbstractTableModel {
     private Pattern digits = Pattern.compile("^-?\\d+$");
     
     public VarTableModel(String[][] inData, String[] colN) {
-        data = new Object[inData.length][inData[0].length];
-        largestInColumn = new Object[inData[0].length];
-        columnNames = colN;
-        boolean first = true;
+        if (inData.length == 0) {
+            data = new Object[][]{ {"No Results to Show"} };
+            columnNames = new String[]{""};
+            largestInColumn = new Object[]{data[0][0]};
+        }
+        else {
+            data = new Object[inData.length][inData[0].length];
+            largestInColumn = new Object[inData[0].length];
+            columnNames = colN;
+            boolean first = true;
 
-        
-        for ( int i = 0; i < inData.length; i++) {
-            for (int j = 0; j < inData[i].length; j++) {
-                    
-                if (digits.matcher(inData[i][j]).find()) {
-                    data[i][j] = Integer.parseInt(inData[i][j]);
-                    
-                    if (first || inData[i][j].length() > largestInColumn[j].toString().length()) {
-                        largestInColumn[j] = Integer.parseInt(inData[i][j]);
+            
+            for ( int i = 0; i < inData.length; i++) {
+                for (int j = 0; j < inData[i].length; j++) {
+                        
+                    if (digits.matcher(inData[i][j]).find()) {
+                        data[i][j] = Integer.parseInt(inData[i][j]);
+                        
+                        if (first || inData[i][j].length() > largestInColumn[j].toString().length()) {
+                            largestInColumn[j] = Integer.parseInt(inData[i][j]);
+                        }
+                    }
+                    else {
+                        data[i][j] = inData[i][j];
+                        
+                        if (first || inData[i][j].length() > largestInColumn[j].toString().length()) {
+                            largestInColumn[j] = inData[i][j];
+                        }
                     }
                 }
-                else {
-                    data[i][j] = inData[i][j];
-                    
-                    if (first || inData[i][j].length() > largestInColumn[j].toString().length()) {
-                        largestInColumn[j] = inData[i][j];
-                    }
-                }
+                first = false;
             }
-            first = false;
         }
     }
 

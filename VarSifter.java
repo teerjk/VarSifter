@@ -3,6 +3,7 @@ import javax.swing.*;
 import javax.swing.event.*;
 import javax.swing.table.*;
 import java.awt.event.*;
+import java.util.BitSet;
 
 /* ****************
 *   VarSifter is designed to read a flat file where a row contains a variant, and all sample info
@@ -83,9 +84,20 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     JCheckBox splice = new JCheckBox("Splice-Site");
     JCheckBox nonsyn = new JCheckBox("Non-synonymous");
     JCheckBox dbsnp = new JCheckBox("dbSNP130");
+    JCheckBox stop = new JCheckBox("Stop");
+    JCheckBox[] cBox = { div, splice, nonsyn, dbsnp, stop };
+
+    //JCheckBox[] cBox = { new JCheckBox("DIV"),
+    //                     new JCheckBox("Splice-Site"),
+    //                     new JCheckBox("Non-synonymous"),
+    //                     new JCheckBox("dbSNP130"),
+    //                     new JCheckBox("Stop")
+    //                   };
     
-    int lastRow = 0;    //Last row selected
+    JButton apply = new JButton("Apply Filter");
     JButton check = new JButton("Check");
+    
+    //int lastRow = 0;    //Last row selected
 
     /* ******************
     *   Initiate GUI, instantiate VarData
@@ -99,52 +111,64 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         setBounds(0, (h/4), (w/2), (h/2));
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         JPanel pane = new JPanel();
+        pane.setLayout(new BorderLayout());
         pane.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
 
         vdat = new VarData(inFile);
         sorter = new TableSorter(new VarTableModel(vdat.returnData(), vdat.returnDataNames()));
-        //outTable = new JTable(vdat.returnData(), vdat.returnDataNames());
         outTable = new JTable(sorter);
         sorter.setTableHeader(outTable.getTableHeader());
-        outTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        //outTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        outTable.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
         outTable.setRowSelectionInterval(0,0);
-        //outTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+        outTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
         outTable.setDefaultRenderer(Number.class, new VarScoreRenderer());
         initColSizes(outTable, (VarTableModel)((TableSorter)outTable.getModel()).getTableModel() );
         lsm = outTable.getSelectionModel();
         lsm.addListSelectionListener(this);
-        //lsm.addListSelectionListener(new SharedListSelectionHandler());
-        lines.setText(Integer.toString(outTable.getRowCount()));
         
         dataScroller = new JScrollPane(outTable,
             ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS,
             ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-        //dataScroller.setPreferredSize(new Dimension((w/2), (h/4)));
+        dataScroller.setPreferredSize(new Dimension((w/2), (h/4)));
         
-        //sampleTable = new JTable( vdat.returnSample(outTable.getSelectedRow()), 
-        //    vdat.returnSampleNames() );
         sampleTable = new JTable( new VarTableModel(vdat.returnSample(outTable.getSelectedRow()),
             vdat.returnSampleNames() ));
-        //sampleTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+        sampleTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
         sampleScroller = new JScrollPane(sampleTable,
             ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER,
             ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-        //sampleScroller.setPreferredSize(new Dimension((w/2), 80));
+        sampleScroller.setPreferredSize(new Dimension((w/2), 80));
         sampleTable.setDefaultRenderer(Object.class, new SampleScoreRenderer());
         initColSizes(sampleTable, (VarTableModel)sampleTable.getModel());
         
         //Filters
         JPanel filtPane = new JPanel();
         filtPane.setLayout(new BoxLayout(filtPane, BoxLayout.Y_AXIS));
-        filtPane.setBorder(BorderFactory.createLineBorder(Color.black));
-        filtPane.add(div);
-        filtPane.add(splice);
-        filtPane.add(nonsyn);
-        filtPane.add(dbsnp);
+        //filtPane.setBorder(BorderFactory.createLineBorder(Color.black));
+        JPanel includePane = new JPanel();
+        includePane.setLayout(new BoxLayout(includePane, BoxLayout.Y_AXIS));
+        includePane.setBorder(BorderFactory.createLineBorder(Color.black));
+        includePane.add(new JLabel("Include:"));
+        includePane.add(div);
+        includePane.add(splice);
+        includePane.add(nonsyn);
+        includePane.add(stop);
+        JPanel excludePane = new JPanel();
+        excludePane.setLayout(new BoxLayout(excludePane, BoxLayout.Y_AXIS));
+        excludePane.setBorder(BorderFactory.createLineBorder(Color.black));
+        excludePane.add(new JLabel("Exclude:"));
+        excludePane.add(dbsnp);
+        filtPane.add(includePane);
+        filtPane.add(Box.createRigidArea(new Dimension(0,15)));
+        filtPane.add(excludePane);
+        filtPane.add(Box.createRigidArea(new Dimension(0,15)));
+        filtPane.add(apply);
 
         //Stats (line count)
         JPanel stats = new JPanel();
         JLabel linesl = new JLabel("Number of Variant Positions: ");
+        lines.setText(Integer.toString(outTable.getRowCount()));
         stats.add(linesl);
         stats.add(lines);
 
@@ -158,7 +182,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         tablePanel.add(sampleScroller);
         tablePanel.add(stats);
 
-        
+        apply.addActionListener(this);
         check.addActionListener(this);
                 
         pane.add(tablePanel, BorderLayout.CENTER);
@@ -179,6 +203,38 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     public void actionPerformed(ActionEvent e) {
         Object es = e.getSource();
 
+        if (es == apply) {
+            
+            sorter.setTableHeader(null);    //Must do this to avoid memory leak
+            BitSet mask = new BitSet(cBox.length);
+            
+            for (int i = 0; i < cBox.length; i++) {
+                if (cBox[i].isSelected()) {
+                    //System.out.println(cb.getText());
+                    mask.set(i);
+                }
+            }
+
+            if (mask.cardinality() == 0) {
+                vdat.resetOutput();
+            }
+            else {
+                vdat.filterData(mask);
+            }
+            
+            //if (dbsnp.isSelected()) {
+            //    vdat.filterData();
+            //}
+            
+            sorter = new TableSorter( new VarTableModel(vdat.returnData(),
+                vdat.returnDataNames()));
+            outTable.setModel(sorter);
+            sorter.setTableHeader(outTable.getTableHeader());
+            initColSizes(outTable, (VarTableModel)((TableSorter)outTable.getModel()).getTableModel() );
+            lines.setText(Integer.toString(outTable.getRowCount()));
+            outTable.requestFocusInWindow();
+        }
+        
         if (es == check) {
             int row = outTable.getSelectedRow();
             int col = outTable.getSelectedColumn();
@@ -200,7 +256,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         if ( e.getSource() == lsm && lsme.getValueIsAdjusting() == false) {
             int rowIndex = outTable.getSelectedRow();
             if (rowIndex < 0) {
-                rowIndex = lastRow;
+                rowIndex = 0;
             }
             int dataIndex = sorter.modelIndex(rowIndex);
 
@@ -208,7 +264,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
                 vdat.returnSampleNames()));
             
             outTable.setRowSelectionInterval(rowIndex,rowIndex);
-            lastRow = rowIndex;
+            //lastRow = rowIndex;
             initColSizes(sampleTable, (VarTableModel)sampleTable.getModel());
             
             //System.out.println(outTable.getSelectedRow() + "\t" + rowIndex + "\t" + dataIndex);
