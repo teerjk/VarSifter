@@ -4,6 +4,7 @@ import javax.swing.event.*;
 import javax.swing.table.*;
 import java.awt.event.*;
 import java.util.BitSet;
+import components.TableSorter;
 
 /* ****************
 *   VarSifter is designed to read a flat file where a row contains a variant, and all sample info
@@ -95,6 +96,8 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     //                   };
     
     JButton apply = new JButton("Apply Filter");
+    JButton selectAll = new JButton("Select All");
+    JButton clear = new JButton("Clear All");
     JButton check = new JButton("Check");
     
     //int lastRow = 0;    //Last row selected
@@ -145,11 +148,9 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         //Filters
         JPanel filtPane = new JPanel();
         filtPane.setLayout(new BoxLayout(filtPane, BoxLayout.Y_AXIS));
-        //filtPane.setBorder(BorderFactory.createLineBorder(Color.black));
         JPanel includePane = new JPanel();
         includePane.setLayout(new BoxLayout(includePane, BoxLayout.Y_AXIS));
         includePane.setBorder(BorderFactory.createLineBorder(Color.black));
-        includePane.add(new JLabel("Include:"));
         includePane.add(div);
         includePane.add(splice);
         includePane.add(nonsyn);
@@ -157,12 +158,21 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         JPanel excludePane = new JPanel();
         excludePane.setLayout(new BoxLayout(excludePane, BoxLayout.Y_AXIS));
         excludePane.setBorder(BorderFactory.createLineBorder(Color.black));
-        excludePane.add(new JLabel("Exclude:"));
         excludePane.add(dbsnp);
+        JPanel selClearPane = new JPanel();
+        selClearPane.setLayout(new BoxLayout(selClearPane, BoxLayout.X_AXIS));
+        selClearPane.setAlignmentX(Component.LEFT_ALIGNMENT);
+        selClearPane.add(selectAll);
+        selClearPane.add(Box.createRigidArea(new Dimension(5,0)));
+        selClearPane.add(clear);
+        filtPane.add(new JLabel("Include:"));
         filtPane.add(includePane);
         filtPane.add(Box.createRigidArea(new Dimension(0,15)));
+        filtPane.add(new JLabel("Exclude:"));
         filtPane.add(excludePane);
         filtPane.add(Box.createRigidArea(new Dimension(0,15)));
+        filtPane.add(selClearPane);
+        filtPane.add(Box.createRigidArea(new Dimension(0,10)));
         filtPane.add(apply);
 
         //Stats (line count)
@@ -183,11 +193,13 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         tablePanel.add(stats);
 
         apply.addActionListener(this);
+        selectAll.addActionListener(this);
+        clear.addActionListener(this);
         check.addActionListener(this);
                 
         pane.add(tablePanel, BorderLayout.CENTER);
         pane.add(filtPane, BorderLayout.LINE_END);
-        pane.add(check, BorderLayout.PAGE_END);
+        //pane.add(check, BorderLayout.PAGE_END);
         add(pane);
         pack();
         setVisible(true);
@@ -233,6 +245,18 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             initColSizes(outTable, (VarTableModel)((TableSorter)outTable.getModel()).getTableModel() );
             lines.setText(Integer.toString(outTable.getRowCount()));
             outTable.requestFocusInWindow();
+        }
+
+        if (es == selectAll) {
+            for (JCheckBox cb : cBox) {
+                cb.setSelected(true);
+            }
+        }
+
+        if (es == clear) {
+            for (JCheckBox cb : cBox) {
+                cb.setSelected(false);
+            }
         }
         
         if (es == check) {
