@@ -94,6 +94,8 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     //                     new JCheckBox("dbSNP130"),
     //                     new JCheckBox("Stop")
     //                   };
+
+    JMenuItem aboutItem;
     
     JButton apply = new JButton("Apply Filter");
     JButton selectAll = new JButton("Select All");
@@ -116,6 +118,14 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         JPanel pane = new JPanel();
         pane.setLayout(new BorderLayout());
         pane.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
+
+        //Menu
+        JMenuBar mBar = new JMenuBar();
+        JMenu helpMenu = new JMenu("Help");
+        aboutItem = new JMenuItem("About VarSifter");
+        helpMenu.add(aboutItem);
+        mBar.add(helpMenu);
+        setJMenuBar(mBar);
 
         vdat = new VarData(inFile);
         sorter = new TableSorter(new VarTableModel(vdat.returnData(), vdat.returnDataNames()));
@@ -142,8 +152,19 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER,
             ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
         sampleScroller.setPreferredSize(new Dimension((w/2), 80));
+        sampleScroller.setAlignmentY(Component.TOP_ALIGNMENT);
         sampleTable.setDefaultRenderer(Object.class, new SampleScoreRenderer());
         initColSizes(sampleTable, (VarTableModel)sampleTable.getModel());
+        
+        //Sample display
+        JPanel samplePane = new JPanel();
+        samplePane.setLayout(new BoxLayout(samplePane, BoxLayout.X_AXIS));
+        JLabel sL = new JLabel("<html>Genotype<p>MPG Score<p>Coverage</html>");
+        sL.setAlignmentY(Component.TOP_ALIGNMENT);
+        sL.setPreferredSize(new Dimension(80,80));
+        sL.setMaximumSize(new Dimension(80,80));
+        samplePane.add(sL);
+        samplePane.add(sampleScroller);
         
         //Filters
         JPanel filtPane = new JPanel();
@@ -189,12 +210,14 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         tablePanel.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
         tablePanel.add(dataScroller);
         tablePanel.add(Box.createRigidArea(new Dimension(0,15)));
-        tablePanel.add(sampleScroller);
+        //tablePanel.add(sampleScroller);
+        tablePanel.add(samplePane);
         tablePanel.add(stats);
 
         apply.addActionListener(this);
         selectAll.addActionListener(this);
         clear.addActionListener(this);
+        aboutItem.addActionListener(this);
         check.addActionListener(this);
                 
         pane.add(tablePanel, BorderLayout.CENTER);
@@ -258,6 +281,16 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
                 cb.setSelected(false);
             }
         }
+        
+        if (es == aboutItem) {
+            JOptionPane.showMessageDialog(null, "VarSifter v" + version + "\n" +
+                "Jamie K. Teer, 2010\n\n" + govWork + "\n" + id +
+                "\n\n--------------------------------------------------------" +
+                "\n\nThis program uses the JTable sorting class TableSorter.java from Sun\n" +
+                "and must include the following copyright notification:\n\n" +
+                sunCopyright + "\n" + sunDisclaimer, "About VarSifter", JOptionPane.PLAIN_MESSAGE);
+        }
+
         
         if (es == check) {
             int row = outTable.getSelectedRow();
