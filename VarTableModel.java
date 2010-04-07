@@ -11,10 +11,13 @@ public class VarTableModel extends AbstractTableModel {
     private String[] columnNames;
     public final static int HIDDEN = 301;   //use this flag to hide a cell
     private Object[] largestInColumn;
+    private VarData vdat;
     
     private Pattern digits = Pattern.compile("^-?\\d+$");
     
-    public VarTableModel(String[][] inData, String[] colN) {
+    public VarTableModel(String[][] inData, String[] colN, VarData v) {
+        vdat = v;
+        
         if (inData.length == 0) {
             data = new Object[][]{ {"No Results to Show"} };
             columnNames = new String[]{""};
@@ -30,7 +33,7 @@ public class VarTableModel extends AbstractTableModel {
             for ( int i = 0; i < inData.length; i++) {
                 for (int j = 0; j < inData[i].length; j++) {
                         
-                    if (digits.matcher(inData[i][j]).find() && j != 13) {
+                    if (digits.matcher(inData[i][j]).find() && !vdat.isEditable(j)) {
                         data[i][j] = Integer.parseInt(inData[i][j]);
                         
                         if (first || inData[i][j].length() > largestInColumn[j].toString().length()) {
@@ -75,12 +78,7 @@ public class VarTableModel extends AbstractTableModel {
     }
 
     public boolean isCellEditable(int row, int col) {
-        if (col == 13) {
-            return true;
-        }
-        else {
-            return false;
-        }
+        return vdat.isEditable(col);
     }
 
     public void setValueAt (Object value, int row, int col) {

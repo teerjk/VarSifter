@@ -1,6 +1,7 @@
 import java.io.*;
 import java.util.regex.*;
 import java.util.BitSet;
+import java.util.HashMap;
 
 public class VarData {
     
@@ -16,6 +17,8 @@ public class VarData {
     private String[] sampleNamesOrig;   // All sample names, for writing purposes
     private String[] sampleNames;
     private BitSet dataIsIncluded;      // A mask used to filter data, samples
+    private BitSet dataIsEditable = new BitSet();      // Which data elements can be edited
+    public HashMap<String, Integer> dataTypeAt = new HashMap<String, Integer>();
 
      /*    
     *    Constructor reads in the file specified by full path in String inFile.
@@ -26,6 +29,8 @@ public class VarData {
     public VarData(String inFile) {
         String line = new String();
         int lineCount = 0;
+        long time = System.currentTimeMillis();
+        
         try {
             BufferedReader br = new BufferedReader(new FileReader(inFile));
             while ((line = br.readLine()) != null) {
@@ -55,22 +60,29 @@ public class VarData {
                 //Handle the Header
                 if (first) {
                     
-                    Pattern pat = Pattern.compile("NA");
+                    Pattern samPat = Pattern.compile("NA");
+                    Pattern edPat = Pattern.compile("Comments");
                     int sampleCount = 0;
                     
-                    for ( String title : temp ) {
-                        if ((pat.matcher(title)).find()) {
+                    for (int i=0; i < temp.length; i++) {
+                        if ((samPat.matcher(temp[i])).find()) {
+
                             //System.out.println(title + "\t");
                             if (sampleCount % S_FIELDS == 0) {
-                                sampleTemp += (title + "\t");
+                                sampleTemp += (temp[i] + "\t");
                             }
                             sampleCount++;
-                            sampleTempOrig += (title + "\t");
-                            
-                            
+                            sampleTempOrig += (temp[i] + "\t");
                         }
                         else {
-                            dataTemp += (title + "\t");
+                            dataTemp += (temp[i] + "\t");
+
+                            // May want to read a flag from header - then can make checkboxes from this.
+                            dataTypeAt.put(temp[i], i);
+
+                            if ((edPat.matcher(temp[i])).find()) {
+                                dataIsEditable.set(i);
+                            }
                         }
                     }
                     
@@ -105,7 +117,8 @@ public class VarData {
         }
 
         resetOutput();  //Initialize outData and outSamples
-
+        
+        //System.out.println((System.currentTimeMillis() - time));
                 
     }
 
@@ -137,18 +150,20 @@ public class VarData {
     public void filterData(BitSet mask) {
         dataIsIncluded.clear();
         BitSet temp = new BitSet(data.length);
+        int typeIndex = dataTypeAt.get("type");
+        int dbSNPIndex = dataTypeAt.get("RS#");
         for (int i = 0; i < data.length; i++) {
            
-            if ( (mask.get(0) && data[i][4].equals("DIV")            ) ||
-                 (mask.get(1) && data[i][4].equals("Splice-site")    ) ||
-                 (mask.get(2) && data[i][4].equals("Non-synonymous") ) ||
-                 (mask.get(4) && data[i][4].equals("Stop")           )
+            if ( (mask.get(0) && data[i][typeIndex].equals("DIV")            ) ||
+                 (mask.get(1) && data[i][typeIndex].equals("Splice-site")    ) ||
+                 (mask.get(2) && data[i][typeIndex].equals("Non-synonymous") ) ||
+                 (mask.get(4) && data[i][typeIndex].equals("Stop")           )
                 ) {
 
                 dataIsIncluded.set(i);
             }
 
-            if ( (mask.get(3) && data[i][12].equals("-")             )
+            if ( (mask.get(3) && data[i][dbSNPIndex].equals("-")             )
                 ) {
                 temp.set(i);
             }
@@ -167,25 +182,40 @@ public class VarData {
     */
     private void filterOutput() {
          
-        outData = new String[dataIsIncluded.cardinality()][];
-        outSamples = new String[dataIsIncluded.cardinality()][][];
-        int j = 0;
-        for (int i=0; i < data.length; i++) {
-            if (dataIsIncluded.get(i)) {
-                outData[j] = data[i];
-                outSamples[j] = samples[i];
-                j++;
+        if (dataIsIncluded.cardinality() == data.length) {
+            outData = data;
+            outSamples = samples;
+        }
+        else {
+            outData = new String[dataIsIncluded.cardinality()][];
+            outSamples = new String[dataIsIncluded.cardinality()][][];
+            int j = 0;
+            for (int i=0; i < data.length; i++) {
+                if (dataIsIncluded.get(i)) {
+                    outData[j] = data[i];
+                    outSamples[j] = samples[i];
+                    j++;
+                }
             }
         }
     }
+
+
+    /* ************
+    *   Returns true if column is editable
+    *  ************
+    */
+    public boolean isEditable(int col) {
+        return dataIsEditable.get(col);
+    }
+
 
     /* ************
     *   Remove all filtering
     *  ************
     */
     public void resetOutput() {
-        dataIsIncluded.clear();
-        dataIsIncluded.flip(0, data.length);
+        dataIsIncluded.set(0, data.length);
         filterOutput();
     }
 
@@ -228,6 +258,7 @@ public class VarData {
     public String[] returnSampleNames() {
         return sampleNames;
     }
+
 
     /* **********
     *   Overwrite field in data[][] (comments for now)

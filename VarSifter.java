@@ -136,7 +136,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         setJMenuBar(mBar);
 
         vdat = new VarData(inFile);
-        sorter = new TableSorter(new VarTableModel(vdat.returnData(), vdat.returnDataNames()));
+        sorter = new TableSorter(new VarTableModel(vdat.returnData(), vdat.returnDataNames(), vdat));
         outTable = new JTable(sorter);
         sorter.setTableHeader(outTable.getTableHeader());
         //outTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
@@ -154,7 +154,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         dataScroller.setPreferredSize(new Dimension((w/2), (h/4)));
         
         sampleTable = new JTable( new VarTableModel(vdat.returnSample(outTable.getSelectedRow()),
-            vdat.returnSampleNames() ));
+            vdat.returnSampleNames(), vdat ));
         sampleTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
         sampleScroller = new JScrollPane(sampleTable,
             ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER,
@@ -273,7 +273,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             //}
             
             sorter = new TableSorter( new VarTableModel(vdat.returnData(),
-                vdat.returnDataNames()));
+                vdat.returnDataNames(), vdat ));
             //sorter.addTableModelListener(this); //Probably wrong...
             ((VarTableModel)sorter.getTableModel()).addTableModelListener(this);
             outTable.setModel(sorter);
@@ -335,7 +335,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             int dataIndex = sorter.modelIndex(rowIndex);
 
             sampleTable.setModel(new VarTableModel(vdat.returnSample(dataIndex),
-                vdat.returnSampleNames()));
+                vdat.returnSampleNames(), vdat ));
             
             outTable.setRowSelectionInterval(rowIndex,rowIndex);
             //lastRow = rowIndex;
