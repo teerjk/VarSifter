@@ -9,9 +9,11 @@ public class VarData {
 
     private String[][] data;            // Fields: [line][var_annotations]
     private String[][] outData;         // Gets returned (can be filtered)
+    private String[] dataNamesOrig;     // All data names, for writing purposes
     private String[] dataNames;
     private String[][][] samples;       // Fields: [line][sampleName][genotype:MPGscore:coverage]
     private String[][][] outSamples;    // Gets returned (can be filtered)
+    private String[] sampleNamesOrig;   // All sample names, for writing purposes
     private String[] sampleNames;
     private BitSet dataIsIncluded;      // A mask used to filter data, samples
 
@@ -47,6 +49,7 @@ public class VarData {
             while ((line = br.readLine()) != null) {
                 String temp[] = line.split("\t", -1);
                 String sampleTemp = "";
+                String sampleTempOrig = "";
                 String dataTemp = "";
                 
                 //Handle the Header
@@ -62,6 +65,8 @@ public class VarData {
                                 sampleTemp += (title + "\t");
                             }
                             sampleCount++;
+                            sampleTempOrig += (title + "\t");
+                            
                             
                         }
                         else {
@@ -70,7 +75,9 @@ public class VarData {
                     }
                     
                     sampleNames = sampleTemp.split("\t");
+                    sampleNamesOrig = sampleTempOrig.split("\t");
                     dataNames = dataTemp.split("\t");
+                    dataNamesOrig = dataNames; //Will have to change this when not all data included
 
                     first = false;
                     continue;
@@ -90,6 +97,7 @@ public class VarData {
                 
                 lineCount++;
             }
+            br.close();
         }
         catch (IOException ioe) {
             System.out.println(ioe);
@@ -101,9 +109,29 @@ public class VarData {
                 
     }
 
+    /* ***********
+    *   Returns 2d array of all data
+    *  ***********
+    */
+    public String[][] dataDump() {
+        boolean first = true;
+        String[][] out = new String[data.length + 1][dataNamesOrig.length + sampleNamesOrig.length];
+        
+        //header
+        System.arraycopy(dataNamesOrig, 0, out[0], 0, dataNamesOrig.length);
+        System.arraycopy(sampleNamesOrig, 0, out[0], dataNamesOrig.length, sampleNamesOrig.length);
+
+        for (int i=0; i < data.length; i++) {
+            System.arraycopy(data[i], 0, out[i+1], 0, dataNamesOrig.length);
+            for (int j=0; j < sampleNames.length; j++) {
+                System.arraycopy(samples[i][j], 0, out[i+1], (dataNamesOrig.length + (j * S_FIELDS)), S_FIELDS);
+            }
+        }
+        return out;
+    }
     
     /* ***********
-    *   Filtera mutation type
+    *   Filter mutation type
     *  ***********
     */
     public void filterData(BitSet mask) {
@@ -187,9 +215,9 @@ public class VarData {
             tempOutSamples = new String[0][];
         }
         else {
-            tempOutSamples = new String[3][sampleNames.length];
+            tempOutSamples = new String[S_FIELDS][sampleNames.length];
             for (int j = 0; j < sampleNames.length; j++) {
-                for (int k = 0; k < 3; k++) {
+                for (int k = 0; k < S_FIELDS; k++) {
                     tempOutSamples[k][j] = outSamples[i][j][k];
                 }
             }
@@ -199,6 +227,18 @@ public class VarData {
     
     public String[] returnSampleNames() {
         return sampleNames;
+    }
+
+    /* **********
+    *   Overwrite field in data[][] (comments for now)
+    *  **********
+    */
+    public void setData(int row, int col, String newData) {
+        int lastIndex = 0;
+        for (int i = 0; i <= row; i++) {
+            lastIndex = ( dataIsIncluded.nextSetBit(lastIndex) + 1 );
+        }
+        data[lastIndex - 1][col] = newData;
     }
 
 

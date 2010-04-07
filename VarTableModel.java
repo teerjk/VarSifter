@@ -30,7 +30,7 @@ public class VarTableModel extends AbstractTableModel {
             for ( int i = 0; i < inData.length; i++) {
                 for (int j = 0; j < inData[i].length; j++) {
                         
-                    if (digits.matcher(inData[i][j]).find()) {
+                    if (digits.matcher(inData[i][j]).find() && j != 13) {
                         data[i][j] = Integer.parseInt(inData[i][j]);
                         
                         if (first || inData[i][j].length() > largestInColumn[j].toString().length()) {
@@ -72,5 +72,19 @@ public class VarTableModel extends AbstractTableModel {
 
     public Class getColumnClass(int c) {
         return getValueAt(0,c).getClass();
+    }
+
+    public boolean isCellEditable(int row, int col) {
+        if (col == 13) {
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+
+    public void setValueAt (Object value, int row, int col) {
+        data[row][col] = value;
+        fireTableCellUpdated(row,col);
     }
 }

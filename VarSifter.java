@@ -4,6 +4,7 @@ import javax.swing.event.*;
 import javax.swing.table.*;
 import java.awt.event.*;
 import java.util.BitSet;
+import java.io.*;
 import components.TableSorter;
 
 /* ****************
@@ -13,9 +14,9 @@ import components.TableSorter;
 *  ****************
 */
 
-public class VarSifter extends JFrame implements ListSelectionListener, ActionListener {
+public class VarSifter extends JFrame implements ListSelectionListener, ActionListener, TableModelListener {
     
-    final String version = "0.1";
+    final String version = "0.1a";
     final String id = "$Id$";
 
     final String govWork = "PUBLIC DOMAIN NOTICE\n" +
@@ -95,6 +96,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     //                     new JCheckBox("Stop")
     //                   };
 
+    JMenuItem saveAsItem;
     JMenuItem aboutItem;
     
     JButton apply = new JButton("Apply Filter");
@@ -102,6 +104,8 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     JButton clear = new JButton("Clear All");
     JButton check = new JButton("Check");
     
+    String newLine = System.getProperty("line.separator");
+
     //int lastRow = 0;    //Last row selected
 
     /* ******************
@@ -121,9 +125,13 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
 
         //Menu
         JMenuBar mBar = new JMenuBar();
+        JMenu fileMenu = new JMenu("File");
         JMenu helpMenu = new JMenu("Help");
+        saveAsItem = new JMenuItem("Save File As");
         aboutItem = new JMenuItem("About VarSifter");
+        fileMenu.add(saveAsItem);
         helpMenu.add(aboutItem);
+        mBar.add(fileMenu);
         mBar.add(helpMenu);
         setJMenuBar(mBar);
 
@@ -217,12 +225,15 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         apply.addActionListener(this);
         selectAll.addActionListener(this);
         clear.addActionListener(this);
+        saveAsItem.addActionListener(this);
         aboutItem.addActionListener(this);
         check.addActionListener(this);
+        //((TableSorter)outTable.getModel()).addTableModelListener(this); //probably wrong
+        ((VarTableModel)((TableSorter)outTable.getModel()).getTableModel()).addTableModelListener(this);
                 
         pane.add(tablePanel, BorderLayout.CENTER);
         pane.add(filtPane, BorderLayout.LINE_END);
-        //pane.add(check, BorderLayout.PAGE_END);
+        pane.add(check, BorderLayout.PAGE_END);
         add(pane);
         pack();
         setVisible(true);
@@ -243,7 +254,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             sorter.setTableHeader(null);    //Must do this to avoid memory leak
             BitSet mask = new BitSet(cBox.length);
             
-            for (int i = 0; i < cBox.length; i++) {
+            for (int i=0; i < cBox.length; i++) {
                 if (cBox[i].isSelected()) {
                     //System.out.println(cb.getText());
                     mask.set(i);
@@ -263,6 +274,8 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             
             sorter = new TableSorter( new VarTableModel(vdat.returnData(),
                 vdat.returnDataNames()));
+            //sorter.addTableModelListener(this); //Probably wrong...
+            ((VarTableModel)sorter.getTableModel()).addTableModelListener(this);
             outTable.setModel(sorter);
             sorter.setTableHeader(outTable.getTableHeader());
             initColSizes(outTable, (VarTableModel)((TableSorter)outTable.getModel()).getTableModel() );
@@ -280,6 +293,10 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             for (JCheckBox cb : cBox) {
                 cb.setSelected(false);
             }
+        }
+
+        if (es == saveAsItem) {
+            saveData(null);
         }
         
         if (es == aboutItem) {
@@ -330,6 +347,38 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
 
 
     /* *************
+    *   Handle Table Actions
+    *  *************
+    */
+    public void tableChanged(TableModelEvent e) {
+
+        //System.out.println(e.getSource().toString());
+            
+        if (e.getSource().getClass() == VarTableModel.class) {
+            int row = e.getFirstRow();
+            int lastRow = e.getLastRow();
+            int col = e.getColumn();
+            VarTableModel model = (VarTableModel)e.getSource();
+            Object data = model.getValueAt(row, col);
+            //System.out.println("Row: " + row + "/" + lastRow + " Col: " + col + " value: " + e.getType() +
+            //    " data: "+ data);
+            //System.out.println(data.getClass());
+            vdat.setData(row, col, (String)data);
+        }
+
+        //if (e.getSource().getClass() == TableSorter.class) {
+        //    int row = e.getFirstRow();
+        //    int lastRow = e.getLastRow();
+        //    int col = e.getColumn();
+        //    TableSorter model = (TableSorter)e.getSource();
+        //    //Object data = model.getValueAt(row, col);
+        //    System.out.println("Row: " + row + "/" + lastRow + " Col: " + col + " value: " + e.getType());
+        //    System.out.println(model.getSortingStatus(13));
+        //}
+    }
+
+
+    /* *************
     *   Sets fitted column sizes
     *  *************
     */
@@ -343,7 +392,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         Object[] largestInCol = model.getLargestInColumn();
         TableCellRenderer headerRenderer = table.getTableHeader().getDefaultRenderer();
 
-        for (int i = 0; i < largestInCol.length; i++) {
+        for (int i=0; i < largestInCol.length; i++) {
             col = table.getColumnModel().getColumn(i);
 
             comp = headerRenderer.getTableCellRendererComponent(
@@ -356,6 +405,75 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
 
             col.setPreferredWidth( (Math.max(headerWidth, cellWidth) + 25) );
         }
+    }
+
+    
+    /* *************
+    *   Save data, either in place, or as new
+    *  *************
+    */
+    private void saveData(String fileName) {
+        File fcFile;
+        int ovwResult = JOptionPane.YES_OPTION;
+        
+        if (fileName == null) {
+            JFileChooser fc = new JFileChooser(System.getProperty("user.dir"));
+            fc.setDialogTitle("Save File As");
+            int fcReturnVal = fc.showSaveDialog(VarSifter.this);
+            if (fcReturnVal == JFileChooser.APPROVE_OPTION) {
+                fcFile = fc.getSelectedFile();
+                fileName = fcFile.getAbsolutePath();
+            }
+            else {
+                System.out.println("File NOT SAVED!!!");
+                return;
+            }
+        }
+        else {
+            fcFile = new File(System.getProperty("user.dir") + fileName);
+            fileName = fcFile.getAbsolutePath();
+        }
+        
+        if (fcFile.exists()) {
+            ovwResult = JOptionPane.showConfirmDialog(null, fileName + " already exists.  " +
+                "Do you want to overwrite it?", "Overwrite Warning",
+                JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+        }
+
+        if (ovwResult == JOptionPane.YES_OPTION) {
+            try {
+                
+                PrintWriter pw = new PrintWriter(new BufferedWriter(new FileWriter(fcFile)));
+                String[][] outData = vdat.dataDump();
+
+                for (int i=0; i < outData.length; i++) {
+                    StringBuilder outString = new StringBuilder(100);
+                                    
+                    for (int j=0; j < outData[i].length; j++) {
+                        outString.append(outData[i][j] + "\t");
+                    }
+                    outString.deleteCharAt(outString.length() - 1);
+                    //outString.append(newLine);
+
+                    pw.println(outString.toString());
+                }
+                pw.close();
+                if (pw.checkError()) {
+                    System.out.println("Error Detected writing file!");
+                }
+                else {
+                    System.out.println("File " + fileName + " written");
+                }
+            }
+            catch (IOException ioe) {
+                JOptionPane.showMessageDialog(null, "File write error: " + ioe.getMessage(),
+                    "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+        else {
+            System.out.println(fileName + " not overwritten!");
+        }
+
     }
 
     
