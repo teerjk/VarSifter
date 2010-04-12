@@ -16,7 +16,7 @@ import components.TableSorter;
 
 public class VarSifter extends JFrame implements ListSelectionListener, ActionListener, TableModelListener {
     
-    final String version = "0.1a";
+    final String version = "0.2";
     final String id = "$Id$";
 
     final String govWork = "PUBLIC DOMAIN NOTICE\n" +
@@ -73,7 +73,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
 
 
     // Test using object[][], titles[]
-    VarData vdat;
+    VarData vdat = null;
     JTable outTable;
     TableSorter sorter;
     JTable sampleTable;
@@ -96,7 +96,9 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     //                     new JCheckBox("Stop")
     //                   };
 
+    JMenuItem openItem;
     JMenuItem saveAsItem;
+    JMenuItem exitItem;
     JMenuItem aboutItem;
     
     JButton apply = new JButton("Apply Filter");
@@ -116,7 +118,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     public VarSifter(String inFile) {
         
         //initiate parent window
-        super("VarSifter - TEST");
+        super("VarSifter - " + inFile);
         setBounds(0, (h/4), (w/2), (h/2));
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         JPanel pane = new JPanel();
@@ -127,15 +129,24 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         JMenuBar mBar = new JMenuBar();
         JMenu fileMenu = new JMenu("File");
         JMenu helpMenu = new JMenu("Help");
+        openItem = new JMenuItem("Open File");
         saveAsItem = new JMenuItem("Save File As");
+        exitItem = new JMenuItem("Exit");
         aboutItem = new JMenuItem("About VarSifter");
+        fileMenu.add(openItem);
         fileMenu.add(saveAsItem);
+        fileMenu.add(exitItem);
         helpMenu.add(aboutItem);
         mBar.add(fileMenu);
         mBar.add(helpMenu);
         setJMenuBar(mBar);
 
-        vdat = new VarData(inFile);
+        if (inFile == null) {
+            vdat = new VarData(openData());
+        }
+        else {
+            vdat = new VarData(inFile);
+        }
         sorter = new TableSorter(new VarTableModel(vdat.returnData(), vdat.returnDataNames(), vdat));
         outTable = new JTable(sorter);
         sorter.setTableHeader(outTable.getTableHeader());
@@ -225,7 +236,9 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         apply.addActionListener(this);
         selectAll.addActionListener(this);
         clear.addActionListener(this);
+        openItem.addActionListener(this);
         saveAsItem.addActionListener(this);
+        exitItem.addActionListener(this);
         aboutItem.addActionListener(this);
         check.addActionListener(this);
         //((TableSorter)outTable.getModel()).addTableModelListener(this); //probably wrong
@@ -233,7 +246,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
                 
         pane.add(tablePanel, BorderLayout.CENTER);
         pane.add(filtPane, BorderLayout.LINE_END);
-        pane.add(check, BorderLayout.PAGE_END);
+        //pane.add(check, BorderLayout.PAGE_END);
         add(pane);
         pack();
         setVisible(true);
@@ -268,19 +281,8 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
                 vdat.filterData(mask);
             }
             
-            //if (dbsnp.isSelected()) {
-            //    vdat.filterData();
-            //}
+            initTable(null);
             
-            sorter = new TableSorter( new VarTableModel(vdat.returnData(),
-                vdat.returnDataNames(), vdat ));
-            //sorter.addTableModelListener(this); //Probably wrong...
-            ((VarTableModel)sorter.getTableModel()).addTableModelListener(this);
-            outTable.setModel(sorter);
-            sorter.setTableHeader(outTable.getTableHeader());
-            initColSizes(outTable, (VarTableModel)((TableSorter)outTable.getModel()).getTableModel() );
-            lines.setText(Integer.toString(outTable.getRowCount()));
-            outTable.requestFocusInWindow();
         }
 
         if (es == selectAll) {
@@ -295,8 +297,21 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             }
         }
 
+        if (es == openItem) {
+            String fName = openData();
+
+            if (fName != null) {
+                initTable(fName);
+            }
+        }
+
         if (es == saveAsItem) {
             saveData(null);
+        }
+
+        if (es == exitItem) {
+            System.out.println("Bye!");
+            System.exit(0);
         }
         
         if (es == aboutItem) {
@@ -407,6 +422,56 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         }
     }
 
+    /* *************
+    *   Initialize Table
+    *  *************
+    */
+    private void initTable(String newData) {
+        if (newData != null) {
+            vdat = new VarData(newData);
+        }
+        sorter = new TableSorter( new VarTableModel(vdat.returnData(),
+            vdat.returnDataNames(), vdat ));
+        //sorter.addTableModelListener(this); //Probably wrong...
+        ((VarTableModel)sorter.getTableModel()).addTableModelListener(this);
+        outTable.setModel(sorter);
+        sorter.setTableHeader(outTable.getTableHeader());
+        initColSizes(outTable, (VarTableModel)((TableSorter)outTable.getModel()).getTableModel() );
+        lines.setText(Integer.toString(outTable.getRowCount()));
+        outTable.requestFocusInWindow();
+    }
+       
+
+
+    /* *************
+    *   Open data
+    *  *************
+    */
+    private String openData() {
+        File fcFile;
+        String fileName;
+        JFileChooser fc = new JFileChooser(System.getProperty("user.dir"));
+        fc.setDialogTitle("Open variant list");
+        int fcReturnVal = fc.showOpenDialog(VarSifter.this);
+        if (fcReturnVal == JFileChooser.APPROVE_OPTION) {
+            fcFile = fc.getSelectedFile();
+            fileName = fcFile.getAbsolutePath();
+        }
+        else {
+            System.out.println("No File opened.");
+
+            if (vdat == null) {
+                System.out.println("This program really only works if you open a file. Exiting.");
+                System.exit(0);
+            }
+            return null;
+        }
+
+        System.out.println(fileName);
+        VarSifter.this.setTitle("VarSifter - " + fileName);
+        return fileName;
+    }
+
     
     /* *************
     *   Save data, either in place, or as new
@@ -486,7 +551,8 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
                     v = new VarSifter(args[0]);
                 }
                 else {
-                    v = new VarSifter("test_data.txt");
+                    //v = new VarSifter("test_data.txt");
+                    v = new VarSifter(null);
                 }
                 //System.out.println("Width: " + v.w + "\tHeight: " + v.h);
             }
