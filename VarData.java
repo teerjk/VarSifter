@@ -2,6 +2,7 @@ import java.io.*;
 import java.util.regex.*;
 import java.util.BitSet;
 import java.util.HashMap;
+import java.util.HashSet;
 
 public class VarData {
     
@@ -68,6 +69,7 @@ public class VarData {
                     Pattern edPat = Pattern.compile("Comments");
                     Pattern samAff = Pattern.compile("aff");
                     Pattern samNorm = Pattern.compile("norm");
+                    Pattern genePat = Pattern.compile("refseq");
                     String[] affPosArr;
                     String[] normPosArr;
                     int dataCount = 0;
@@ -179,18 +181,31 @@ public class VarData {
     *   Filter mutation type
     *  ***********
     */
-    public void filterData(BitSet mask) {
+    public void filterData(BitSet mask, String geneFile) {
         dataIsIncluded.clear();
         BitSet temp = new BitSet(data.length);
         BitSet mendRecTemp = new BitSet(data.length);
         BitSet mendDomTemp = new BitSet(data.length);
         BitSet mendBadTemp = new BitSet(data.length);
         BitSet sampleTemp = new BitSet(data.length);
+        BitSet geneTemp = new BitSet(data.length);
         int typeIndex = dataTypeAt.get("type");
         int dbSNPIndex = dataTypeAt.get("RS#");
         int mendRecIndex = (dataTypeAt.containsKey("MendHomRec")) ? dataTypeAt.get("MendHomRec") : -1;
         int mendDomIndex = (dataTypeAt.containsKey("MendDom")) ? dataTypeAt.get("MendDom") : -1;
         int mendBadIndex = (dataTypeAt.containsKey("MendInconsis")) ? dataTypeAt.get("MendInconsis") : -1;
+        int geneIndex = dataTypeAt.get("refseq");
+        HashSet<String> geneSet = new HashSet<String>();
+        
+        if (mask.get(11)) {
+            if (geneFile != null) {
+                geneSet = returnGeneSet(geneFile);
+            }
+            else {
+                System.out.println("!!! geneFile not defined, so can't use it to filter !!!");
+            }
+        }
+        
         for (int i = 0; i < data.length; i++) {
            
             if ( (mask.get(0) && data[i][typeIndex].equals("Stop")           ) ||
@@ -239,6 +254,11 @@ public class VarData {
                     sampleTemp.set(i);
                 }
             }
+
+            if (mask.get(11) && geneSet.contains(data[i][geneIndex])) {
+                geneTemp.set(i);
+            }
+                
                         
         }
         
@@ -255,7 +275,10 @@ public class VarData {
             dataIsIncluded.and(mendDomTemp);
         }
         if (! mendBadTemp.isEmpty()) {
-            dataIsIncluded.and(temp);
+            dataIsIncluded.and(mendBadTemp);
+        }
+        if (! geneTemp.isEmpty()) {
+            dataIsIncluded.and(geneTemp);
         }
         filterOutput();
     }
@@ -333,6 +356,28 @@ public class VarData {
 
     public String[] returnDataNames() {
         return dataNames;
+    }
+
+
+    /* **********
+    *   Get a HashSet from a file of gene names
+    *  **********
+    */
+    private HashSet<String> returnGeneSet(String inFile) {
+        HashSet<String> outSet = new HashSet<String>();
+        try {
+            String line = new String();
+            BufferedReader br = new BufferedReader(new FileReader(inFile));
+            while ((line = br.readLine()) != null) {
+                outSet.add(line);
+            }
+            br.close();
+        }
+        catch (IOException ioe) {
+            System.out.println(ioe);
+            System.exit(1);
+        }
+        return outSet;
     }
 
     /* **********

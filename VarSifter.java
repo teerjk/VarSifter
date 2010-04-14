@@ -66,6 +66,9 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     "NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS\n" +
     "SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.";
 
+    final int VARIANT_FILE = 0;
+    final int GENE_FILTER_FILE = 1;
+
 
     Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
     int w = (int)dim.getWidth();
@@ -101,6 +104,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     JCheckBox mendDom = new JCheckBox("Dominant");
     JCheckBox mendBad = new JCheckBox("Inconsistent");
     JCheckBox uniqInAff = new JCheckBox("Aff different from Norm");
+    JCheckBox filterFile = new JCheckBox("No Gene file selected");
 
     JCheckBox[] cBox = { stop,
                          div, 
@@ -112,7 +116,8 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
                          mendRec,
                          mendDom,
                          mendBad,
-                         uniqInAff
+                         uniqInAff,
+                         filterFile
                        };
 
     JMenuItem openItem;
@@ -124,8 +129,10 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     JButton selectAll = new JButton("Select All");
     JButton clear = new JButton("Clear All");
     JButton check = new JButton("Check");
+    JButton filterFileButton = new JButton("Choose Gene File Filter");
     
     String newLine = System.getProperty("line.separator");
+    private String geneFile = null;
 
     //int lastRow = 0;    //Last row selected
 
@@ -162,7 +169,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
 
         if (inFile == null) {
             //vdat = new VarData(openData());
-            inFile = openData();
+            inFile = openData(VARIANT_FILE);
         }
         else {
             //vdat = new VarData(inFile);
@@ -232,6 +239,11 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         selClearPane.add(selectAll);
         selClearPane.add(Box.createRigidArea(new Dimension(5,0)));
         selClearPane.add(clear);
+        JPanel fFiltPane = new JPanel();
+        fFiltPane.setLayout(new BoxLayout(fFiltPane, BoxLayout.Y_AXIS));
+        //fFiltPane.setAlignmentX(Component.LEFT_ALIGNMENT);
+        fFiltPane.add(filterFile);
+        fFiltPane.add(filterFileButton);
         filtPane.add(new JLabel("Include:"));
         filtPane.add(includePane);
         filtPane.add(Box.createRigidArea(new Dimension(0,15)));
@@ -244,6 +256,8 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         filtPane.add(selClearPane);
         filtPane.add(Box.createRigidArea(new Dimension(0,10)));
         filtPane.add(apply);
+        filtPane.add(Box.createVerticalGlue());
+        filtPane.add(fFiltPane);
 
         //Stats (line count)
         JPanel stats = new JPanel();
@@ -271,6 +285,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         exitItem.addActionListener(this);
         aboutItem.addActionListener(this);
         check.addActionListener(this);
+        filterFileButton.addActionListener(this);
 
         //Disable unused buttons
         //if (!vdat.isMendFilt()) {
@@ -281,6 +296,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         //if (!vdat.isAffNorm()) {
         //    uniqInAff.setEnabled(false);
         //}
+        filterFile.setEnabled(false);
                 
         pane.add(tablePanel, BorderLayout.CENTER);
         pane.add(filtPane, BorderLayout.LINE_END);
@@ -317,7 +333,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
                 vdat.resetOutput();
             }
             else {
-                vdat.filterData(mask);
+                vdat.filterData(mask, geneFile);
             }
             
             redrawOutTable(null);
@@ -338,8 +354,12 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             }
         }
 
+        if (es == filterFileButton) {
+            geneFile = openData(GENE_FILTER_FILE);
+        }
+
         if (es == openItem) {
-            String fName = openData();
+            String fName = openData(VARIANT_FILE);
 
             if (fName != null) {
                 redrawOutTable(fName);
@@ -510,11 +530,15 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     *   Open data
     *  *************
     */
-    private String openData() {
+    private String openData(int openType) {
         File fcFile;
         String fileName;
+        String[] dTitle = { "Open variant list",
+                            "Open gene filter list"
+                          };
+        
         JFileChooser fc = new JFileChooser(System.getProperty("user.dir"));
-        fc.setDialogTitle("Open variant list");
+        fc.setDialogTitle(dTitle[openType]);
         int fcReturnVal = fc.showOpenDialog(VarSifter.this);
         if (fcReturnVal == JFileChooser.APPROVE_OPTION) {
             fcFile = fc.getSelectedFile();
@@ -531,7 +555,13 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         }
 
         System.out.println(fileName);
-        VarSifter.this.setTitle("VarSifter - " + fileName);
+        if (openType == VARIANT_FILE) {
+            VarSifter.this.setTitle("VarSifter - " + fileName);
+        }
+        else if (openType == GENE_FILTER_FILE) {
+            filterFile.setText(fileName);
+            filterFile.setEnabled(true);
+        }
         return fileName;
     }
 
