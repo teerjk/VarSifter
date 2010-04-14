@@ -19,6 +19,8 @@ public class VarData {
     private BitSet dataIsIncluded;      // A mask used to filter data, samples
     private BitSet dataIsEditable = new BitSet();      // Which data elements can be edited
     public HashMap<String, Integer> dataTypeAt = new HashMap<String, Integer>();
+    private int[] affAt;
+    private int[] normAt;
 
      /*    
     *    Constructor reads in the file specified by full path in String inFile.
@@ -56,20 +58,34 @@ public class VarData {
                 String sampleTemp = "";
                 String sampleTempOrig = "";
                 String dataTemp = "";
+                String affPos = "";
+                String normPos = "";
                 
                 //Handle the Header
                 if (first) {
                     
                     Pattern samPat = Pattern.compile("NA");
                     Pattern edPat = Pattern.compile("Comments");
+                    Pattern samAff = Pattern.compile("aff");
+                    Pattern samNorm = Pattern.compile("norm");
+                    String[] affPosArr;
+                    String[] normPosArr;
+                    int dataCount = 0;
                     int sampleCount = 0;
                     
                     for (int i=0; i < temp.length; i++) {
                         if ((samPat.matcher(temp[i])).find()) {
 
                             //System.out.println(title + "\t");
-                            if (sampleCount % S_FIELDS == 0) {
+                            if (sampleCount % S_FIELDS == 0) {  //Sample name, not score, cov, etc
                                 sampleTemp += (temp[i] + "\t");
+                                
+                                if ((samAff.matcher(temp[i])).find()) {
+                                    affPos += ( ((i - dataCount)/S_FIELDS) + "\t");
+                                }
+                                else if ((samNorm.matcher(temp[i])).find()) {
+                                    normPos += ( ((i - dataCount)/S_FIELDS) + "\t");
+                                }
                             }
                             sampleCount++;
                             sampleTempOrig += (temp[i] + "\t");
@@ -83,6 +99,7 @@ public class VarData {
                             if ((edPat.matcher(temp[i])).find()) {
                                 dataIsEditable.set(i);
                             }
+                            dataCount++;
                         }
                     }
                     
@@ -90,6 +107,21 @@ public class VarData {
                     sampleNamesOrig = sampleTempOrig.split("\t");
                     dataNames = dataTemp.split("\t");
                     dataNamesOrig = dataNames; //Will have to change this when not all data included
+                    
+                    if (affPos.length() > 0 && normPos.length() > 0) {
+                        affPosArr = affPos.split("\t");
+                        normPosArr = normPos.split("\t");
+                        affAt = new int[affPosArr.length];
+                        normAt = new int[normPosArr.length];
+                        for (int i=0; i < affPosArr.length; i++) { //Only works with norm/aff pairs...
+                            affAt[i] = Integer.parseInt(affPosArr[i]);
+                            normAt[i] = Integer.parseInt(normPosArr[i]);
+                        }
+                    }
+                    else {
+                        affAt = null;
+                        normAt = null;
+                    }
 
                     first = false;
                     continue;
@@ -150,27 +182,79 @@ public class VarData {
     public void filterData(BitSet mask) {
         dataIsIncluded.clear();
         BitSet temp = new BitSet(data.length);
+        BitSet mendRecTemp = new BitSet(data.length);
+        BitSet mendDomTemp = new BitSet(data.length);
+        BitSet mendBadTemp = new BitSet(data.length);
+        BitSet sampleTemp = new BitSet(data.length);
         int typeIndex = dataTypeAt.get("type");
         int dbSNPIndex = dataTypeAt.get("RS#");
+        int mendRecIndex = (dataTypeAt.containsKey("MendHomRec")) ? dataTypeAt.get("MendHomRec") : -1;
+        int mendDomIndex = (dataTypeAt.containsKey("MendDom")) ? dataTypeAt.get("MendDom") : -1;
+        int mendBadIndex = (dataTypeAt.containsKey("MendInconsis")) ? dataTypeAt.get("MendInconsis") : -1;
         for (int i = 0; i < data.length; i++) {
            
-            if ( (mask.get(0) && data[i][typeIndex].equals("DIV")            ) ||
-                 (mask.get(1) && data[i][typeIndex].equals("Splice-site")    ) ||
-                 (mask.get(2) && data[i][typeIndex].equals("Non-synonymous") ) ||
-                 (mask.get(4) && data[i][typeIndex].equals("Stop")           )
+            if ( (mask.get(0) && data[i][typeIndex].equals("Stop")           ) ||
+                 (mask.get(1) && data[i][typeIndex].equals("DIV")            ) ||
+                 (mask.get(2) && data[i][typeIndex].equals("Splice-site")    ) ||
+                 (mask.get(3) && data[i][typeIndex].equals("Non-synonymous") ) ||
+                 (mask.get(4) && data[i][typeIndex].equals("Synonymous")     ) ||
+                 (mask.get(5) && data[i][typeIndex].equals("NC")             ) 
                 ) {
 
                 dataIsIncluded.set(i);
             }
 
-            if ( (mask.get(3) && data[i][dbSNPIndex].equals("-")             )
+            if ( (mask.get(6) && data[i][dbSNPIndex].equals("-")             )
                 ) {
                 temp.set(i);
+            }
+            
+            if (mask.get(7) && Integer.parseInt(data[i][mendRecIndex]) > 0) {
+                mendRecTemp.set(i);
+            }
+            
+            if (mask.get(8) && Integer.parseInt(data[i][mendDomIndex]) > 0) {
+                mendDomTemp.set(i);
+            }
+
+            if (mask.get(9) && Integer.parseInt(data[i][mendBadIndex]) > 0) {
+                mendBadTemp.set(i);
+            }
+                
+
+            if (mask.get(10)) {
+                int count = 0;
+                for (int j=0; j < affAt.length; j++) {
+                    String affTemp = samples[i][affAt[j]][0];
+                    String normTemp = samples[i][normAt[j]][0];
+                    if (!affTemp.equals(normTemp) &&
+                        !affTemp.equals("NA") &&
+                        !normTemp.equals("NA") ) {
+
+                        count++;
+                    }
+                }
+                //if (count == affAt.length) {
+                if (count == 1) {
+                    sampleTemp.set(i);
+                }
             }
                         
         }
         
         if (! temp.isEmpty()) {
+            dataIsIncluded.and(temp);
+        }
+        if (! sampleTemp.isEmpty()) {
+            dataIsIncluded.and(sampleTemp);
+        }
+        if (! mendRecTemp.isEmpty()) {
+            dataIsIncluded.and(mendRecTemp);
+        }
+        if (! mendDomTemp.isEmpty()) {
+            dataIsIncluded.and(mendDomTemp);
+        }
+        if (! mendBadTemp.isEmpty()) {
             dataIsIncluded.and(temp);
         }
         filterOutput();
@@ -207,6 +291,23 @@ public class VarData {
     */
     public boolean isEditable(int col) {
         return dataIsEditable.get(col);
+    }
+
+
+    /* ************
+    *   Returns true if we have normal affected pairs
+    *  ************
+    */
+    public boolean isAffNorm() {
+        return (affAt != null && normAt != null);
+    }
+
+    /* ************
+    *   Returns true if we have mendelian filter columns
+    *  ************
+    */
+    public boolean isMendFilt() {
+        return (dataTypeAt.containsKey("MendHomRec"));
     }
 
 

@@ -16,7 +16,7 @@ import components.TableSorter;
 
 public class VarSifter extends JFrame implements ListSelectionListener, ActionListener, TableModelListener {
     
-    final String version = "0.2";
+    final String version = "0.3";
     final String id = "$Id$";
 
     final String govWork = "PUBLIC DOMAIN NOTICE\n" +
@@ -82,12 +82,13 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     ListSelectionModel lsm;
     JLabel lines = new JLabel();
 
+    JCheckBox stop = new JCheckBox("Stop");
     JCheckBox div = new JCheckBox("DIV");
     JCheckBox splice = new JCheckBox("Splice-Site");
     JCheckBox nonsyn = new JCheckBox("Non-synonymous");
+    JCheckBox syn = new JCheckBox("Synonymous");
+    JCheckBox noncod = new JCheckBox("Non-Coding");
     JCheckBox dbsnp = new JCheckBox("dbSNP130");
-    JCheckBox stop = new JCheckBox("Stop");
-    JCheckBox[] cBox = { div, splice, nonsyn, dbsnp, stop };
 
     //JCheckBox[] cBox = { new JCheckBox("DIV"),
     //                     new JCheckBox("Splice-Site"),
@@ -95,6 +96,24 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     //                     new JCheckBox("dbSNP130"),
     //                     new JCheckBox("Stop")
     //                   };
+    
+    JCheckBox mendRec = new JCheckBox("Hom. Recessive");
+    JCheckBox mendDom = new JCheckBox("Dominant");
+    JCheckBox mendBad = new JCheckBox("Inconsistent");
+    JCheckBox uniqInAff = new JCheckBox("Aff different from Norm");
+
+    JCheckBox[] cBox = { stop,
+                         div, 
+                         splice, 
+                         nonsyn, 
+                         syn,
+                         noncod,
+                         dbsnp, 
+                         mendRec,
+                         mendDom,
+                         mendBad,
+                         uniqInAff
+                       };
 
     JMenuItem openItem;
     JMenuItem saveAsItem;
@@ -142,20 +161,19 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         setJMenuBar(mBar);
 
         if (inFile == null) {
-            vdat = new VarData(openData());
+            //vdat = new VarData(openData());
+            inFile = openData();
         }
         else {
-            vdat = new VarData(inFile);
+            //vdat = new VarData(inFile);
         }
-        sorter = new TableSorter(new VarTableModel(vdat.returnData(), vdat.returnDataNames(), vdat));
-        outTable = new JTable(sorter);
-        sorter.setTableHeader(outTable.getTableHeader());
+        outTable = new JTable();
+        redrawOutTable(inFile);
         //outTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         outTable.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
         outTable.setRowSelectionInterval(0,0);
         outTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
         outTable.setDefaultRenderer(Number.class, new VarScoreRenderer());
-        initColSizes(outTable, (VarTableModel)((TableSorter)outTable.getModel()).getTableModel() );
         lsm = outTable.getSelectionModel();
         lsm.addListSelectionListener(this);
         
@@ -191,14 +209,23 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         JPanel includePane = new JPanel();
         includePane.setLayout(new BoxLayout(includePane, BoxLayout.Y_AXIS));
         includePane.setBorder(BorderFactory.createLineBorder(Color.black));
+        includePane.add(stop);
         includePane.add(div);
         includePane.add(splice);
         includePane.add(nonsyn);
-        includePane.add(stop);
+        includePane.add(syn);
+        includePane.add(noncod);
         JPanel excludePane = new JPanel();
         excludePane.setLayout(new BoxLayout(excludePane, BoxLayout.Y_AXIS));
         excludePane.setBorder(BorderFactory.createLineBorder(Color.black));
         excludePane.add(dbsnp);
+        JPanel sampleFiltPane = new JPanel();
+        sampleFiltPane.setLayout(new BoxLayout(sampleFiltPane, BoxLayout.Y_AXIS));
+        sampleFiltPane.setBorder(BorderFactory.createLineBorder(Color.black));
+        sampleFiltPane.add(mendRec);
+        sampleFiltPane.add(mendDom);
+        sampleFiltPane.add(mendBad);
+        sampleFiltPane.add(uniqInAff);
         JPanel selClearPane = new JPanel();
         selClearPane.setLayout(new BoxLayout(selClearPane, BoxLayout.X_AXIS));
         selClearPane.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -211,6 +238,9 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         filtPane.add(new JLabel("Exclude:"));
         filtPane.add(excludePane);
         filtPane.add(Box.createRigidArea(new Dimension(0,15)));
+        filtPane.add(new JLabel("Include:"));
+        filtPane.add(sampleFiltPane);
+        filtPane.add(Box.createRigidArea(new Dimension(0,15)));
         filtPane.add(selClearPane);
         filtPane.add(Box.createRigidArea(new Dimension(0,10)));
         filtPane.add(apply);
@@ -218,7 +248,6 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         //Stats (line count)
         JPanel stats = new JPanel();
         JLabel linesl = new JLabel("Number of Variant Positions: ");
-        lines.setText(Integer.toString(outTable.getRowCount()));
         stats.add(linesl);
         stats.add(lines);
 
@@ -229,10 +258,11 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         tablePanel.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
         tablePanel.add(dataScroller);
         tablePanel.add(Box.createRigidArea(new Dimension(0,15)));
-        //tablePanel.add(sampleScroller);
         tablePanel.add(samplePane);
         tablePanel.add(stats);
 
+        //Listener Registration
+        //TableListener to detect data changes added in redrawOutTable(String)
         apply.addActionListener(this);
         selectAll.addActionListener(this);
         clear.addActionListener(this);
@@ -241,8 +271,16 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         exitItem.addActionListener(this);
         aboutItem.addActionListener(this);
         check.addActionListener(this);
-        //((TableSorter)outTable.getModel()).addTableModelListener(this); //probably wrong
-        ((VarTableModel)((TableSorter)outTable.getModel()).getTableModel()).addTableModelListener(this);
+
+        //Disable unused buttons
+        //if (!vdat.isMendFilt()) {
+        //    mendRec.setEnabled(false);
+        //    mendDom.setEnabled(false);
+        //    mendBad.setEnabled(false);
+        //}
+        //if (!vdat.isAffNorm()) {
+        //    uniqInAff.setEnabled(false);
+        //}
                 
         pane.add(tablePanel, BorderLayout.CENTER);
         pane.add(filtPane, BorderLayout.LINE_END);
@@ -269,10 +307,11 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             
             for (int i=0; i < cBox.length; i++) {
                 if (cBox[i].isSelected()) {
-                    //System.out.println(cb.getText());
+                    //System.out.println(cBox[i].getText());
                     mask.set(i);
                 }
             }
+
 
             if (mask.cardinality() == 0) {
                 vdat.resetOutput();
@@ -281,13 +320,15 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
                 vdat.filterData(mask);
             }
             
-            initTable(null);
+            redrawOutTable(null);
             
         }
 
         if (es == selectAll) {
             for (JCheckBox cb : cBox) {
-                cb.setSelected(true);
+                if (cb.isEnabled()) {
+                    cb.setSelected(true);
+                }
             }
         }
 
@@ -301,7 +342,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             String fName = openData();
 
             if (fName != null) {
-                initTable(fName);
+                redrawOutTable(fName);
             }
         }
 
@@ -426,9 +467,30 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     *   Initialize Table
     *  *************
     */
-    private void initTable(String newData) {
+    private void redrawOutTable(String newData) {
         if (newData != null) {
             vdat = new VarData(newData);
+
+            //Disable unused buttons
+            if (!vdat.isMendFilt()) {
+                mendRec.setEnabled(false);
+                mendDom.setEnabled(false);
+                mendBad.setEnabled(false);
+            }
+            else {
+                mendRec.setEnabled(true);
+                mendDom.setEnabled(true);
+                mendBad.setEnabled(true);
+            }
+            
+            if (!vdat.isAffNorm()) {
+                uniqInAff.setEnabled(false);
+            }
+            else {
+                uniqInAff.setEnabled(true);
+            }
+            clear.doClick();
+
         }
         sorter = new TableSorter( new VarTableModel(vdat.returnData(),
             vdat.returnDataNames(), vdat ));
@@ -439,6 +501,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         initColSizes(outTable, (VarTableModel)((TableSorter)outTable.getModel()).getTableModel() );
         lines.setText(Integer.toString(outTable.getRowCount()));
         outTable.requestFocusInWindow();
+
     }
        
 
