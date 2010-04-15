@@ -130,6 +130,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     JButton clear = new JButton("Clear All");
     JButton check = new JButton("Check");
     JButton filterFileButton = new JButton("Choose Gene File Filter");
+    JButton compoundHetButton = new JButton("View Compound Hets");
     
     String newLine = System.getProperty("line.separator");
     private String geneFile = null;
@@ -138,15 +139,225 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
 
     /* ******************
     *   Initiate GUI, instantiate VarData
+    *   Constructor using FileName
     *  ******************
     */
-
     public VarSifter(String inFile) {
         
         //initiate parent window
         super("VarSifter - " + inFile);
-        setBounds(0, (h/4), (w/2), (h/2));
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setBounds(0, (h/8), (w/2), (h/2));
+
+        if (inFile == null) {
+            //vdat = new VarData(openData());
+            inFile = openData(VARIANT_FILE);
+        }
+        else {
+            //vdat = new VarData(inFile);
+        }
+        outTable = new JTable();
+        redrawOutTable(inFile);
+        initTable();
+    }
+
+    /* *****************
+    *   Constructor using VarData object
+    *  *****************
+    */
+    public VarSifter(VarData vdatTemp) {
+        
+        super("VarSifter SubSet");
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        setBounds(w-(3* w/4), (h/2), (w/2), (h/2));
+        //setBounds(0, (h/4), (w/2), (h/2));
+        vdat = vdatTemp;
+        outTable = new JTable();
+        redrawOutTable(null);
+        initTable();
+    }
+    
+
+    /* *************
+    *   Handle Actions
+    *  *************
+    */
+    public void actionPerformed(ActionEvent e) {
+        Object es = e.getSource();
+
+        if (es == apply) {
+            
+            sorter.setTableHeader(null);    //Must do this to avoid memory leak
+            BitSet mask = new BitSet(cBox.length);
+            
+            for (int i=0; i < cBox.length; i++) {
+                if (cBox[i].isSelected()) {
+                    //System.out.println(cBox[i].getText());
+                    mask.set(i);
+                }
+            }
+
+
+            if (mask.cardinality() == 0) {
+                vdat.resetOutput();
+            }
+            else {
+                vdat.filterData(mask, geneFile);
+            }
+            
+            redrawOutTable(null);
+            
+        }
+
+        else if (es == selectAll) {
+            for (JCheckBox cb : cBox) {
+                if (cb.isEnabled()) {
+                    cb.setSelected(true);
+                }
+            }
+        }
+
+        else if (es == clear) {
+            for (JCheckBox cb : cBox) {
+                cb.setSelected(false);
+            }
+        }
+
+        else if (es == filterFileButton) {
+            geneFile = openData(GENE_FILTER_FILE);
+        }
+
+        else if (es == compoundHetButton) {
+
+            /* ************
+            *   Testing only - must replace!!!
+            *  ************
+            */
+            BitSet test = new BitSet(vdat.returnData().length);
+            for (int i=0; i < 5; i++) {
+                test.set(i);
+            }
+            test.set(6);
+            VarSifter vs = new VarSifter(vdat.returnSubVarData(vdat, test));
+        }
+
+        else if (es == openItem) {
+            String fName = openData(VARIANT_FILE);
+
+            if (fName != null) {
+                redrawOutTable(fName);
+            }
+        }
+
+        else if (es == saveAsItem) {
+            saveData(null);
+        }
+
+        else if (es == exitItem) {
+            processWindowEvent(new WindowEvent(this, WindowEvent.WINDOW_CLOSING));
+        }
+        
+        else if (es == aboutItem) {
+            JOptionPane.showMessageDialog(null, "VarSifter v" + version + "\n" +
+                "Jamie K. Teer, 2010\n\n" + govWork + "\n" + id +
+                "\n\n--------------------------------------------------------" +
+                "\n\nThis program uses the JTable sorting class TableSorter.java from Sun\n" +
+                "and must include the following copyright notification:\n\n" +
+                sunCopyright + "\n" + sunDisclaimer, "About VarSifter", JOptionPane.PLAIN_MESSAGE);
+        }
+
+        else if (es == check) {
+            int row = outTable.getSelectedRow();
+            int col = outTable.getSelectedColumn();
+            System.out.println(row + "\t" + col + "\t" + outTable.getValueAt(row,col).getClass() +
+                "\t" + outTable.getColumnClass(col));
+        }
+    }
+    
+
+    /* *************
+    *   Handle List Actions
+    *  *************
+    */
+    public void valueChanged(ListSelectionEvent e) {
+        ListSelectionModel lsme = (ListSelectionModel)e.getSource();
+
+        //May remove this test if its the only List Action
+        if ( e.getSource() == lsm && lsme.getValueIsAdjusting() == false) {
+            int rowIndex = outTable.getSelectedRow();
+            if (rowIndex < 0) {
+                rowIndex = 0;
+            }
+            int dataIndex = sorter.modelIndex(rowIndex);
+
+            sampleTable.setModel(new VarTableModel(vdat.returnSample(dataIndex),
+                vdat.returnSampleNames(), vdat ));
+            
+            outTable.setRowSelectionInterval(rowIndex,rowIndex);
+            //lastRow = rowIndex;
+            initColSizes(sampleTable, (VarTableModel)sampleTable.getModel());
+            
+            //System.out.println(outTable.getSelectedRow() + "\t" + rowIndex + "\t" + dataIndex);
+        }
+    }
+
+
+    /* *************
+    *   Handle Table Actions
+    *  *************
+    */
+    public void tableChanged(TableModelEvent e) {
+
+        //System.out.println(e.getSource().toString());
+            
+        if (e.getSource().getClass() == VarTableModel.class) {
+            int row = e.getFirstRow();
+            int lastRow = e.getLastRow();
+            int col = e.getColumn();
+            VarTableModel model = (VarTableModel)e.getSource();
+            Object data = model.getValueAt(row, col);
+            //System.out.println("Row: " + row + "/" + lastRow + " Col: " + col + " value: " + e.getType() +
+            //    " data: "+ data);
+            //System.out.println(data.getClass());
+            vdat.setData(row, col, (String)data);
+        }
+    }
+
+
+    /* *************
+    *   Sets fitted column sizes
+    *  *************
+    */
+    public void initColSizes(JTable table, VarTableModel model) {
+        
+        TableColumn col = null;
+        Component comp = null;
+        int headerWidth = 0;
+        int cellWidth = 0;
+        Object[] largestInCol = model.getLargestInColumn();
+        TableCellRenderer headerRenderer = table.getTableHeader().getDefaultRenderer();
+
+        for (int i=0; i < largestInCol.length; i++) {
+            col = table.getColumnModel().getColumn(i);
+
+            comp = headerRenderer.getTableCellRendererComponent(
+                table, col.getHeaderValue(), false, false, 0, 0);
+            headerWidth = comp.getPreferredSize().width;
+
+            comp = table.getDefaultRenderer(model.getColumnClass(i)).getTableCellRendererComponent(
+                table, largestInCol[i], false, false, 0, i);
+            cellWidth = comp.getPreferredSize().width;
+
+            col.setPreferredWidth( (Math.max(headerWidth, cellWidth) + 25) );
+        }
+    }
+
+
+    /* *************
+    *   Initialize Table
+    *  *************
+    */
+    private void initTable() {
         JPanel pane = new JPanel();
         pane.setLayout(new BorderLayout());
         pane.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
@@ -166,16 +377,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         mBar.add(fileMenu);
         mBar.add(helpMenu);
         setJMenuBar(mBar);
-
-        if (inFile == null) {
-            //vdat = new VarData(openData());
-            inFile = openData(VARIANT_FILE);
-        }
-        else {
-            //vdat = new VarData(inFile);
-        }
-        outTable = new JTable();
-        redrawOutTable(inFile);
+        
         //outTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         outTable.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
         outTable.setRowSelectionInterval(0,0);
@@ -258,6 +460,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         filtPane.add(apply);
         filtPane.add(Box.createVerticalGlue());
         filtPane.add(fFiltPane);
+        filtPane.add(compoundHetButton);
 
         //Stats (line count)
         JPanel stats = new JPanel();
@@ -286,17 +489,14 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         aboutItem.addActionListener(this);
         check.addActionListener(this);
         filterFileButton.addActionListener(this);
+        compoundHetButton.addActionListener(this);
 
         //Disable unused buttons
-        //if (!vdat.isMendFilt()) {
-        //    mendRec.setEnabled(false);
-        //    mendDom.setEnabled(false);
-        //    mendBad.setEnabled(false);
-        //}
-        //if (!vdat.isAffNorm()) {
-        //    uniqInAff.setEnabled(false);
-        //}
         filterFile.setEnabled(false);
+        if (vdat.returnParent() != null) {
+            compoundHetButton.setVisible(false);
+        }
+        maskCBox();
                 
         pane.add(tablePanel, BorderLayout.CENTER);
         pane.add(filtPane, BorderLayout.LINE_END);
@@ -304,211 +504,18 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         add(pane);
         pack();
         setVisible(true);
-
-    }
-    
-
-    /* *************
-    *   Handle Actions
-    *  *************
-    */
-
-    public void actionPerformed(ActionEvent e) {
-        Object es = e.getSource();
-
-        if (es == apply) {
-            
-            sorter.setTableHeader(null);    //Must do this to avoid memory leak
-            BitSet mask = new BitSet(cBox.length);
-            
-            for (int i=0; i < cBox.length; i++) {
-                if (cBox[i].isSelected()) {
-                    //System.out.println(cBox[i].getText());
-                    mask.set(i);
-                }
-            }
-
-
-            if (mask.cardinality() == 0) {
-                vdat.resetOutput();
-            }
-            else {
-                vdat.filterData(mask, geneFile);
-            }
-            
-            redrawOutTable(null);
-            
-        }
-
-        if (es == selectAll) {
-            for (JCheckBox cb : cBox) {
-                if (cb.isEnabled()) {
-                    cb.setSelected(true);
-                }
-            }
-        }
-
-        if (es == clear) {
-            for (JCheckBox cb : cBox) {
-                cb.setSelected(false);
-            }
-        }
-
-        if (es == filterFileButton) {
-            geneFile = openData(GENE_FILTER_FILE);
-        }
-
-        if (es == openItem) {
-            String fName = openData(VARIANT_FILE);
-
-            if (fName != null) {
-                redrawOutTable(fName);
-            }
-        }
-
-        if (es == saveAsItem) {
-            saveData(null);
-        }
-
-        if (es == exitItem) {
-            System.out.println("Bye!");
-            System.exit(0);
-        }
-        
-        if (es == aboutItem) {
-            JOptionPane.showMessageDialog(null, "VarSifter v" + version + "\n" +
-                "Jamie K. Teer, 2010\n\n" + govWork + "\n" + id +
-                "\n\n--------------------------------------------------------" +
-                "\n\nThis program uses the JTable sorting class TableSorter.java from Sun\n" +
-                "and must include the following copyright notification:\n\n" +
-                sunCopyright + "\n" + sunDisclaimer, "About VarSifter", JOptionPane.PLAIN_MESSAGE);
-        }
-
-        
-        if (es == check) {
-            int row = outTable.getSelectedRow();
-            int col = outTable.getSelectedColumn();
-            System.out.println(row + "\t" + col + "\t" + outTable.getValueAt(row,col).getClass() +
-                "\t" + outTable.getColumnClass(col));
-        }
-    }
-    
-
-    /* *************
-    *   Handle List Actions
-    *  *************
-    */
-
-    public void valueChanged(ListSelectionEvent e) {
-        ListSelectionModel lsme = (ListSelectionModel)e.getSource();
-
-        //May remove this test if its the only List Action
-        if ( e.getSource() == lsm && lsme.getValueIsAdjusting() == false) {
-            int rowIndex = outTable.getSelectedRow();
-            if (rowIndex < 0) {
-                rowIndex = 0;
-            }
-            int dataIndex = sorter.modelIndex(rowIndex);
-
-            sampleTable.setModel(new VarTableModel(vdat.returnSample(dataIndex),
-                vdat.returnSampleNames(), vdat ));
-            
-            outTable.setRowSelectionInterval(rowIndex,rowIndex);
-            //lastRow = rowIndex;
-            initColSizes(sampleTable, (VarTableModel)sampleTable.getModel());
-            
-            //System.out.println(outTable.getSelectedRow() + "\t" + rowIndex + "\t" + dataIndex);
-        }
     }
 
 
-    /* *************
-    *   Handle Table Actions
-    *  *************
-    */
-    public void tableChanged(TableModelEvent e) {
-
-        //System.out.println(e.getSource().toString());
-            
-        if (e.getSource().getClass() == VarTableModel.class) {
-            int row = e.getFirstRow();
-            int lastRow = e.getLastRow();
-            int col = e.getColumn();
-            VarTableModel model = (VarTableModel)e.getSource();
-            Object data = model.getValueAt(row, col);
-            //System.out.println("Row: " + row + "/" + lastRow + " Col: " + col + " value: " + e.getType() +
-            //    " data: "+ data);
-            //System.out.println(data.getClass());
-            vdat.setData(row, col, (String)data);
-        }
-
-        //if (e.getSource().getClass() == TableSorter.class) {
-        //    int row = e.getFirstRow();
-        //    int lastRow = e.getLastRow();
-        //    int col = e.getColumn();
-        //    TableSorter model = (TableSorter)e.getSource();
-        //    //Object data = model.getValueAt(row, col);
-        //    System.out.println("Row: " + row + "/" + lastRow + " Col: " + col + " value: " + e.getType());
-        //    System.out.println(model.getSortingStatus(13));
-        //}
-    }
-
 
     /* *************
-    *   Sets fitted column sizes
-    *  *************
-    */
-
-    public void initColSizes(JTable table, VarTableModel model) {
-        
-        TableColumn col = null;
-        Component comp = null;
-        int headerWidth = 0;
-        int cellWidth = 0;
-        Object[] largestInCol = model.getLargestInColumn();
-        TableCellRenderer headerRenderer = table.getTableHeader().getDefaultRenderer();
-
-        for (int i=0; i < largestInCol.length; i++) {
-            col = table.getColumnModel().getColumn(i);
-
-            comp = headerRenderer.getTableCellRendererComponent(
-                table, col.getHeaderValue(), false, false, 0, 0);
-            headerWidth = comp.getPreferredSize().width;
-
-            comp = table.getDefaultRenderer(model.getColumnClass(i)).getTableCellRendererComponent(
-                table, largestInCol[i], false, false, 0, i);
-            cellWidth = comp.getPreferredSize().width;
-
-            col.setPreferredWidth( (Math.max(headerWidth, cellWidth) + 25) );
-        }
-    }
-
-    /* *************
-    *   Initialize Table
+    *   Redraw Table
     *  *************
     */
     private void redrawOutTable(String newData) {
         if (newData != null) {
             vdat = new VarData(newData);
-
-            //Disable unused buttons
-            if (!vdat.isMendFilt()) {
-                mendRec.setEnabled(false);
-                mendDom.setEnabled(false);
-                mendBad.setEnabled(false);
-            }
-            else {
-                mendRec.setEnabled(true);
-                mendDom.setEnabled(true);
-                mendBad.setEnabled(true);
-            }
-            
-            if (!vdat.isAffNorm()) {
-                uniqInAff.setEnabled(false);
-            }
-            else {
-                uniqInAff.setEnabled(true);
-            }
+            maskCBox();
             clear.doClick();
 
         }
@@ -523,6 +530,32 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         outTable.requestFocusInWindow();
 
     }
+
+
+    /* *************
+    *   Disable unused CheckBoxes
+    *  *************
+    */
+    private void maskCBox() {
+        if (!vdat.isMendFilt()) {
+            mendRec.setEnabled(false);
+            mendDom.setEnabled(false);
+            mendBad.setEnabled(false);
+        }
+        else {
+            mendRec.setEnabled(true);
+            mendDom.setEnabled(true);
+            mendBad.setEnabled(true);
+        }
+        
+        if (!vdat.isAffNorm()) {
+            uniqInAff.setEnabled(false);
+        }
+        else {
+            uniqInAff.setEnabled(true);
+        }
+
+    }      
        
 
 
@@ -642,10 +675,11 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
                 VarSifter v;
                 if (args.length > 0) {
                     v = new VarSifter(args[0]);
+                    //VarData vd = new VarData(args[0]);
+                    //v = new VarSifter(vd);
                 }
                 else {
-                    //v = new VarSifter("test_data.txt");
-                    v = new VarSifter(null);
+                    v = new VarSifter((String)null);
                 }
                 //System.out.println("Width: " + v.w + "\tHeight: " + v.h);
             }

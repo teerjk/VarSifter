@@ -6,8 +6,8 @@ import java.util.HashSet;
 
 public class VarData {
     
-    int H_LINES  = 1;   //Number of header lines
-    int S_FIELDS = 3;   //Number of columns for each sample
+    final int H_LINES  = 1;   //Number of header lines
+    final int S_FIELDS = 3;   //Number of columns for each sample
 
     private String[][] data;            // Fields: [line][var_annotations]
     private String[][] outData;         // Gets returned (can be filtered)
@@ -19,9 +19,11 @@ public class VarData {
     private String[] sampleNames;
     private BitSet dataIsIncluded;      // A mask used to filter data, samples
     private BitSet dataIsEditable = new BitSet();      // Which data elements can be edited
-    public HashMap<String, Integer> dataTypeAt = new HashMap<String, Integer>();
+    private HashMap<String, Integer> dataTypeAt = new HashMap<String, Integer>();
+    //public HashMap<String, Integer> dataTypeAt = new HashMap<String, Integer>();
     private int[] affAt;
     private int[] normAt;
+    private VarData parentVarData = null;
 
      /*    
     *    Constructor reads in the file specified by full path in String inFile.
@@ -155,6 +157,43 @@ public class VarData {
         //System.out.println((System.currentTimeMillis() - time));
                 
     }
+
+    /* ***********
+    *   Constructor for making subsetted copies using 
+    *   the factory method returnSubVarData
+    *  ***********
+    */
+    private VarData(String[][] dataIn,
+                    String[] dataNamesOrigIn,
+                    String[] dataNamesIn,
+                    String[][][] samplesIn,
+                    String[] sampleNamesOrigIn,
+                    String[] sampleNamesIn,
+                    BitSet dataIsEditableIn,
+                    HashMap<String, Integer> dataTypeAtIn,
+                    int[] affAtIn,
+                    int[] normAtIn,
+                    VarData parentVarDataIn
+                    ) {
+        data = dataIn;
+        dataNamesOrig = dataNamesOrigIn;
+        dataNames = dataNamesIn;
+        samples = samplesIn;
+        sampleNamesOrig = sampleNamesOrigIn;
+        sampleNames = sampleNamesIn;
+        dataIsEditable = (BitSet)dataIsEditableIn.clone();
+        dataTypeAt = (HashMap<String, Integer>)dataTypeAtIn.clone();
+        affAt = affAtIn;
+        normAt = normAtIn;
+        parentVarData = parentVarDataIn;
+
+        dataIsIncluded = new BitSet(data.length);
+
+        resetOutput();
+
+    }
+
+
 
     /* ***********
     *   Returns 2d array of all data
@@ -360,6 +399,15 @@ public class VarData {
 
 
     /* **********
+    *   Return the parent VarData or null if this is not a copy
+    *  **********
+    */
+    public VarData returnParent() {
+        return parentVarData;
+    }
+
+
+    /* **********
     *   Get a HashSet from a file of gene names
     *  **********
     */
@@ -403,6 +451,36 @@ public class VarData {
     
     public String[] returnSampleNames() {
         return sampleNames;
+    }
+
+
+    /* **********
+    *   Returns a new Object with a subset of the data
+    *  **********
+    */
+    public VarData returnSubVarData(VarData vdatIn, BitSet isInSubset) {
+        String[][] subsetData = new String[isInSubset.cardinality()][data[0].length];
+        String[][][] subsetSamples = new String[subsetData.length][][];
+        int lastPos = 0;
+        for (int i=0; i < data.length; i++) {
+            if (isInSubset.get(i)) {
+                System.arraycopy(data[i], 0, subsetData[lastPos], 0, data[i].length);
+                subsetSamples[lastPos] = samples[i];
+                lastPos++;
+            }
+        }
+        return new VarData(subsetData,
+                           dataNamesOrig,
+                           dataNames,
+                           subsetSamples,
+                           sampleNamesOrig,
+                           sampleNames,
+                           dataIsEditable,
+                           dataTypeAt,
+                           affAt,
+                           normAt,
+                           vdatIn
+                           );
     }
 
 

@@ -7,6 +7,9 @@ JAR_FILE:=VarSifter.jar
 compile:
 	${JAVAC5} VarSifter.java
 
+compile_check:
+	${JAVAC5} -Xlint:unchecked VarSifter.java
+
 compile6:
 	${JAVAC6} VarSifter.java
 
