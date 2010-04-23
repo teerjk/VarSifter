@@ -69,12 +69,12 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
 
     final int VARIANT_FILE = 0;
     final int GENE_FILTER_FILE = 1;
+    final int MAX_COLUMN_SIZE = 150;
 
 
     final Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
     final int w = (int)dim.getWidth();
     final int h = (int)dim.getHeight();
-
 
     // Test using object[][], titles[]
     private VarData vdat = null;
@@ -134,7 +134,6 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     private JButton compoundHetButton = new JButton("View Compound Hets");
 
     private JSpinner minAffSpinner = new JSpinner();
-    private ArrayList<Integer> affSeries = new ArrayList<Integer>();
     
     final String newLine = System.getProperty("line.separator");
     private String geneFile = null;
@@ -351,10 +350,16 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             comp = headerRenderer.getTableCellRendererComponent(
                 table, col.getHeaderValue(), false, false, 0, 0);
             headerWidth = comp.getPreferredSize().width;
+            if (headerWidth > MAX_COLUMN_SIZE) {
+                headerWidth = MAX_COLUMN_SIZE;
+            }
 
             comp = table.getDefaultRenderer(model.getColumnClass(i)).getTableCellRendererComponent(
                 table, largestInCol[i], false, false, 0, i);
             cellWidth = comp.getPreferredSize().width;
+            if (cellWidth > MAX_COLUMN_SIZE) {
+                cellWidth = MAX_COLUMN_SIZE;
+            }
 
             col.setPreferredWidth( (Math.max(headerWidth, cellWidth) + 25) );
         }
@@ -483,7 +488,8 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         JPanel tablePanel = new JPanel();
         tablePanel.setLayout(new BoxLayout(tablePanel, BoxLayout.Y_AXIS));
         tablePanel.setPreferredSize(new Dimension((w/2), (h/3)));
-        tablePanel.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
+        //tablePanel.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
+        tablePanel.setBorder(BorderFactory.createEmptyBorder(0,0,0,10));
         tablePanel.add(dataScroller);
         tablePanel.add(Box.createRigidArea(new Dimension(0,15)));
         tablePanel.add(samplePane);
@@ -577,12 +583,12 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     */    
     private void drawMinAffSpinner() {
         if (vdat.countAffNorm() > 0) {
-            affSeries.clear();
-            for (int i=0; i<vdat.countAffNorm(); i++) {
-                affSeries.add(i+1);
-            }
-            minAffSpinner.setModel(new SpinnerListModel(affSeries));
+            minAffSpinner.setModel(new SpinnerNumberModel(1, 1, vdat.countAffNorm(), 1));
         }
+        Dimension d = minAffSpinner.getPreferredSize();
+        d.width = 60;
+        minAffSpinner.setPreferredSize(d);
+        minAffSpinner.setMaximumSize(minAffSpinner.getPreferredSize());
     }
        
 
