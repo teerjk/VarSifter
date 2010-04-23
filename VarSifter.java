@@ -4,6 +4,7 @@ import javax.swing.event.*;
 import javax.swing.table.*;
 import java.awt.event.*;
 import java.util.BitSet;
+import java.util.ArrayList;
 import java.io.*;
 import components.TableSorter;
 
@@ -16,7 +17,7 @@ import components.TableSorter;
 
 public class VarSifter extends JFrame implements ListSelectionListener, ActionListener, TableModelListener {
     
-    final String version = "0.3";
+    final String version = "0.3a";
     final String id = "$Id$";
 
     final String govWork = "PUBLIC DOMAIN NOTICE\n" +
@@ -70,28 +71,28 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     final int GENE_FILTER_FILE = 1;
 
 
-    Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
-    int w = (int)dim.getWidth();
-    int h = (int)dim.getHeight();
+    final Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
+    final int w = (int)dim.getWidth();
+    final int h = (int)dim.getHeight();
 
 
     // Test using object[][], titles[]
-    VarData vdat = null;
-    JTable outTable;
-    TableSorter sorter;
-    JTable sampleTable;
-    JScrollPane dataScroller;
-    JScrollPane sampleScroller;
-    ListSelectionModel lsm;
-    JLabel lines = new JLabel();
+    private VarData vdat = null;
+    private JTable outTable;
+    private TableSorter sorter;
+    private JTable sampleTable;
+    private JScrollPane dataScroller;
+    private JScrollPane sampleScroller;
+    private ListSelectionModel lsm;
+    private JLabel lines = new JLabel();
 
-    JCheckBox stop = new JCheckBox("Stop");
-    JCheckBox div = new JCheckBox("DIV");
-    JCheckBox splice = new JCheckBox("Splice-Site");
-    JCheckBox nonsyn = new JCheckBox("Non-synonymous");
-    JCheckBox syn = new JCheckBox("Synonymous");
-    JCheckBox noncod = new JCheckBox("Non-Coding");
-    JCheckBox dbsnp = new JCheckBox("dbSNP130");
+    private JCheckBox stop = new JCheckBox("Stop");
+    private JCheckBox div = new JCheckBox("DIV");
+    private JCheckBox splice = new JCheckBox("Splice-Site");
+    private JCheckBox nonsyn = new JCheckBox("Non-synonymous");
+    private JCheckBox syn = new JCheckBox("Synonymous");
+    private JCheckBox noncod = new JCheckBox("Non-Coding");
+    private JCheckBox dbsnp = new JCheckBox("dbSNP130");
 
     //JCheckBox[] cBox = { new JCheckBox("DIV"),
     //                     new JCheckBox("Splice-Site"),
@@ -100,39 +101,42 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     //                     new JCheckBox("Stop")
     //                   };
     
-    JCheckBox mendRec = new JCheckBox("Hom. Recessive");
-    JCheckBox mendDom = new JCheckBox("Dominant");
-    JCheckBox mendBad = new JCheckBox("Inconsistent");
-    JCheckBox uniqInAff = new JCheckBox("Aff different from Norm");
-    JCheckBox filterFile = new JCheckBox("No Gene file selected");
+    private JCheckBox mendRec = new JCheckBox("Hom. Recessive");
+    private JCheckBox mendDom = new JCheckBox("Dominant");
+    private JCheckBox mendBad = new JCheckBox("Inconsistent");
+    private JCheckBox uniqInAff = new JCheckBox("Aff different from Norm");
+    private JCheckBox filterFile = new JCheckBox("No Gene file selected");
 
-    JCheckBox[] cBox = { stop,
-                         div, 
-                         splice, 
-                         nonsyn, 
-                         syn,
-                         noncod,
-                         dbsnp, 
-                         mendRec,
-                         mendDom,
-                         mendBad,
-                         uniqInAff,
-                         filterFile
-                       };
+    private JCheckBox[] cBox = { stop,
+                                 div, 
+                                 splice, 
+                                 nonsyn, 
+                                 syn,
+                                 noncod,
+                                 dbsnp, 
+                                 mendRec,
+                                 mendDom,
+                                 mendBad,
+                                 uniqInAff,
+                                 filterFile
+                               };
 
-    JMenuItem openItem;
-    JMenuItem saveAsItem;
-    JMenuItem exitItem;
-    JMenuItem aboutItem;
+    private JMenuItem openItem;
+    private JMenuItem saveAsItem;
+    private JMenuItem exitItem;
+    private JMenuItem aboutItem;
+
+    private JButton apply = new JButton("Apply Filter");
+    private JButton selectAll = new JButton("Select All");
+    private JButton clear = new JButton("Clear All");
+    private JButton check = new JButton("Check");
+    private JButton filterFileButton = new JButton("Choose Gene File Filter");
+    private JButton compoundHetButton = new JButton("View Compound Hets");
+
+    private JSpinner minAffSpinner = new JSpinner();
+    private ArrayList<Integer> affSeries = new ArrayList<Integer>();
     
-    JButton apply = new JButton("Apply Filter");
-    JButton selectAll = new JButton("Select All");
-    JButton clear = new JButton("Clear All");
-    JButton check = new JButton("Check");
-    JButton filterFileButton = new JButton("Choose Gene File Filter");
-    JButton compoundHetButton = new JButton("View Compound Hets");
-    
-    String newLine = System.getProperty("line.separator");
+    final String newLine = System.getProperty("line.separator");
     private String geneFile = null;
 
     //int lastRow = 0;    //Last row selected
@@ -202,7 +206,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
                 vdat.resetOutput();
             }
             else {
-                vdat.filterData(mask, geneFile);
+                vdat.filterData(mask, geneFile, ((Integer)minAffSpinner.getValue()).intValue());
             }
             
             redrawOutTable(null);
@@ -224,7 +228,11 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         }
 
         else if (es == filterFileButton) {
-            geneFile = openData(GENE_FILTER_FILE);
+            
+            String temp = openData(GENE_FILTER_FILE);
+            if (temp != null) {
+                geneFile = temp;
+            }
         }
 
         else if (es == compoundHetButton) {
@@ -377,6 +385,8 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         mBar.add(fileMenu);
         mBar.add(helpMenu);
         setJMenuBar(mBar);
+
+        drawMinAffSpinner();
         
         //outTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         outTable.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
@@ -435,6 +445,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         sampleFiltPane.add(mendDom);
         sampleFiltPane.add(mendBad);
         sampleFiltPane.add(uniqInAff);
+        sampleFiltPane.add(minAffSpinner);
         JPanel selClearPane = new JPanel();
         selClearPane.setLayout(new BoxLayout(selClearPane, BoxLayout.X_AXIS));
         selClearPane.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -517,6 +528,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             vdat = new VarData(newData);
             maskCBox();
             clear.doClick();
+            drawMinAffSpinner();
 
         }
         sorter = new TableSorter( new VarTableModel(vdat.returnData(),
@@ -548,14 +560,30 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             mendBad.setEnabled(true);
         }
         
-        if (!vdat.isAffNorm()) {
+        if (vdat.countAffNorm() == 0) {
             uniqInAff.setEnabled(false);
+            minAffSpinner.setEnabled(false);
         }
         else {
             uniqInAff.setEnabled(true);
+            minAffSpinner.setEnabled(true);
         }
 
     }      
+
+    /* *************
+    *   initialize  minAffSpinner
+    *  *************
+    */    
+    private void drawMinAffSpinner() {
+        if (vdat.countAffNorm() > 0) {
+            affSeries.clear();
+            for (int i=0; i<vdat.countAffNorm(); i++) {
+                affSeries.add(i+1);
+            }
+            minAffSpinner.setModel(new SpinnerListModel(affSeries));
+        }
+    }
        
 
 

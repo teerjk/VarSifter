@@ -220,7 +220,7 @@ public class VarData {
     *   Filter mutation type
     *  ***********
     */
-    public void filterData(BitSet mask, String geneFile) {
+    public void filterData(BitSet mask, String geneFile, int affMin) {
         dataIsIncluded.clear();
         BitSet temp = new BitSet(data.length);
         BitSet mendRecTemp = new BitSet(data.length);
@@ -283,13 +283,15 @@ public class VarData {
                     String normTemp = samples[i][normAt[j]][0];
                     if (!affTemp.equals(normTemp) &&
                         !affTemp.equals("NA") &&
-                        !normTemp.equals("NA") ) {
+                        !normTemp.equals("NA") &&
+                        Integer.parseInt(samples[i][affAt[j]][1]) >= 10 &&
+                        Integer.parseInt(samples[i][normAt[j]][1]) >= 10) {
 
                         count++;
                     }
                 }
                 //if (count == affAt.length) {
-                if (count == 1) {
+                if (count >= affMin) {
                     sampleTemp.set(i);
                 }
             }
@@ -357,11 +359,17 @@ public class VarData {
 
 
     /* ************
-    *   Returns true if we have normal affected pairs
+    *   Returns number of normal affected pairs or null
     *  ************
     */
-    public boolean isAffNorm() {
-        return (affAt != null && normAt != null);
+    public int countAffNorm() {
+        //return (affAt != null && normAt != null);
+        if (affAt != null && normAt != null) {
+            return affAt.length;
+        }
+        else {
+            return 0;
+        }
     }
 
     /* ************
