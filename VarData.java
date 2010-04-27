@@ -222,12 +222,10 @@ public class VarData {
     */
     public void filterData(BitSet mask, String geneFile, int affMin) {
         dataIsIncluded.clear();
-        BitSet temp = new BitSet(data.length);
-        BitSet mendRecTemp = new BitSet(data.length);
-        BitSet mendDomTemp = new BitSet(data.length);
-        BitSet mendBadTemp = new BitSet(data.length);
-        BitSet sampleTemp = new BitSet(data.length);
-        BitSet geneTemp = new BitSet(data.length);
+        final int TOTAL_FILTERS = 6;
+        final int TOTAL_TYPE_FILTERS = 7;
+        BitSet[] filterSet = new BitSet[TOTAL_FILTERS];
+        
         int typeIndex = dataTypeAt.get("type");
         int dbSNPIndex = dataTypeAt.get("RS#");
         int mendRecIndex = (dataTypeAt.containsKey("MendHomRec")) ? dataTypeAt.get("MendHomRec") : -1;
@@ -235,8 +233,15 @@ public class VarData {
         int mendBadIndex = (dataTypeAt.containsKey("MendInconsis")) ? dataTypeAt.get("MendInconsis") : -1;
         int geneIndex = dataTypeAt.get("refseq");
         HashSet<String> geneSet = new HashSet<String>();
+
+        for (int i=0; i < TOTAL_FILTERS; i++) {
+            filterSet[i] = new BitSet(data.length + 1);
+            if (mask.get(i + TOTAL_TYPE_FILTERS)) {
+                filterSet[i].set(data.length + 1);
+            }
+        }
         
-        if (mask.get(11)) {
+        if (mask.get(12)) {
             if (geneFile != null) {
                 geneSet = returnGeneSet(geneFile);
             }
@@ -252,31 +257,32 @@ public class VarData {
                  (mask.get(2) && data[i][typeIndex].equals("Splice-site")    ) ||
                  (mask.get(3) && data[i][typeIndex].equals("Non-synonymous") ) ||
                  (mask.get(4) && data[i][typeIndex].equals("Synonymous")     ) ||
-                 (mask.get(5) && data[i][typeIndex].equals("NC")             ) 
+                 (mask.get(5) && data[i][typeIndex].equals("NC")             ) ||
+                 (mask.get(6) && data[i][typeIndex].contains("UTR")          )
                 ) {
 
                 dataIsIncluded.set(i);
             }
 
-            if ( (mask.get(6) && data[i][dbSNPIndex].equals("-")             )
+            if ( (mask.get(7) && data[i][dbSNPIndex].equals("-")             )
                 ) {
-                temp.set(i);
+                filterSet[0].set(i);
             }
             
-            if (mask.get(7) && Integer.parseInt(data[i][mendRecIndex]) > 0) {
-                mendRecTemp.set(i);
+            if (mask.get(8) && Integer.parseInt(data[i][mendRecIndex]) > 0) {
+                filterSet[1].set(i);
             }
             
-            if (mask.get(8) && Integer.parseInt(data[i][mendDomIndex]) > 0) {
-                mendDomTemp.set(i);
+            if (mask.get(9) && Integer.parseInt(data[i][mendDomIndex]) > 0) {
+                filterSet[2].set(i);
             }
 
-            if (mask.get(9) && Integer.parseInt(data[i][mendBadIndex]) > 0) {
-                mendBadTemp.set(i);
+            if (mask.get(10) && Integer.parseInt(data[i][mendBadIndex]) > 0) {
+                filterSet[3].set(i);
             }
                 
 
-            if (mask.get(10)) {
+            if (mask.get(11)) {
                 int count = 0;
                 for (int j=0; j < affAt.length; j++) {
                     String affTemp = samples[i][affAt[j]][0];
@@ -292,34 +298,21 @@ public class VarData {
                 }
                 //if (count == affAt.length) {
                 if (count >= affMin) {
-                    sampleTemp.set(i);
+                    filterSet[4].set(i);
                 }
             }
 
-            if (mask.get(11) && geneSet.contains(data[i][geneIndex])) {
-                geneTemp.set(i);
+            if (mask.get(12) && geneSet.contains(data[i][geneIndex])) {
+                filterSet[5].set(i);
             }
                 
                         
         }
         
-        if (! temp.isEmpty()) {
-            dataIsIncluded.and(temp);
-        }
-        if (! sampleTemp.isEmpty()) {
-            dataIsIncluded.and(sampleTemp);
-        }
-        if (! mendRecTemp.isEmpty()) {
-            dataIsIncluded.and(mendRecTemp);
-        }
-        if (! mendDomTemp.isEmpty()) {
-            dataIsIncluded.and(mendDomTemp);
-        }
-        if (! mendBadTemp.isEmpty()) {
-            dataIsIncluded.and(mendBadTemp);
-        }
-        if (! geneTemp.isEmpty()) {
-            dataIsIncluded.and(geneTemp);
+        for (BitSet fs : filterSet) {
+            if (fs.get(data.length + 1)) {
+                dataIsIncluded.and(fs);
+            }
         }
         filterOutput();
     }
@@ -374,6 +367,8 @@ public class VarData {
 
     /* ************
     *   Returns true if we have mendelian filter columns
+    *   !!!!!!  Really only checks for "MendHomRec", which isn't right.!!!!
+    *   !!!!!!  Deprecated !!!!!!!
     *  ************
     */
     public boolean isMendFilt() {
@@ -406,6 +401,15 @@ public class VarData {
     }
 
 
+    /* **********
+    *   Return a clone of dataTypeAt
+    *  **********
+    */
+    public HashMap<String, Integer> returnDataTypeAt() {
+        return (HashMap<String, Integer>)dataTypeAt.clone();
+    }
+
+    
     /* **********
     *   Return the parent VarData or null if this is not a copy
     *  **********

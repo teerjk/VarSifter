@@ -6,6 +6,7 @@ import java.awt.event.*;
 import java.util.BitSet;
 import java.util.ArrayList;
 import java.io.*;
+import java.util.HashMap;
 import components.TableSorter;
 
 /* ****************
@@ -92,6 +93,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     private JCheckBox nonsyn = new JCheckBox("Non-synonymous");
     private JCheckBox syn = new JCheckBox("Synonymous");
     private JCheckBox noncod = new JCheckBox("Non-Coding");
+    private JCheckBox utr = new JCheckBox("UTR");
     private JCheckBox dbsnp = new JCheckBox("dbSNP130");
 
     //JCheckBox[] cBox = { new JCheckBox("DIV"),
@@ -113,6 +115,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
                                  nonsyn, 
                                  syn,
                                  noncod,
+                                 utr,
                                  dbsnp, 
                                  mendRec,
                                  mendDom,
@@ -134,6 +137,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     private JButton compoundHetButton = new JButton("View Compound Hets");
 
     private JSpinner minAffSpinner = new JSpinner();
+    private JLabel affSpinnerLabel = new JLabel("Diff. in at least:");
     
     final String newLine = System.getProperty("line.separator");
     private String geneFile = null;
@@ -436,6 +440,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         includePane.add(stop);
         includePane.add(div);
         includePane.add(splice);
+        includePane.add(utr);
         includePane.add(nonsyn);
         includePane.add(syn);
         includePane.add(noncod);
@@ -450,7 +455,16 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         sampleFiltPane.add(mendDom);
         sampleFiltPane.add(mendBad);
         sampleFiltPane.add(uniqInAff);
-        sampleFiltPane.add(minAffSpinner);
+        JPanel affSpinnerPane = new JPanel();
+        affSpinnerPane.setLayout(new BoxLayout(affSpinnerPane, BoxLayout.X_AXIS));
+        affSpinnerPane.setAlignmentX(Component.LEFT_ALIGNMENT);
+        //affSpinnerPane.add(Box.createHorizontalGlue());
+        affSpinnerPane.add(Box.createRigidArea(new Dimension(15,0)));
+        //affSpinnerPane.add(new JLabel("Diff. in at least:"));
+        affSpinnerPane.add(affSpinnerLabel);
+        affSpinnerPane.add(minAffSpinner);
+        sampleFiltPane.add(affSpinnerPane);
+        
         JPanel selClearPane = new JPanel();
         selClearPane.setLayout(new BoxLayout(selClearPane, BoxLayout.X_AXIS));
         selClearPane.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -555,24 +569,38 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     *  *************
     */
     private void maskCBox() {
-        if (!vdat.isMendFilt()) {
-            mendRec.setEnabled(false);
-            mendDom.setEnabled(false);
-            mendBad.setEnabled(false);
+        HashMap<String, Integer> typeMap = vdat.returnDataTypeAt();
+        if (typeMap.containsKey("MendHomRec")) {
+            mendRec.setEnabled(true);
         }
         else {
-            mendRec.setEnabled(true);
+            mendRec.setEnabled(false);
+        }
+        
+        if (typeMap.containsKey("MendDom")) {
             mendDom.setEnabled(true);
+        }
+        else {
+            mendDom.setEnabled(false);
+        }
+        
+        if (typeMap.containsKey("MendInconsis")) {
             mendBad.setEnabled(true);
         }
+        else {
+            mendBad.setEnabled(false);
+        }
+
         
         if (vdat.countAffNorm() == 0) {
             uniqInAff.setEnabled(false);
             minAffSpinner.setEnabled(false);
+            affSpinnerLabel.setEnabled(false);
         }
         else {
             uniqInAff.setEnabled(true);
             minAffSpinner.setEnabled(true);
+            affSpinnerLabel.setEnabled(true);
         }
 
     }      
