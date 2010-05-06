@@ -8,6 +8,8 @@ public class VarData {
     
     final int H_LINES  = 1;   //Number of header lines
     final int S_FIELDS = 3;   //Number of columns for each sample
+    
+    final String[] geneDataHeaders = {"refseq", "Var Count"};
 
     private String[][] data;            // Fields: [line][var_annotations]
     private String[][] outData;         // Gets returned (can be filtered)
@@ -220,11 +222,15 @@ public class VarData {
     *   Filter mutation type
     *  ***********
     */
-    public void filterData(BitSet mask, String geneFile, int affMin) {
-        dataIsIncluded.clear();
-        final int TOTAL_FILTERS = 6;
+    public void filterData(BitSet mask, String geneFile, int affMin, String geneQuery) {
+        dataIsIncluded.set(0,data.length);
+        //dataIsIncluded.clear();
+        final int TOTAL_FILTERS = 6 + 1; //Number of non-type filters plus 1 (all type filters)
         final int TOTAL_TYPE_FILTERS = 7;
         BitSet[] filterSet = new BitSet[TOTAL_FILTERS];
+        BitSet geneFilter = new BitSet(data.length);
+        geneFilter.set(0, data.length);
+        Pattern geneQueryPat = null;
         
         int typeIndex = dataTypeAt.get("type");
         int dbSNPIndex = dataTypeAt.get("RS#");
@@ -234,12 +240,24 @@ public class VarData {
         int geneIndex = dataTypeAt.get("refseq");
         HashSet<String> geneSet = new HashSet<String>();
 
-        for (int i=0; i < TOTAL_FILTERS; i++) {
+        //Set up type filters (filterSet[0], as all types are folded into one filter)
+        filterSet[0] = new BitSet(data.length + 1);
+        for (int i=0; i < TOTAL_TYPE_FILTERS; i++) {
+            if (mask.get(i)) {
+                filterSet[0].set(data.length + 1);
+                break;
+            }
+        }
+        
+        //Set up remaining filters (filterSet[x>0])
+        for (int i=1; i < TOTAL_FILTERS; i++) {
             filterSet[i] = new BitSet(data.length + 1);
-            if (mask.get(i + TOTAL_TYPE_FILTERS)) {
+            if (mask.get(i + TOTAL_TYPE_FILTERS - 1)) {  //must have -1 since mask is 0-based
                 filterSet[i].set(data.length + 1);
             }
         }
+        
+        //Start filtering!
         
         if (mask.get(12)) {
             if (geneFile != null) {
@@ -248,6 +266,11 @@ public class VarData {
             else {
                 System.out.println("!!! geneFile not defined, so can't use it to filter !!!");
             }
+        }
+
+        if (geneQuery != null) {
+            geneQueryPat = Pattern.compile(geneQuery, Pattern.CASE_INSENSITIVE);
+            geneFilter.clear();
         }
         
         for (int i = 0; i < data.length; i++) {
@@ -261,24 +284,24 @@ public class VarData {
                  (mask.get(6) && data[i][typeIndex].contains("UTR")          )
                 ) {
 
-                dataIsIncluded.set(i);
+                filterSet[0].set(i);
             }
 
             if ( (mask.get(7) && data[i][dbSNPIndex].equals("-")             )
                 ) {
-                filterSet[0].set(i);
-            }
-            
-            if (mask.get(8) && Integer.parseInt(data[i][mendRecIndex]) > 0) {
                 filterSet[1].set(i);
             }
             
-            if (mask.get(9) && Integer.parseInt(data[i][mendDomIndex]) > 0) {
+            if (mask.get(8) && Integer.parseInt(data[i][mendRecIndex]) > 0) {
                 filterSet[2].set(i);
+            }
+            
+            if (mask.get(9) && Integer.parseInt(data[i][mendDomIndex]) > 0) {
+                filterSet[3].set(i);
             }
 
             if (mask.get(10) && Integer.parseInt(data[i][mendBadIndex]) > 0) {
-                filterSet[3].set(i);
+                filterSet[4].set(i);
             }
                 
 
@@ -298,12 +321,19 @@ public class VarData {
                 }
                 //if (count == affAt.length) {
                 if (count >= affMin) {
-                    filterSet[4].set(i);
+                    filterSet[5].set(i);
                 }
             }
 
             if (mask.get(12) && geneSet.contains(data[i][geneIndex])) {
-                filterSet[5].set(i);
+                filterSet[6].set(i);
+            }
+
+            if (geneQuery != null) {
+                if ((geneQueryPat.matcher(data[i][geneIndex])).find()) {
+                    //System.out.println(i + "\t" + data[i][geneIndex]);
+                    geneFilter.set(i);
+                }
             }
                 
                         
@@ -314,6 +344,7 @@ public class VarData {
                 dataIsIncluded.and(fs);
             }
         }
+        dataIsIncluded.and(geneFilter);
         filterOutput();
     }
 
@@ -420,6 +451,41 @@ public class VarData {
 
 
     /* **********
+    *   Return data collapsed on gene name
+    *  **********
+    */
+    public String[][] returnGeneData() {
+        String[][] tempGeneData;
+        HashMap<String, Integer> tempGeneHash = new HashMap<String, Integer>();
+
+        for (int i=0; i<outData.length; i++) {
+            String geneName = outData[i][dataTypeAt.get("refseq")];
+            if (tempGeneHash.containsKey(geneName)) {
+                tempGeneHash.put(geneName, tempGeneHash.get(geneName) + 1);
+            }
+            else {
+                tempGeneHash.put(geneName, 1);
+            }
+        }
+
+        tempGeneData = new String[tempGeneHash.size()][geneDataHeaders.length];
+        int i = 0;
+        for (String j : tempGeneHash.keySet()) {
+            tempGeneData[i][0] = j;
+            tempGeneData[i][1] = tempGeneHash.get(j).toString();
+            i++;
+        }
+        return tempGeneData;
+    }
+
+    public String[] returnGeneNames() {
+        return geneDataHeaders;
+    }
+
+
+
+
+    /* **********
     *   Get a HashSet from a file of gene names
     *  **********
     */
@@ -471,6 +537,9 @@ public class VarData {
     *  **********
     */
     public VarData returnSubVarData(VarData vdatIn, BitSet isInSubset) {
+        if (isInSubset == null) {
+            isInSubset = dataIsIncluded;
+        }
         String[][] subsetData = new String[isInSubset.cardinality()][data[0].length];
         String[][][] subsetSamples = new String[subsetData.length][][];
         int lastPos = 0;

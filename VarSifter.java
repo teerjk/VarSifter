@@ -18,7 +18,7 @@ import components.TableSorter;
 
 public class VarSifter extends JFrame implements ListSelectionListener, ActionListener, TableModelListener {
     
-    final String version = "0.3a";
+    final String version = "0.4";
     final String id = "$Id$";
 
     final String govWork = "PUBLIC DOMAIN NOTICE\n" +
@@ -126,21 +126,28 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
 
     private JMenuItem openItem;
     private JMenuItem saveAsItem;
+    private JMenuItem saveViewItem;
     private JMenuItem exitItem;
     private JMenuItem aboutItem;
 
     private JButton apply = new JButton("Apply Filter");
     private JButton selectAll = new JButton("Select All");
     private JButton clear = new JButton("Clear All");
+    private JRadioButton showVar = new JRadioButton("Show Variants", true);
+    private JRadioButton showGene = new JRadioButton("Show Genes");
     private JButton check = new JButton("Check");
     private JButton filterFileButton = new JButton("Choose Gene File Filter");
-    private JButton compoundHetButton = new JButton("View Compound Hets");
+    private JButton compoundHetButton = new JButton("View Variants for Selected Gene");
 
     private JSpinner minAffSpinner = new JSpinner();
     private JLabel affSpinnerLabel = new JLabel("Diff. in at least:");
+    private JTextField geneRegexField = new JTextField();
     
     final String newLine = System.getProperty("line.separator");
     private String geneFile = null;
+
+    private BitSet mask; //store selected filters on "Apply Filter" press
+    private boolean isShowVar = true;
 
     //int lastRow = 0;    //Last row selected
 
@@ -192,25 +199,37 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     public void actionPerformed(ActionEvent e) {
         Object es = e.getSource();
 
+
         if (es == apply) {
             
             sorter.setTableHeader(null);    //Must do this to avoid memory leak
-            BitSet mask = new BitSet(cBox.length);
             
-            for (int i=0; i < cBox.length; i++) {
-                if (cBox[i].isSelected()) {
-                    //System.out.println(cBox[i].getText());
-                    mask.set(i);
-                }
+            mask = getFilterMask();
+
+            if (showVar.isSelected()) {
+                isShowVar = true;
+                compoundHetButton.setEnabled(false);
             }
-
-
-            if (mask.cardinality() == 0) {
-                vdat.resetOutput();
+            else if (showGene.isSelected()) {
+                isShowVar = false;
+                compoundHetButton.setEnabled(true);
+            }
+            
+            String tempRegex;
+            if (geneRegexField.getText().equals("")) {
+                tempRegex = null;
             }
             else {
-                vdat.filterData(mask, geneFile, ((Integer)minAffSpinner.getValue()).intValue());
+                tempRegex = geneRegexField.getText();;
             }
+           
+
+            //if (mask.cardinality() == 0) {
+            //    vdat.resetOutput();
+            //}
+            //else {
+                vdat.filterData(mask, geneFile, ((Integer)minAffSpinner.getValue()).intValue(), tempRegex);
+            //}
             
             redrawOutTable(null);
             
@@ -228,6 +247,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             for (JCheckBox cb : cBox) {
                 cb.setSelected(false);
             }
+            geneRegexField.setText("");
         }
 
         else if (es == filterFileButton) {
@@ -244,12 +264,25 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             *   Testing only - must replace!!!
             *  ************
             */
+            /*
             BitSet test = new BitSet(vdat.returnData().length);
             for (int i=0; i < 5; i++) {
                 test.set(i);
             }
             test.set(6);
             VarSifter vs = new VarSifter(vdat.returnSubVarData(vdat, test));
+            */
+
+            //Use this button to return a VarSifter view of one gene
+            //int l = vdat.dataDump().length - 1;
+            String geneRegex = "^" + (String)outTable.getValueAt(outTable.getSelectedRow(), 0) + "$";
+            vdat.filterData(new BitSet(), null, 0, geneRegex);
+                //(String)outTable.getValueAt(outTable.getSelectedRow(), 0));
+            VarData tempVdat = vdat.returnSubVarData(vdat, null);
+            VarSifter vs = new VarSifter(tempVdat);
+            
+            //Must return the filtered state to what it was, to avoid data mapping errors!
+            vdat.filterData(mask, geneFile, ((Integer)minAffSpinner.getValue()).intValue(), null);
         }
 
         else if (es == openItem) {
@@ -261,7 +294,12 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         }
 
         else if (es == saveAsItem) {
-            saveData(null);
+            saveData(null, vdat);
+        }
+
+        else if (es == saveViewItem) {
+            VarData subVdat = vdat.returnSubVarData(vdat, null);
+            saveData(null, subVdat);
         }
 
         else if (es == exitItem) {
@@ -301,8 +339,13 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             }
             int dataIndex = sorter.modelIndex(rowIndex);
 
-            sampleTable.setModel(new VarTableModel(vdat.returnSample(dataIndex),
-                vdat.returnSampleNames(), vdat ));
+            if (isShowVar) {
+                sampleTable.setModel(new VarTableModel(vdat.returnSample(dataIndex),
+                    vdat.returnSampleNames(), vdat ));
+            }
+            else {
+                sampleTable.setModel(new VarTableModel(new String[0][], null, vdat));
+            }
             
             outTable.setRowSelectionInterval(rowIndex,rowIndex);
             //lastRow = rowIndex;
@@ -333,6 +376,23 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             vdat.setData(row, col, (String)data);
         }
     }
+
+
+    /* *************
+    *   Determine which boxes are checked
+    *  *************
+    */
+    private BitSet getFilterMask() {
+        BitSet m = new BitSet(cBox.length);
+        for (int i=0; i < cBox.length; i++) {
+            if (cBox[i].isSelected()) {
+                //System.out.println(cBox[i].getText());
+                m.set(i);
+            }
+        }
+        return m;
+    }
+
 
 
     /* *************
@@ -385,10 +445,12 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         JMenu helpMenu = new JMenu("Help");
         openItem = new JMenuItem("Open File");
         saveAsItem = new JMenuItem("Save File As");
+        saveViewItem = new JMenuItem("Save Current View As");
         exitItem = new JMenuItem("Exit");
         aboutItem = new JMenuItem("About VarSifter");
         fileMenu.add(openItem);
         fileMenu.add(saveAsItem);
+        fileMenu.add(saveViewItem);
         fileMenu.add(exitItem);
         helpMenu.add(aboutItem);
         mBar.add(fileMenu);
@@ -464,6 +526,11 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         affSpinnerPane.add(affSpinnerLabel);
         affSpinnerPane.add(minAffSpinner);
         sampleFiltPane.add(affSpinnerPane);
+
+        JPanel regexPane = new JPanel();
+        regexPane.setLayout(new BoxLayout(regexPane, BoxLayout.Y_AXIS));
+        regexPane.add(new JLabel("Search gene names for:"));
+        regexPane.add(geneRegexField);
         
         JPanel selClearPane = new JPanel();
         selClearPane.setLayout(new BoxLayout(selClearPane, BoxLayout.X_AXIS));
@@ -474,6 +541,17 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         JPanel fFiltPane = new JPanel();
         fFiltPane.setLayout(new BoxLayout(fFiltPane, BoxLayout.Y_AXIS));
         //fFiltPane.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JPanel showPane = new JPanel();
+        showPane.setLayout(new BoxLayout(showPane, BoxLayout.X_AXIS));
+        showPane.setBorder(BorderFactory.createLineBorder(Color.black));
+        showPane.setAlignmentX(Component.LEFT_ALIGNMENT);
+        ButtonGroup showGroup = new ButtonGroup();
+        showGroup.add(showVar);
+        showGroup.add(showGene);
+        showPane.add(showVar);
+        showPane.add(showGene);
+
+        
         fFiltPane.add(filterFile);
         fFiltPane.add(filterFileButton);
         filtPane.add(new JLabel("Include:"));
@@ -485,8 +563,13 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         filtPane.add(new JLabel("Include:"));
         filtPane.add(sampleFiltPane);
         filtPane.add(Box.createRigidArea(new Dimension(0,15)));
+        filtPane.add(regexPane);
+        filtPane.add(Box.createRigidArea(new Dimension(0,15)));
+        filtPane.add(showPane);
+        filtPane.add(Box.createRigidArea(new Dimension(0,15)));
         filtPane.add(selClearPane);
         filtPane.add(Box.createRigidArea(new Dimension(0,10)));
+        apply.setMnemonic(KeyEvent.VK_F);
         filtPane.add(apply);
         filtPane.add(Box.createVerticalGlue());
         filtPane.add(fFiltPane);
@@ -516,6 +599,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         clear.addActionListener(this);
         openItem.addActionListener(this);
         saveAsItem.addActionListener(this);
+        saveViewItem.addActionListener(this);
         exitItem.addActionListener(this);
         aboutItem.addActionListener(this);
         check.addActionListener(this);
@@ -524,6 +608,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
 
         //Disable unused buttons
         filterFile.setEnabled(false);
+        compoundHetButton.setEnabled(false);
         if (vdat.returnParent() != null) {
             compoundHetButton.setVisible(false);
         }
@@ -551,8 +636,14 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             drawMinAffSpinner();
 
         }
-        sorter = new TableSorter( new VarTableModel(vdat.returnData(),
+        if (isShowVar) {
+            sorter = new TableSorter( new VarTableModel(vdat.returnData(),
             vdat.returnDataNames(), vdat ));
+        }
+        else {
+            sorter = new TableSorter( new VarTableModel(vdat.returnGeneData(),
+            vdat.returnGeneNames(), vdat ));
+        }
         //sorter.addTableModelListener(this); //Probably wrong...
         ((VarTableModel)sorter.getTableModel()).addTableModelListener(this);
         outTable.setModel(sorter);
@@ -665,7 +756,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     *   Save data, either in place, or as new
     *  *************
     */
-    private void saveData(String fileName) {
+    private void saveData(String fileName, VarData vdTemp) {
         File fcFile;
         int ovwResult = JOptionPane.YES_OPTION;
         
@@ -697,7 +788,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             try {
                 
                 PrintWriter pw = new PrintWriter(new BufferedWriter(new FileWriter(fcFile)));
-                String[][] outData = vdat.dataDump();
+                String[][] outData = vdTemp.dataDump();
 
                 for (int i=0; i < outData.length; i++) {
                     StringBuilder outString = new StringBuilder(100);
