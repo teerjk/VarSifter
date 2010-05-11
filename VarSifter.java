@@ -70,6 +70,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
 
     final int VARIANT_FILE = 0;
     final int GENE_FILTER_FILE = 1;
+    final int BED_FILTER_FILE = 2;
     final int MAX_COLUMN_SIZE = 150;
 
 
@@ -106,8 +107,9 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     private JCheckBox mendRec = new JCheckBox("Hom. Recessive");
     private JCheckBox mendDom = new JCheckBox("Dominant");
     private JCheckBox mendBad = new JCheckBox("Inconsistent");
-    private JCheckBox uniqInAff = new JCheckBox("Aff different from Norm");
+    private JCheckBox uniqInAff = new JCheckBox("Tumor different from Norm");
     private JCheckBox filterFile = new JCheckBox("No Gene file selected");
+    private JCheckBox bedFilterFile = new JCheckBox("No bed file selected");
 
     private JCheckBox[] cBox = { stop,
                                  div, 
@@ -121,7 +123,8 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
                                  mendDom,
                                  mendBad,
                                  uniqInAff,
-                                 filterFile
+                                 filterFile,
+                                 bedFilterFile
                                };
 
     private JMenuItem openItem;
@@ -137,6 +140,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     private JRadioButton showGene = new JRadioButton("Show Genes");
     private JButton check = new JButton("Check");
     private JButton filterFileButton = new JButton("Choose Gene File Filter");
+    private JButton bedFilterFileButton = new JButton("Choose Bed File Filter");
     private JButton compoundHetButton = new JButton("View Variants for Selected Gene");
 
     private JSpinner minAffSpinner = new JSpinner();
@@ -145,6 +149,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     
     final String newLine = System.getProperty("line.separator");
     private String geneFile = null;
+    private String bedFile = null;
 
     private BitSet mask; //store selected filters on "Apply Filter" press
     private boolean isShowVar = true;
@@ -223,14 +228,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
                 tempRegex = geneRegexField.getText();;
             }
            
-
-            //if (mask.cardinality() == 0) {
-            //    vdat.resetOutput();
-            //}
-            //else {
-                vdat.filterData(mask, geneFile, ((Integer)minAffSpinner.getValue()).intValue(), tempRegex);
-            //}
-            
+            vdat.filterData(mask, geneFile, bedFile, ((Integer)minAffSpinner.getValue()).intValue(), tempRegex);
             redrawOutTable(null);
             
         }
@@ -258,6 +256,13 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             }
         }
 
+        else if (es == bedFilterFileButton) {
+            String temp = openData(BED_FILTER_FILE);
+            if (temp != null) {
+                bedFile = temp;
+            }
+        }
+
         else if (es == compoundHetButton) {
 
             /* ************
@@ -276,13 +281,13 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             //Use this button to return a VarSifter view of one gene
             //int l = vdat.dataDump().length - 1;
             String geneRegex = "^" + (String)outTable.getValueAt(outTable.getSelectedRow(), 0) + "$";
-            vdat.filterData(new BitSet(), null, 0, geneRegex);
+            vdat.filterData(new BitSet(), null, null, 0, geneRegex);
                 //(String)outTable.getValueAt(outTable.getSelectedRow(), 0));
             VarData tempVdat = vdat.returnSubVarData(vdat, null);
             VarSifter vs = new VarSifter(tempVdat);
             
             //Must return the filtered state to what it was, to avoid data mapping errors!
-            vdat.filterData(mask, geneFile, ((Integer)minAffSpinner.getValue()).intValue(), null);
+            vdat.filterData(mask, geneFile, bedFile, ((Integer)minAffSpinner.getValue()).intValue(), null);
         }
 
         else if (es == openItem) {
@@ -530,6 +535,8 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         JPanel regexPane = new JPanel();
         regexPane.setLayout(new BoxLayout(regexPane, BoxLayout.Y_AXIS));
         regexPane.add(new JLabel("Search gene names for:"));
+        geneRegexField.setMaximumSize( new Dimension( (int)geneRegexField.getMaximumSize().getWidth(), 
+            (int)geneRegexField.getMinimumSize().getHeight()));
         regexPane.add(geneRegexField);
         
         JPanel selClearPane = new JPanel();
@@ -541,6 +548,14 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         JPanel fFiltPane = new JPanel();
         fFiltPane.setLayout(new BoxLayout(fFiltPane, BoxLayout.Y_AXIS));
         //fFiltPane.setAlignmentX(Component.LEFT_ALIGNMENT);
+        fFiltPane.add(filterFile);
+        fFiltPane.add(filterFileButton);
+
+        JPanel bFiltPane = new JPanel();
+        bFiltPane.setLayout(new BoxLayout(bFiltPane, BoxLayout.Y_AXIS));
+        bFiltPane.add(bedFilterFile);
+        bFiltPane.add(bedFilterFileButton);
+        
         JPanel showPane = new JPanel();
         showPane.setLayout(new BoxLayout(showPane, BoxLayout.X_AXIS));
         showPane.setBorder(BorderFactory.createLineBorder(Color.black));
@@ -552,8 +567,6 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         showPane.add(showGene);
 
         
-        fFiltPane.add(filterFile);
-        fFiltPane.add(filterFileButton);
         filtPane.add(new JLabel("Include:"));
         filtPane.add(includePane);
         filtPane.add(Box.createRigidArea(new Dimension(0,15)));
@@ -573,6 +586,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         filtPane.add(apply);
         filtPane.add(Box.createVerticalGlue());
         filtPane.add(fFiltPane);
+        filtPane.add(bFiltPane);
         filtPane.add(compoundHetButton);
 
         //Stats (line count)
@@ -604,10 +618,12 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         aboutItem.addActionListener(this);
         check.addActionListener(this);
         filterFileButton.addActionListener(this);
+        bedFilterFileButton.addActionListener(this);
         compoundHetButton.addActionListener(this);
 
         //Disable unused buttons
         filterFile.setEnabled(false);
+        bedFilterFile.setEnabled(false);
         compoundHetButton.setEnabled(false);
         if (vdat.returnParent() != null) {
             compoundHetButton.setVisible(false);
@@ -720,7 +736,8 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         File fcFile;
         String fileName;
         String[] dTitle = { "Open variant list",
-                            "Open gene filter list"
+                            "Open gene filter list",
+                            "Open bed filter list"
                           };
         
         JFileChooser fc = new JFileChooser(System.getProperty("user.dir"));
@@ -747,6 +764,10 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         else if (openType == GENE_FILTER_FILE) {
             filterFile.setText(fileName);
             filterFile.setEnabled(true);
+        }
+        else if (openType == BED_FILTER_FILE) {
+            bedFilterFile.setText(fileName);
+            bedFilterFile.setEnabled(true);
         }
         return fileName;
     }

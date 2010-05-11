@@ -222,10 +222,10 @@ public class VarData {
     *   Filter mutation type
     *  ***********
     */
-    public void filterData(BitSet mask, String geneFile, int affMin, String geneQuery) {
+    public void filterData(BitSet mask, String geneFile, String bedFile, int affMin, String geneQuery) {
         dataIsIncluded.set(0,data.length);
         //dataIsIncluded.clear();
-        final int TOTAL_FILTERS = 6 + 1; //Number of non-type filters plus 1 (all type filters)
+        final int TOTAL_FILTERS = 7 + 1; //Number of non-type filters plus 1 (all type filters)
         final int TOTAL_TYPE_FILTERS = 7;
         BitSet[] filterSet = new BitSet[TOTAL_FILTERS];
         BitSet geneFilter = new BitSet(data.length);
@@ -238,7 +238,10 @@ public class VarData {
         int mendDomIndex = (dataTypeAt.containsKey("MendDom")) ? dataTypeAt.get("MendDom") : -1;
         int mendBadIndex = (dataTypeAt.containsKey("MendInconsis")) ? dataTypeAt.get("MendInconsis") : -1;
         int geneIndex = dataTypeAt.get("refseq");
+        int chrIndex = dataTypeAt.get("Chr");
+        int lfIndex = dataTypeAt.get("LeftFlank");
         HashSet<String> geneSet = new HashSet<String>();
+        HashMap<String, BitSet> bedHash = new HashMap<String, BitSet>();
 
         //Set up type filters (filterSet[0], as all types are folded into one filter)
         filterSet[0] = new BitSet(data.length + 1);
@@ -265,6 +268,15 @@ public class VarData {
             }
             else {
                 System.out.println("!!! geneFile not defined, so can't use it to filter !!!");
+            }
+        }
+
+        if (mask.get(13)) {
+            if (bedFile != null) {
+                bedHash = returnBedHash(bedFile);
+            }
+            else {
+                System.out.println("!!! bedFile not defined, so nothing to filter with !!!");
             }
         }
 
@@ -327,6 +339,11 @@ public class VarData {
 
             if (mask.get(12) && geneSet.contains(data[i][geneIndex])) {
                 filterSet[6].set(i);
+            }
+
+            if (mask.get(13) && bedHash.get(data[i][chrIndex]) != null && 
+                bedHash.get(data[i][chrIndex]).get(Integer.parseInt(data[i][lfIndex])) ) {
+                filterSet[7].set(i);
             }
 
             if (geneQuery != null) {
@@ -417,6 +434,40 @@ public class VarData {
     }
 
     
+    /* ************
+    *   Return a hash of BitSets containing positions in a bedfile
+    *  ************
+    */
+    private HashMap<String, BitSet> returnBedHash(String inFile) {
+        HashMap<String, BitSet> outHash = new HashMap<String, BitSet>();
+        try {
+            String line = new String();
+            Pattern chr = Pattern.compile("^chr");
+            BufferedReader br = new BufferedReader(new FileReader(inFile));
+            while ((line = br.readLine()) != null ) {
+                if ( (chr.matcher(line)).find() ) {
+                    String[] lineArray = line.split("\\s+");
+                    for (int i = (Integer.parseInt(lineArray[1]) + 1); 
+                             i<= (Integer.parseInt(lineArray[2])); 
+                             i++) {
+                        if (outHash.get(lineArray[0]) != null) {
+                            outHash.get(lineArray[0]).set(i);
+                        }
+                        else {
+                            outHash.put(lineArray[0], new BitSet(3000000));
+                            outHash.get(lineArray[0]).set(i);
+                        }
+                    }
+                }
+            }
+        }
+        catch (IOException ioe) {
+            System.out.println(ioe);
+            System.exit(1);
+        }
+        return outHash;
+    }
+                
 
     /* ************
     *   Return annotation data
