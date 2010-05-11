@@ -97,13 +97,6 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     private JCheckBox utr = new JCheckBox("UTR");
     private JCheckBox dbsnp = new JCheckBox("dbSNP130");
 
-    //JCheckBox[] cBox = { new JCheckBox("DIV"),
-    //                     new JCheckBox("Splice-Site"),
-    //                     new JCheckBox("Non-synonymous"),
-    //                     new JCheckBox("dbSNP130"),
-    //                     new JCheckBox("Stop")
-    //                   };
-    
     private JCheckBox mendRec = new JCheckBox("Hom. Recessive");
     private JCheckBox mendDom = new JCheckBox("Dominant");
     private JCheckBox mendBad = new JCheckBox("Inconsistent");
@@ -632,7 +625,6 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
                 
         pane.add(tablePanel, BorderLayout.CENTER);
         pane.add(filtPane, BorderLayout.LINE_END);
-        //pane.add(check, BorderLayout.PAGE_END);
         add(pane);
         pack();
         setVisible(true);

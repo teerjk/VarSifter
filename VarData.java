@@ -3,6 +3,7 @@ import java.util.regex.*;
 import java.util.BitSet;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Vector;
 
 public class VarData {
     
@@ -241,7 +242,7 @@ public class VarData {
         int chrIndex = dataTypeAt.get("Chr");
         int lfIndex = dataTypeAt.get("LeftFlank");
         HashSet<String> geneSet = new HashSet<String>();
-        HashMap<String, BitSet> bedHash = new HashMap<String, BitSet>();
+        HashMap[] bedHash = null;
 
         //Set up type filters (filterSet[0], as all types are folded into one filter)
         filterSet[0] = new BitSet(data.length + 1);
@@ -341,10 +342,23 @@ public class VarData {
                 filterSet[6].set(i);
             }
 
-            if (mask.get(13) && bedHash.get(data[i][chrIndex]) != null && 
-                bedHash.get(data[i][chrIndex]).get(Integer.parseInt(data[i][lfIndex])) ) {
-                filterSet[7].set(i);
+            if (mask.get(13) && bedHash[0].get(data[i][chrIndex]) != null) {
+                Object[] starts = ((HashMap<String, Vector<Integer>>)bedHash[0]).get(data[i][chrIndex]).toArray();
+                Object[] ends = ((HashMap<String, Vector<Integer>>)bedHash[1]).get(data[i][chrIndex]).toArray();
+                int lf = Integer.parseInt(data[i][lfIndex]);
+
+                for (int j=0; j<starts.length;j++) {
+                    if (lf < (Integer)starts[j]) {
+                        continue;
+                    }
+
+                    if (lf <= (Integer)ends[j]) {
+                        filterSet[7].set(i);
+                        break;
+                    }
+                }
             }
+
 
             if (geneQuery != null) {
                 if ((geneQueryPat.matcher(data[i][geneIndex])).find()) {
@@ -438,26 +452,59 @@ public class VarData {
     *   Return a hash of BitSets containing positions in a bedfile
     *  ************
     */
-    private HashMap<String, BitSet> returnBedHash(String inFile) {
-        HashMap<String, BitSet> outHash = new HashMap<String, BitSet>();
+    //private HashMap<String, BitSet> returnBedHash(String inFile) {
+    //    HashMap<String, BitSet> outHash = new HashMap<String, BitSet>();
+    //    try {
+    //        String line = new String();
+    //        Pattern chr = Pattern.compile("^chr");
+    //        BufferedReader br = new BufferedReader(new FileReader(inFile));
+    //        while ((line = br.readLine()) != null ) {
+    //            if ( (chr.matcher(line)).find() ) {
+    //                String[] lineArray = line.split("\\s+");
+    //                for (int i = (Integer.parseInt(lineArray[1]) + 1); 
+    //                         i<= (Integer.parseInt(lineArray[2])); 
+    //                         i++) {
+    //                    if (outHash.get(lineArray[0]) != null) {
+    //                        outHash.get(lineArray[0]).set(i);
+    //                    }
+    //                    else {
+    //                        outHash.put(lineArray[0], new BitSet(3000000));
+    //                        outHash.get(lineArray[0]).set(i);
+    //                    }
+    //                }
+    //            }
+    //        }
+    //    }
+    //    catch (IOException ioe) {
+    //        System.out.println(ioe);
+    //        System.exit(1);
+    //    }
+    //    return outHash;
+    //}
+
+    /* ************
+    *   Return a hash of Vectors containing start positions in a bedfile
+    *  ************
+    */
+    private HashMap[] returnBedHash(String inFile) {
+        HashMap<String, Vector<Integer>> outStart = new HashMap<String, Vector<Integer>>();
+        HashMap<String, Vector<Integer>> outEnd   = new HashMap<String, Vector<Integer>>();
+        HashMap[] outHash = new HashMap[2];
+
         try {
             String line = new String();
             Pattern chr = Pattern.compile("^chr");
             BufferedReader br = new BufferedReader(new FileReader(inFile));
-            while ((line = br.readLine()) != null ) {
+            while ((line = br.readLine()) != null) {
                 if ( (chr.matcher(line)).find() ) {
                     String[] lineArray = line.split("\\s+");
-                    for (int i = (Integer.parseInt(lineArray[1]) + 1); 
-                             i<= (Integer.parseInt(lineArray[2])); 
-                             i++) {
-                        if (outHash.get(lineArray[0]) != null) {
-                            outHash.get(lineArray[0]).set(i);
-                        }
-                        else {
-                            outHash.put(lineArray[0], new BitSet(3000000));
-                            outHash.get(lineArray[0]).set(i);
-                        }
+                    if (outStart.get(lineArray[0]) == null) {
+                        outStart.put(lineArray[0], new Vector<Integer>());
+                        outEnd.put(lineArray[0], new Vector<Integer>());
                     }
+
+                    outStart.get(lineArray[0]).add(Integer.valueOf(lineArray[1]) + 1);
+                    outEnd.get(lineArray[0]).add(Integer.valueOf(lineArray[2]));
                 }
             }
         }
@@ -465,9 +512,12 @@ public class VarData {
             System.out.println(ioe);
             System.exit(1);
         }
+
+        outHash[0] = outStart;
+        outHash[1] = outEnd;
         return outHash;
     }
-                
+        
 
     /* ************
     *   Return annotation data
