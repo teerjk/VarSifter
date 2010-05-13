@@ -9,8 +9,15 @@ public class VarData {
     
     final int H_LINES  = 1;   //Number of header lines
     final int S_FIELDS = 3;   //Number of columns for each sample
+
+    final int AFF_NORM_PAIR = 0;
+    final int CASE = 1;
+    final int CONTROL = 2;
+
+    final int THRESHOLD = 10;
     
     final String[] geneDataHeaders = {"refseq", "Var Count"};
+    final String[] ALLELES = {"A", "C", "G", "T"};
 
     private String[][] data;            // Fields: [line][var_annotations]
     private String[][] outData;         // Gets returned (can be filtered)
@@ -26,6 +33,8 @@ public class VarData {
     //public HashMap<String, Integer> dataTypeAt = new HashMap<String, Integer>();
     private int[] affAt;
     private int[] normAt;
+    private int[] caseAt;
+    private int[] controlAt;
     private VarData parentVarData = null;
 
      /*    
@@ -66,6 +75,8 @@ public class VarData {
                 String dataTemp = "";
                 String affPos = "";
                 String normPos = "";
+                String casePos = "";
+                String controlPos = "";
                 
                 //Handle the Header
                 if (first) {
@@ -75,8 +86,12 @@ public class VarData {
                     Pattern samAff = Pattern.compile("aff");
                     Pattern samNorm = Pattern.compile("norm");
                     Pattern genePat = Pattern.compile("refseq");
+                    Pattern casePat = Pattern.compile("case");
+                    Pattern controlPat = Pattern.compile("control");
                     String[] affPosArr;
                     String[] normPosArr;
+                    String[] casePosArr;
+                    String[] controlPosArr;
                     int dataCount = 0;
                     int sampleCount = 0;
                     
@@ -86,12 +101,20 @@ public class VarData {
                             //System.out.println(title + "\t");
                             if (sampleCount % S_FIELDS == 0) {  //Sample name, not score, cov, etc
                                 sampleTemp += (temp[i] + "\t");
+                                int samPos = (i - dataCount)/S_FIELDS;
                                 
                                 if ((samAff.matcher(temp[i])).find()) {
-                                    affPos += ( ((i - dataCount)/S_FIELDS) + "\t");
+                                    affPos += ( samPos + "\t");
                                 }
                                 else if ((samNorm.matcher(temp[i])).find()) {
-                                    normPos += ( ((i - dataCount)/S_FIELDS) + "\t");
+                                    normPos += ( samPos + "\t");
+                                }
+
+                                if ((casePat.matcher(temp[i])).find()) {
+                                    casePos += ( samPos + "\t");
+                                }
+                                else if ((controlPat.matcher(temp[i])).find()) {
+                                    controlPos += ( samPos + "\t");
                                 }
                             }
                             sampleCount++;
@@ -128,6 +151,21 @@ public class VarData {
                     else {
                         affAt = null;
                         normAt = null;
+                    }
+
+                    if (casePos.length() > 0) {
+                        casePosArr = casePos.split("\t");
+                        caseAt = new int[casePosArr.length];
+                        for (int i=0; i < casePosArr.length; i++) {
+                            caseAt[i] = Integer.parseInt(casePosArr[i]);
+                        }
+                    }
+                    if (controlPos.length() > 0) {
+                        controlPosArr = controlPos.split("\t");
+                        controlAt = new int[controlPosArr.length];
+                        for (int i=0; i< controlPosArr.length; i++) {
+                            controlAt[i] = Integer.parseInt(controlPosArr[i]);
+                        }
                     }
 
                     first = false;
@@ -176,6 +214,8 @@ public class VarData {
                     HashMap<String, Integer> dataTypeAtIn,
                     int[] affAtIn,
                     int[] normAtIn,
+                    int[] caseAtIn,
+                    int[] controlAtIn,
                     VarData parentVarDataIn
                     ) {
         data = dataIn;
@@ -188,6 +228,8 @@ public class VarData {
         dataTypeAt = (HashMap<String, Integer>)dataTypeAtIn.clone();
         affAt = affAtIn;
         normAt = normAtIn;
+        caseAt = caseAtIn;
+        controlAt = controlAtIn;
         parentVarData = parentVarDataIn;
 
         dataIsIncluded = new BitSet(data.length);
@@ -223,10 +265,10 @@ public class VarData {
     *   Filter mutation type
     *  ***********
     */
-    public void filterData(BitSet mask, String geneFile, String bedFile, int affMin, String geneQuery) {
+    public void filterData(BitSet mask, String geneFile, String bedFile, int[] spinnerData, String geneQuery) {
         dataIsIncluded.set(0,data.length);
         //dataIsIncluded.clear();
-        final int TOTAL_FILTERS = 7 + 1; //Number of non-type filters plus 1 (all type filters)
+        final int TOTAL_FILTERS = 8 + 1; //Number of non-type filters plus 1 (all type filters)
         final int TOTAL_TYPE_FILTERS = 7;
         BitSet[] filterSet = new BitSet[TOTAL_FILTERS];
         BitSet geneFilter = new BitSet(data.length);
@@ -234,6 +276,8 @@ public class VarData {
         Pattern geneQueryPat = null;
         
         int typeIndex = dataTypeAt.get("type");
+        int refAlleleIndex = dataTypeAt.get("ref_allele");
+        int varAlleleIndex = dataTypeAt.get("var_allele");
         int dbSNPIndex = dataTypeAt.get("RS#");
         int mendRecIndex = (dataTypeAt.containsKey("MendHomRec")) ? dataTypeAt.get("MendHomRec") : -1;
         int mendDomIndex = (dataTypeAt.containsKey("MendDom")) ? dataTypeAt.get("MendDom") : -1;
@@ -263,7 +307,7 @@ public class VarData {
         
         //Start filtering!
         
-        if (mask.get(12)) {
+        if (mask.get(13)) {
             if (geneFile != null) {
                 geneSet = returnGeneSet(geneFile);
             }
@@ -272,7 +316,7 @@ public class VarData {
             }
         }
 
-        if (mask.get(13)) {
+        if (mask.get(14)) {
             if (bedFile != null) {
                 bedHash = returnBedHash(bedFile);
             }
@@ -287,6 +331,13 @@ public class VarData {
         }
         
         for (int i = 0; i < data.length; i++) {
+            String[] tempGeno = { data[i][refAlleleIndex], data[i][varAlleleIndex] };
+            java.util.Arrays.sort(tempGeno);
+            String genotype = "";
+            for (String s : tempGeno) {
+                genotype += s;
+            }
+            //System.out.println(genotype);
            
             if ( (mask.get(0) && data[i][typeIndex].equals("Stop")           ) ||
                  (mask.get(1) && data[i][typeIndex].equals("DIV")            ) ||
@@ -326,23 +377,47 @@ public class VarData {
                     if (!affTemp.equals(normTemp) &&
                         !affTemp.equals("NA") &&
                         !normTemp.equals("NA") &&
-                        Integer.parseInt(samples[i][affAt[j]][1]) >= 10 &&
-                        Integer.parseInt(samples[i][normAt[j]][1]) >= 10) {
+                        Integer.parseInt(samples[i][affAt[j]][1]) >= THRESHOLD &&
+                        Integer.parseInt(samples[i][normAt[j]][1]) >= THRESHOLD) {
 
                         count++;
                     }
                 }
                 //if (count == affAt.length) {
-                if (count >= affMin) {
+                if (count >= spinnerData[AFF_NORM_PAIR]) {
                     filterSet[5].set(i);
                 }
             }
 
-            if (mask.get(12) && geneSet.contains(data[i][geneIndex])) {
-                filterSet[6].set(i);
+            if (mask.get(12)) {
+                int caseCount = 0;
+                int controlCount = 0;
+                for (int j=0; j < caseAt.length; j++) {
+                    String caseTemp = samples[i][caseAt[j]][0].replaceAll(":", "");
+                    if (caseTemp.equals(genotype) &&
+                        Integer.parseInt(samples[i][caseAt[j]][1]) >= THRESHOLD) {
+                        caseCount++;
+                    }
+                }
+                for (int j=0; j < controlAt.length; j++) {
+                    String controlTemp = samples[i][controlAt[j]][0].replaceAll(":","");
+                    if (controlTemp.equals(genotype) &&
+                        Integer.parseInt(samples[i][controlAt[j]][1]) >= THRESHOLD) {
+                        controlCount++;
+                    }
+                }
+                if (caseCount >= spinnerData[CASE] && controlCount <= spinnerData[CONTROL]) {
+                    filterSet[6].set(i);
+                }
             }
 
-            if (mask.get(13) && bedHash[0].get(data[i][chrIndex]) != null) {
+                        
+
+            if (mask.get(13) && geneSet.contains(data[i][geneIndex])) {
+                filterSet[7].set(i);
+            }
+
+            if (mask.get(14) && bedHash[0].get(data[i][chrIndex]) != null) {
                 Object[] starts = ((HashMap<String, Vector<Integer>>)bedHash[0]).get(data[i][chrIndex]).toArray();
                 Object[] ends = ((HashMap<String, Vector<Integer>>)bedHash[1]).get(data[i][chrIndex]).toArray();
                 int lf = Integer.parseInt(data[i][lfIndex]);
@@ -353,7 +428,7 @@ public class VarData {
                     }
 
                     if (lf <= (Integer)ends[j]) {
-                        filterSet[7].set(i);
+                        filterSet[8].set(i);
                         break;
                     }
                 }
@@ -415,6 +490,7 @@ public class VarData {
 
     /* ************
     *   Returns number of normal affected pairs or null
+    *   !!!!!!!! Deprecated in favor of countSampleType(int) !!!!!!!!!!!!
     *  ************
     */
     public int countAffNorm() {
@@ -426,6 +502,25 @@ public class VarData {
             return 0;
         }
     }
+
+
+    /* ************
+    *   Returns number of requested sample type
+    *  ************
+    */
+    public int countSampleType(int sType) {
+        switch (sType) {
+            case 0: // Aff/normal pairs
+                return (affAt != null && normAt != null) ? affAt.length : 0;
+            case 1: // Case
+                return (caseAt != null) ? caseAt.length : 0;
+            case 2: // Control
+                return (controlAt != null) ? controlAt.length : 0;
+            default:
+                return 0;
+        }
+    }
+
 
     /* ************
     *   Returns true if we have mendelian filter columns
@@ -448,39 +543,6 @@ public class VarData {
     }
 
     
-    /* ************
-    *   Return a hash of BitSets containing positions in a bedfile
-    *  ************
-    */
-    //private HashMap<String, BitSet> returnBedHash(String inFile) {
-    //    HashMap<String, BitSet> outHash = new HashMap<String, BitSet>();
-    //    try {
-    //        String line = new String();
-    //        Pattern chr = Pattern.compile("^chr");
-    //        BufferedReader br = new BufferedReader(new FileReader(inFile));
-    //        while ((line = br.readLine()) != null ) {
-    //            if ( (chr.matcher(line)).find() ) {
-    //                String[] lineArray = line.split("\\s+");
-    //                for (int i = (Integer.parseInt(lineArray[1]) + 1); 
-    //                         i<= (Integer.parseInt(lineArray[2])); 
-    //                         i++) {
-    //                    if (outHash.get(lineArray[0]) != null) {
-    //                        outHash.get(lineArray[0]).set(i);
-    //                    }
-    //                    else {
-    //                        outHash.put(lineArray[0], new BitSet(3000000));
-    //                        outHash.get(lineArray[0]).set(i);
-    //                    }
-    //                }
-    //            }
-    //        }
-    //    }
-    //    catch (IOException ioe) {
-    //        System.out.println(ioe);
-    //        System.exit(1);
-    //    }
-    //    return outHash;
-    //}
 
     /* ************
     *   Return a hash of Vectors containing start positions in a bedfile
@@ -661,6 +723,8 @@ public class VarData {
                            dataTypeAt,
                            affAt,
                            normAt,
+                           caseAt,
+                           controlAt,
                            vdatIn
                            );
     }

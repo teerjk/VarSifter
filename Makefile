@@ -4,14 +4,16 @@ JAVAC6=javac
 CLASS_LIST:=classes.txt
 JAR_FILE:=VarSifter.jar
 
-compile:
+all: compile6
+
+compile5:
 	${JAVAC5} VarSifter.java
 
 compile_check:
 	${JAVAC5} -Xlint:unchecked VarSifter.java
 
 compile6:
-	${JAVAC6} VarSifter.java
+	${JAVAC6} -target 5 VarSifter.java
 
 build: $(CLASS_LIST) $(JAR_FILE)
 

@@ -18,7 +18,7 @@ import components.TableSorter;
 
 public class VarSifter extends JFrame implements ListSelectionListener, ActionListener, TableModelListener {
     
-    final String version = "0.4";
+    final String version = "0.5";
     final String id = "$Id$";
 
     final String govWork = "PUBLIC DOMAIN NOTICE\n" +
@@ -101,6 +101,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     private JCheckBox mendDom = new JCheckBox("Dominant");
     private JCheckBox mendBad = new JCheckBox("Inconsistent");
     private JCheckBox uniqInAff = new JCheckBox("Tumor different from Norm");
+    private JCheckBox caseControl = new JCheckBox("Case / Control");
     private JCheckBox filterFile = new JCheckBox("No Gene file selected");
     private JCheckBox bedFilterFile = new JCheckBox("No bed file selected");
 
@@ -116,6 +117,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
                                  mendDom,
                                  mendBad,
                                  uniqInAff,
+                                 caseControl,
                                  filterFile,
                                  bedFilterFile
                                };
@@ -136,9 +138,16 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     private JButton bedFilterFileButton = new JButton("Choose Bed File Filter");
     private JButton compoundHetButton = new JButton("View Variants for Selected Gene");
 
+    private int[] spinnerData = new int[3]; //Hold data for Spinner values (use int values from VarData)
+    
     private JSpinner minAffSpinner = new JSpinner();
     private JLabel affSpinnerLabel = new JLabel("Diff. in at least:");
     private JTextField geneRegexField = new JTextField();
+
+    private JSpinner caseSpinner = new JSpinner();
+    private JLabel caseSpinnerLabel = new JLabel("Var in cases (at least):");
+    private JSpinner controlSpinner = new JSpinner();
+    private JLabel controlSpinnerLabel = new JLabel("Not in controls:");
     
     final String newLine = System.getProperty("line.separator");
     private String geneFile = null;
@@ -220,8 +229,12 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             else {
                 tempRegex = geneRegexField.getText();;
             }
+
+            spinnerData[vdat.AFF_NORM_PAIR] = ((Integer)minAffSpinner.getValue()).intValue();
+            spinnerData[vdat.CASE] = ((Integer)caseSpinner.getValue()).intValue();
+            spinnerData[vdat.CONTROL] = ((Integer)controlSpinner.getValue()).intValue();
            
-            vdat.filterData(mask, geneFile, bedFile, ((Integer)minAffSpinner.getValue()).intValue(), tempRegex);
+            vdat.filterData(mask, geneFile, bedFile, spinnerData, tempRegex);
             redrawOutTable(null);
             
         }
@@ -274,13 +287,13 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             //Use this button to return a VarSifter view of one gene
             //int l = vdat.dataDump().length - 1;
             String geneRegex = "^" + (String)outTable.getValueAt(outTable.getSelectedRow(), 0) + "$";
-            vdat.filterData(new BitSet(), null, null, 0, geneRegex);
+            vdat.filterData(new BitSet(), null, null, null, geneRegex);
                 //(String)outTable.getValueAt(outTable.getSelectedRow(), 0));
             VarData tempVdat = vdat.returnSubVarData(vdat, null);
             VarSifter vs = new VarSifter(tempVdat);
             
             //Must return the filtered state to what it was, to avoid data mapping errors!
-            vdat.filterData(mask, geneFile, bedFile, ((Integer)minAffSpinner.getValue()).intValue(), null);
+            vdat.filterData(mask, geneFile, bedFile, spinnerData, null);
         }
 
         else if (es == openItem) {
@@ -456,6 +469,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         setJMenuBar(mBar);
 
         drawMinAffSpinner();
+        drawCaseControlSpinner();
         
         //outTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         outTable.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
@@ -524,6 +538,22 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         affSpinnerPane.add(affSpinnerLabel);
         affSpinnerPane.add(minAffSpinner);
         sampleFiltPane.add(affSpinnerPane);
+        
+        JPanel casePane = new JPanel();
+        casePane.setLayout(new BoxLayout(casePane, BoxLayout.X_AXIS));
+        casePane.setAlignmentX(Component.LEFT_ALIGNMENT);
+        casePane.add(Box.createRigidArea(new Dimension(15,0)));
+        casePane.add(caseSpinnerLabel);
+        casePane.add(caseSpinner);
+        JPanel controlPane = new JPanel();
+        controlPane.setLayout(new BoxLayout(controlPane, BoxLayout.X_AXIS));
+        controlPane.setAlignmentX(Component.LEFT_ALIGNMENT);
+        controlPane.add(Box.createRigidArea(new Dimension(15,0)));
+        controlPane.add(controlSpinnerLabel);
+        controlPane.add(controlSpinner);
+        sampleFiltPane.add(caseControl);
+        sampleFiltPane.add(casePane);
+        sampleFiltPane.add(controlPane);
 
         JPanel regexPane = new JPanel();
         regexPane.setLayout(new BoxLayout(regexPane, BoxLayout.Y_AXIS));
@@ -642,6 +672,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             maskCBox();
             clear.doClick();
             drawMinAffSpinner();
+            drawCaseControlSpinner();
 
         }
         if (isShowVar) {
@@ -691,7 +722,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         }
 
         
-        if (vdat.countAffNorm() == 0) {
+        if (vdat.countSampleType(vdat.AFF_NORM_PAIR) == 0) {
             uniqInAff.setEnabled(false);
             minAffSpinner.setEnabled(false);
             affSpinnerLabel.setEnabled(false);
@@ -702,6 +733,23 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             affSpinnerLabel.setEnabled(true);
         }
 
+        if (vdat.countSampleType(vdat.CASE) == 0) {
+            caseControl.setEnabled(false);
+            caseSpinner.setEnabled(false);
+        }
+        else {
+            caseControl.setEnabled(true);
+            caseSpinner.setEnabled(true);
+        }
+        if (vdat.countSampleType(vdat.CONTROL) == 0) {
+            caseControl.setEnabled(false);
+            controlSpinner.setEnabled(false);
+        }
+        else {
+            caseControl.setEnabled(true);
+            controlSpinner.setEnabled(true);
+        }
+
     }      
 
     /* *************
@@ -709,15 +757,30 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     *  *************
     */    
     private void drawMinAffSpinner() {
-        if (vdat.countAffNorm() > 0) {
-            minAffSpinner.setModel(new SpinnerNumberModel(1, 1, vdat.countAffNorm(), 1));
+        if (vdat.countSampleType(vdat.AFF_NORM_PAIR) > 0) {
+            minAffSpinner.setModel(new SpinnerNumberModel(1, 1, vdat.countSampleType(vdat.AFF_NORM_PAIR), 1));
         }
         Dimension d = minAffSpinner.getPreferredSize();
         d.width = 60;
         minAffSpinner.setPreferredSize(d);
         minAffSpinner.setMaximumSize(minAffSpinner.getPreferredSize());
     }
-       
+
+
+    /* *************
+    *   initialize case, control spinners
+    *  *************
+    */
+    private void drawCaseControlSpinner() {
+        int caseCount = vdat.countSampleType(vdat.CASE);
+        int controlCount = vdat.countSampleType(vdat.CONTROL);
+        if (caseCount > 0) {
+            caseSpinner.setModel(new SpinnerNumberModel(1, 0, caseCount, 1));
+        }
+        if (controlCount > 0) {
+            controlSpinner.setModel(new SpinnerNumberModel(0, 0, controlCount, 1));
+        }
+    }
 
 
     /* *************
