@@ -18,7 +18,7 @@ import components.TableSorter;
 
 public class VarSifter extends JFrame implements ListSelectionListener, ActionListener, TableModelListener {
     
-    final String version = "0.5";
+    final String version = "0.5a";
     final String id = "$Id$";
 
     final String govWork = "PUBLIC DOMAIN NOTICE\n" +
@@ -136,7 +136,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     private JButton check = new JButton("Check");
     private JButton filterFileButton = new JButton("Choose Gene File Filter");
     private JButton bedFilterFileButton = new JButton("Choose Bed File Filter");
-    private JButton compoundHetButton = new JButton("View Variants for Selected Gene");
+    private JButton geneViewButton = new JButton("View Variants for Selected Gene");
 
     private int[] spinnerData = new int[3]; //Hold data for Spinner values (use int values from VarData)
     
@@ -147,7 +147,9 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     private JSpinner caseSpinner = new JSpinner();
     private JLabel caseSpinnerLabel = new JLabel("Var in cases (at least):");
     private JSpinner controlSpinner = new JSpinner();
-    private JLabel controlSpinnerLabel = new JLabel("Not in controls:");
+    private JLabel controlSpinnerLabel = new JLabel("Var in controls (this or fewer):");
+
+    private JLabel linesl = new JLabel("Number of Variant Positions: ");
     
     final String newLine = System.getProperty("line.separator");
     private String geneFile = null;
@@ -215,11 +217,13 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
 
             if (showVar.isSelected()) {
                 isShowVar = true;
-                compoundHetButton.setEnabled(false);
+                geneViewButton.setEnabled(false);
+                linesl.setText("Number of Variant Positions: ");
             }
             else if (showGene.isSelected()) {
                 isShowVar = false;
-                compoundHetButton.setEnabled(true);
+                geneViewButton.setEnabled(true);
+                linesl.setText("Number of Genes: ");
             }
             
             String tempRegex;
@@ -269,7 +273,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             }
         }
 
-        else if (es == compoundHetButton) {
+        else if (es == geneViewButton) {
 
             /* ************
             *   Testing only - must replace!!!
@@ -610,11 +614,10 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         filtPane.add(Box.createVerticalGlue());
         filtPane.add(fFiltPane);
         filtPane.add(bFiltPane);
-        filtPane.add(compoundHetButton);
+        filtPane.add(geneViewButton);
 
         //Stats (line count)
         JPanel stats = new JPanel();
-        JLabel linesl = new JLabel("Number of Variant Positions: ");
         stats.add(linesl);
         stats.add(lines);
 
@@ -642,14 +645,14 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         check.addActionListener(this);
         filterFileButton.addActionListener(this);
         bedFilterFileButton.addActionListener(this);
-        compoundHetButton.addActionListener(this);
+        geneViewButton.addActionListener(this);
 
         //Disable unused buttons
         filterFile.setEnabled(false);
         bedFilterFile.setEnabled(false);
-        compoundHetButton.setEnabled(false);
+        geneViewButton.setEnabled(false);
         if (vdat.returnParent() != null) {
-            compoundHetButton.setVisible(false);
+            geneViewButton.setVisible(false);
         }
         maskCBox();
                 
@@ -780,6 +783,12 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         if (controlCount > 0) {
             controlSpinner.setModel(new SpinnerNumberModel(0, 0, controlCount, 1));
         }
+        Dimension d = caseSpinner.getPreferredSize();
+        d.width = 60;
+        caseSpinner.setPreferredSize(d);
+        caseSpinner.setMaximumSize(caseSpinner.getPreferredSize());
+        controlSpinner.setPreferredSize(d);
+        controlSpinner.setMaximumSize(controlSpinner.getPreferredSize());
     }
 
 
