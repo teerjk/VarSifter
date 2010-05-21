@@ -268,7 +268,7 @@ public class VarData {
     public void filterData(BitSet mask, String geneFile, String bedFile, int[] spinnerData, String geneQuery) {
         dataIsIncluded.set(0,data.length);
         //dataIsIncluded.clear();
-        final int TOTAL_FILTERS = 8 + 1; //Number of non-type filters plus 1 (all type filters)
+        final int TOTAL_FILTERS = 9 + 1; //Number of non-type filters plus 1 (all type filters)
         final int TOTAL_TYPE_FILTERS = 7;
         BitSet[] filterSet = new BitSet[TOTAL_FILTERS];
         BitSet geneFilter = new BitSet(data.length);
@@ -280,6 +280,7 @@ public class VarData {
         int varAlleleIndex = dataTypeAt.get("var_allele");
         int dbSNPIndex = dataTypeAt.get("RS#");
         int mendRecIndex = (dataTypeAt.containsKey("MendHomRec")) ? dataTypeAt.get("MendHomRec") : -1;
+        int mendHetRecIndex = (dataTypeAt.containsKey("MendHetRec")) ? dataTypeAt.get("MendHetRec") : -1;
         int mendDomIndex = (dataTypeAt.containsKey("MendDom")) ? dataTypeAt.get("MendDom") : -1;
         int mendBadIndex = (dataTypeAt.containsKey("MendInconsis")) ? dataTypeAt.get("MendInconsis") : -1;
         int geneIndex = dataTypeAt.get("refseq");
@@ -307,7 +308,8 @@ public class VarData {
         
         //Start filtering!
         
-        if (mask.get(13)) {
+        //filterFile
+        if (mask.get(14)) {
             if (geneFile != null) {
                 geneSet = returnGeneSet(geneFile);
             }
@@ -316,7 +318,8 @@ public class VarData {
             }
         }
 
-        if (mask.get(14)) {
+        //bedFilterFile
+        if (mask.get(15)) {
             if (bedFile != null) {
                 bedHash = returnBedHash(bedFile);
             }
@@ -368,8 +371,11 @@ public class VarData {
                 filterSet[4].set(i);
             }
                 
+            if (mask.get(11) && ! data[i][mendHetRecIndex].equals("0,")) {
+                filterSet[5].set(i);
+            }
 
-            if (mask.get(11)) {
+            if (mask.get(12)) {
                 int count = 0;
                 for (int j=0; j < affAt.length; j++) {
                     String affTemp = samples[i][affAt[j]][0];
@@ -385,11 +391,11 @@ public class VarData {
                 }
                 //if (count == affAt.length) {
                 if (count >= spinnerData[AFF_NORM_PAIR]) {
-                    filterSet[5].set(i);
+                    filterSet[6].set(i);
                 }
             }
 
-            if (mask.get(12)) {
+            if (mask.get(13)) {
                 int caseCount = 0;
                 int controlCount = 0;
                 for (int j=0; j < caseAt.length; j++) {
@@ -407,17 +413,17 @@ public class VarData {
                     }
                 }
                 if (caseCount >= spinnerData[CASE] && controlCount <= spinnerData[CONTROL]) {
-                    filterSet[6].set(i);
+                    filterSet[7].set(i);
                 }
             }
 
                         
 
-            if (mask.get(13) && geneSet.contains(data[i][geneIndex])) {
-                filterSet[7].set(i);
+            if (mask.get(14) && geneSet.contains(data[i][geneIndex])) {
+                filterSet[8].set(i);
             }
 
-            if (mask.get(14) && bedHash[0].get(data[i][chrIndex]) != null) {
+            if (mask.get(15) && bedHash[0].get(data[i][chrIndex]) != null) {
                 Object[] starts = ((HashMap<String, Vector<Integer>>)bedHash[0]).get(data[i][chrIndex]).toArray();
                 Object[] ends = ((HashMap<String, Vector<Integer>>)bedHash[1]).get(data[i][chrIndex]).toArray();
                 int lf = Integer.parseInt(data[i][lfIndex]);
@@ -428,7 +434,7 @@ public class VarData {
                     }
 
                     if (lf <= (Integer)ends[j]) {
-                        filterSet[8].set(i);
+                        filterSet[9].set(i);
                         break;
                     }
                 }

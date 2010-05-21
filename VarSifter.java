@@ -18,7 +18,7 @@ import components.TableSorter;
 
 public class VarSifter extends JFrame implements ListSelectionListener, ActionListener, TableModelListener {
     
-    final String version = "0.5a";
+    final String version = "0.5b";
     final String id = "$Id$";
 
     final String govWork = "PUBLIC DOMAIN NOTICE\n" +
@@ -100,6 +100,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     private JCheckBox mendRec = new JCheckBox("Hom. Recessive");
     private JCheckBox mendDom = new JCheckBox("Dominant");
     private JCheckBox mendBad = new JCheckBox("Inconsistent");
+    private JCheckBox mendCompHet = new JCheckBox("Mend. Compound Het");
     private JCheckBox uniqInAff = new JCheckBox("Tumor different from Norm");
     private JCheckBox caseControl = new JCheckBox("Case / Control");
     private JCheckBox filterFile = new JCheckBox("No Gene file selected");
@@ -116,6 +117,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
                                  mendRec,
                                  mendDom,
                                  mendBad,
+                                 mendCompHet,
                                  uniqInAff,
                                  caseControl,
                                  filterFile,
@@ -532,6 +534,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         sampleFiltPane.add(mendRec);
         sampleFiltPane.add(mendDom);
         sampleFiltPane.add(mendBad);
+        sampleFiltPane.add(mendCompHet);
         sampleFiltPane.add(uniqInAff);
         JPanel affSpinnerPane = new JPanel();
         affSpinnerPane.setLayout(new BoxLayout(affSpinnerPane, BoxLayout.X_AXIS));
@@ -708,6 +711,13 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         }
         else {
             mendRec.setEnabled(false);
+        }
+
+        if (typeMap.containsKey("MendHetRec")) {
+            mendCompHet.setEnabled(true);
+        }
+        else {
+            mendCompHet.setEnabled(false);
         }
         
         if (typeMap.containsKey("MendDom")) {
