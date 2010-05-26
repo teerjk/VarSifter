@@ -36,6 +36,7 @@ public class VarData {
     private int[] caseAt;
     private int[] controlAt;
     private VarData parentVarData = null;
+    private int numCols = 0;         // Number of columns.  Set from first line, used to check subseq. lines
 
      /*    
     *    Constructor reads in the file specified by full path in String inFile.
@@ -81,6 +82,7 @@ public class VarData {
                 //Handle the Header
                 if (first) {
                     
+                    numCols = temp.length;
                     Pattern samPat = Pattern.compile("NA");
                     Pattern edPat = Pattern.compile("Comments");
                     Pattern samAff = Pattern.compile("aff");
@@ -170,6 +172,12 @@ public class VarData {
 
                     first = false;
                     continue;
+                }
+
+                if (temp.length != numCols) {
+                    System.out.println("*** Input file appears to be malformed - column number not same as header! " +
+                        "Line: " + (lineCount+2) + " ***");
+                    System.exit(1);
                 }
                 
                 //Fill data array (annotations)
@@ -263,12 +271,19 @@ public class VarData {
     
     /* ***********
     *   Filter mutation type
+    *
+    *   To add new filters, must do the following:
+    *   -Add entry to JCheckBox[] VarSifter.cBox
+    *   -change this.mask indices (so that correct bit is being read - same order as cbox)
+    *   -change this.filterSet indices (so that correct bitset is being used)
+    *   -increment TOTAL_FILTERS (or TOTAL_TYPE_FILTERS)
+    *   -add test with correct this.mask index
     *  ***********
     */
     public void filterData(BitSet mask, String geneFile, String bedFile, int[] spinnerData, String geneQuery) {
         dataIsIncluded.set(0,data.length);
         //dataIsIncluded.clear();
-        final int TOTAL_FILTERS = 9 + 1; //Number of non-type filters plus 1 (all type filters)
+        final int TOTAL_FILTERS = 10 + 1; //Number of non-type filters plus 1 (all type filters)
         final int TOTAL_TYPE_FILTERS = 7;
         BitSet[] filterSet = new BitSet[TOTAL_FILTERS];
         BitSet geneFilter = new BitSet(data.length);
@@ -309,7 +324,7 @@ public class VarData {
         //Start filtering!
         
         //filterFile
-        if (mask.get(14)) {
+        if (mask.get(14) || mask.get(15)) {
             if (geneFile != null) {
                 geneSet = returnGeneSet(geneFile);
             }
@@ -319,7 +334,7 @@ public class VarData {
         }
 
         //bedFilterFile
-        if (mask.get(15)) {
+        if (mask.get(16)) {
             if (bedFile != null) {
                 bedHash = returnBedHash(bedFile);
             }
@@ -423,7 +438,12 @@ public class VarData {
                 filterSet[8].set(i);
             }
 
-            if (mask.get(15) && bedHash[0].get(data[i][chrIndex]) != null) {
+            if (mask.get(15) && !geneSet.contains(data[i][geneIndex])) {
+                filterSet[9].set(i);
+            }
+            
+            
+            if (mask.get(16) && bedHash[0].get(data[i][chrIndex]) != null) {
                 Object[] starts = ((HashMap<String, Vector<Integer>>)bedHash[0]).get(data[i][chrIndex]).toArray();
                 Object[] ends = ((HashMap<String, Vector<Integer>>)bedHash[1]).get(data[i][chrIndex]).toArray();
                 int lf = Integer.parseInt(data[i][lfIndex]);
@@ -434,7 +454,7 @@ public class VarData {
                     }
 
                     if (lf <= (Integer)ends[j]) {
-                        filterSet[9].set(i);
+                        filterSet[10].set(i);
                         break;
                     }
                 }

@@ -18,7 +18,7 @@ import components.TableSorter;
 
 public class VarSifter extends JFrame implements ListSelectionListener, ActionListener, TableModelListener {
     
-    final String version = "0.5b";
+    final String version = "0.5c";
     final String id = "$Id$";
 
     final String govWork = "PUBLIC DOMAIN NOTICE\n" +
@@ -103,8 +103,9 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     private JCheckBox mendCompHet = new JCheckBox("Mend. Compound Het");
     private JCheckBox uniqInAff = new JCheckBox("Tumor different from Norm");
     private JCheckBox caseControl = new JCheckBox("Case / Control");
-    private JCheckBox filterFile = new JCheckBox("No Gene file selected");
-    private JCheckBox bedFilterFile = new JCheckBox("No bed file selected");
+    private JCheckBox filterFile = new JCheckBox("Include Gene File");
+    private JCheckBox notFilterFile = new JCheckBox("Exclude Gene File");
+    private JCheckBox bedFilterFile = new JCheckBox("Include Bed File Regions");
 
     private JCheckBox[] cBox = { stop,
                                  div, 
@@ -121,6 +122,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
                                  uniqInAff,
                                  caseControl,
                                  filterFile,
+                                 notFilterFile,
                                  bedFilterFile
                                };
 
@@ -142,6 +144,9 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
 
     private int[] spinnerData = new int[3]; //Hold data for Spinner values (use int values from VarData)
     
+    private JLabel filterFileLabel = new JLabel("No Gene File Selected");
+    private JLabel bedFilterFileLabel = new JLabel("No Bed File Selected");
+
     private JSpinner minAffSpinner = new JSpinner();
     private JLabel affSpinnerLabel = new JLabel("Diff. in at least:");
     private JTextField geneRegexField = new JTextField();
@@ -324,12 +329,16 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         }
         
         else if (es == aboutItem) {
-            JOptionPane.showMessageDialog(null, "VarSifter v" + version + "\n" +
+            JTextArea tPane = new JTextArea("VarSifter v" + version + "\n" +
                 "Jamie K. Teer, 2010\n\n" + govWork + "\n" + id +
                 "\n\n--------------------------------------------------------" +
                 "\n\nThis program uses the JTable sorting class TableSorter.java from Sun\n" +
                 "and must include the following copyright notification:\n\n" +
-                sunCopyright + "\n" + sunDisclaimer, "About VarSifter", JOptionPane.PLAIN_MESSAGE);
+                sunCopyright + "\n" + sunDisclaimer);
+
+            JScrollPane sPane = new JScrollPane(tPane);
+            sPane.setPreferredSize(new Dimension(600,600));
+            JOptionPane.showMessageDialog(null, sPane, "About VarSifter", JOptionPane.PLAIN_MESSAGE);
         }
 
         else if (es == check) {
@@ -528,6 +537,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         excludePane.setLayout(new BoxLayout(excludePane, BoxLayout.Y_AXIS));
         excludePane.setBorder(BorderFactory.createLineBorder(Color.black));
         excludePane.add(dbsnp);
+        excludePane.add(notFilterFile);
         JPanel sampleFiltPane = new JPanel();
         sampleFiltPane.setLayout(new BoxLayout(sampleFiltPane, BoxLayout.Y_AXIS));
         sampleFiltPane.setBorder(BorderFactory.createLineBorder(Color.black));
@@ -535,6 +545,8 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         sampleFiltPane.add(mendDom);
         sampleFiltPane.add(mendBad);
         sampleFiltPane.add(mendCompHet);
+        sampleFiltPane.add(filterFile);
+        sampleFiltPane.add(bedFilterFile);
         sampleFiltPane.add(uniqInAff);
         JPanel affSpinnerPane = new JPanel();
         affSpinnerPane.setLayout(new BoxLayout(affSpinnerPane, BoxLayout.X_AXIS));
@@ -578,12 +590,12 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         JPanel fFiltPane = new JPanel();
         fFiltPane.setLayout(new BoxLayout(fFiltPane, BoxLayout.Y_AXIS));
         //fFiltPane.setAlignmentX(Component.LEFT_ALIGNMENT);
-        fFiltPane.add(filterFile);
+        fFiltPane.add(filterFileLabel);
         fFiltPane.add(filterFileButton);
 
         JPanel bFiltPane = new JPanel();
         bFiltPane.setLayout(new BoxLayout(bFiltPane, BoxLayout.Y_AXIS));
-        bFiltPane.add(bedFilterFile);
+        bFiltPane.add(bedFilterFileLabel);
         bFiltPane.add(bedFilterFileButton);
         
         JPanel showPane = new JPanel();
@@ -614,9 +626,12 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         filtPane.add(Box.createRigidArea(new Dimension(0,10)));
         apply.setMnemonic(KeyEvent.VK_F);
         filtPane.add(apply);
+        filtPane.add(Box.createRigidArea(new Dimension(0,15)));
         filtPane.add(Box.createVerticalGlue());
         filtPane.add(fFiltPane);
+        filtPane.add(Box.createRigidArea(new Dimension(0,10)));
         filtPane.add(bFiltPane);
+        filtPane.add(Box.createRigidArea(new Dimension(0,10)));
         filtPane.add(geneViewButton);
 
         //Stats (line count)
@@ -652,6 +667,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
 
         //Disable unused buttons
         filterFile.setEnabled(false);
+        notFilterFile.setEnabled(false);
         bedFilterFile.setEnabled(false);
         geneViewButton.setEnabled(false);
         if (vdat.returnParent() != null) {
@@ -836,11 +852,12 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             VarSifter.this.setTitle("VarSifter - " + fileName);
         }
         else if (openType == GENE_FILTER_FILE) {
-            filterFile.setText(fileName);
+            filterFileLabel.setText(fileName);
             filterFile.setEnabled(true);
+            notFilterFile.setEnabled(true);
         }
         else if (openType == BED_FILTER_FILE) {
-            bedFilterFile.setText(fileName);
+            bedFilterFileLabel.setText(fileName);
             bedFilterFile.setEnabled(true);
         }
         return fileName;
