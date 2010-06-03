@@ -13,7 +13,7 @@ public class VarTableModel extends AbstractTableModel {
     private Object[] largestInColumn;
     private VarData vdat;
     
-    private Pattern digits = Pattern.compile("^-?\\d+$");
+    public final static Pattern digits = Pattern.compile("^-?\\d+$");
     
     public VarTableModel(String[][] inData, String[] colN, VarData v) {
         vdat = v;

@@ -695,6 +695,43 @@ public class VarData {
         return outSet;
     }
 
+    
+    /* **********
+    *   Return pairs of positions based on index
+    *  **********
+    */
+    public String[][] returnIndexPairs(String[] inPair) {
+        
+        HashMap<String, String> inSet = new HashMap<String, String>();
+        String[][] out = new String[inPair.length-1][4];
+        int indexIndex = (dataTypeAt.containsKey("Index")) ? dataTypeAt.get("Index") : -1;
+        int cdPredIndex = (dataTypeAt.containsKey("CDPred_score")) ? dataTypeAt.get("CDPred_score") : -1;
+        int lfIndex = (dataTypeAt.containsKey("LeftFlank")) ? dataTypeAt.get("LeftFlank") : -1;
+        int geneIndex = (dataTypeAt.containsKey("refseq")) ? dataTypeAt.get("refseq") : -1;
+        int chromIndex = dataTypeAt.get("Chr");
+
+        for (int i=0; i<inPair.length; i++) {
+            inSet.put(inPair[i], "-");
+        }
+
+        for (int i=0; i<data.length; i++) {
+            if (inSet.containsKey(data[i][indexIndex])) {
+                inSet.put(data[i][indexIndex], (data[i][cdPredIndex] + ":" + data[i][lfIndex]) );
+            }
+        }
+
+        for (int i=0; i<out.length; i++) {
+            //out[i][0] = inSet.get(inPair[0]);
+            //out[i][1] = inSet.get(inPair[i+1]);
+            System.arraycopy( inSet.get(inPair[0]).split(":", 0), 0, out[i], 0, 2);
+            System.arraycopy( inSet.get(inPair[i+1]).split(":", 0), 0, out[i], 2, 2);
+        }
+        return out;
+
+    }
+
+
+
     /* **********
     *   Return samples
     *  **********

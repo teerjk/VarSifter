@@ -130,6 +130,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     private JMenuItem saveAsItem;
     private JMenuItem saveViewItem;
     private JMenuItem exitItem;
+    private JMenuItem compHetViewItem;
     private JMenuItem aboutItem;
 
     private JButton apply = new JButton("Apply Filter");
@@ -141,6 +142,10 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     private JButton filterFileButton = new JButton("Choose Gene File Filter");
     private JButton bedFilterFileButton = new JButton("Choose Bed File Filter");
     private JButton geneViewButton = new JButton("View Variants for Selected Gene");
+    private JButton compHetGeneViewButton = new JButton("View by Gene");
+    private JButton compHetPairViewButton = new JButton("View Pairs of Selected Position");
+
+    private JFrame compHetParent = new JFrame("Compound Het Views");
 
     private int[] spinnerData = new int[3]; //Hold data for Spinner values (use int values from VarData)
     
@@ -327,6 +332,20 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         else if (es == exitItem) {
             processWindowEvent(new WindowEvent(this, WindowEvent.WINDOW_CLOSING));
         }
+
+        else if (es == compHetViewItem) {
+            //CompHetPane c = new CompHetPane();
+            compHetParent.setVisible(true);
+        }
+
+        else if (es == compHetPairViewButton) {
+            HashMap<String, Integer> typeMap = vdat.returnDataTypeAt();
+            int row = outTable.getSelectedRow();
+            String index = outTable.getValueAt(row, ((Integer)typeMap.get("Index")).intValue()).toString();
+            index += ("," + outTable.getValueAt(row, ((Integer)typeMap.get("MendHetRec")).intValue()).toString());
+            //System.out.println(index);
+            CompHetView c = new CompHetView(index, vdat);
+        }
         
         else if (es == aboutItem) {
             JTextArea tPane = new JTextArea("VarSifter v" + version + "\n" +
@@ -468,18 +487,22 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         //Menu
         JMenuBar mBar = new JMenuBar();
         JMenu fileMenu = new JMenu("File");
+        JMenu viewMenu = new JMenu("View");
         JMenu helpMenu = new JMenu("Help");
         openItem = new JMenuItem("Open File");
         saveAsItem = new JMenuItem("Save File As");
         saveViewItem = new JMenuItem("Save Current View As");
         exitItem = new JMenuItem("Exit");
+        compHetViewItem = new JMenuItem("Viewing Compound Hets");
         aboutItem = new JMenuItem("About VarSifter");
         fileMenu.add(openItem);
         fileMenu.add(saveAsItem);
         fileMenu.add(saveViewItem);
         fileMenu.add(exitItem);
+        viewMenu.add(compHetViewItem);
         helpMenu.add(aboutItem);
         mBar.add(fileMenu);
+        mBar.add(viewMenu);
         mBar.add(helpMenu);
         setJMenuBar(mBar);
 
@@ -658,6 +681,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         openItem.addActionListener(this);
         saveAsItem.addActionListener(this);
         saveViewItem.addActionListener(this);
+        compHetViewItem.addActionListener(this);
         exitItem.addActionListener(this);
         aboutItem.addActionListener(this);
         check.addActionListener(this);
@@ -673,6 +697,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         if (vdat.returnParent() != null) {
             geneViewButton.setVisible(false);
         }
+        compHetGeneViewButton.setEnabled(false);
         maskCBox();
                 
         pane.add(tablePanel, BorderLayout.CENTER);
@@ -680,6 +705,29 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         add(pane);
         pack();
         setVisible(true);
+
+
+        //Initialize (but don't display) compHetPane
+        JPanel compHetPane = new JPanel();
+        compHetPane.setLayout(new BoxLayout(compHetPane, BoxLayout.Y_AXIS));
+        compHetPane.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
+
+        JPanel buttonPane = new JPanel();
+        buttonPane.setLayout(new BoxLayout(buttonPane, BoxLayout.Y_AXIS));
+        buttonPane.add(new JLabel("Choose Compound Het View:"));
+        buttonPane.add(Box.createRigidArea(new Dimension(0,15)));
+        buttonPane.add(compHetGeneViewButton);
+        buttonPane.add(Box.createRigidArea(new Dimension(0,10)));
+        buttonPane.add(compHetPairViewButton);
+
+        compHetGeneViewButton.addActionListener(this);
+        compHetPairViewButton.addActionListener(this);
+
+        compHetPane.add(buttonPane);
+        compHetParent.add(compHetPane);
+        compHetParent.pack();
+        compHetParent.setVisible(true);
+
     }
 
 
@@ -731,9 +779,11 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
 
         if (typeMap.containsKey("MendHetRec")) {
             mendCompHet.setEnabled(true);
+            compHetPairViewButton.setEnabled(true);
         }
         else {
             mendCompHet.setEnabled(false);
+            compHetPairViewButton.setEnabled(false);
         }
         
         if (typeMap.containsKey("MendDom")) {
