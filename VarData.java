@@ -350,12 +350,13 @@ public class VarData {
         
         for (int i = 0; i < data.length; i++) {
             String[] tempGeno = { data[i][refAlleleIndex], data[i][varAlleleIndex] };
+            String homNonRefGen = (tempGeno[1] + tempGeno[1]);
             java.util.Arrays.sort(tempGeno);
-            String genotype = "";
+            String hetNonRefGen = "";
             for (String s : tempGeno) {
-                genotype += s;
+                hetNonRefGen += s;
             }
-            //System.out.println(genotype);
+            //System.out.println(hetNonRefGen);
            
             if ( (mask.get(0) && data[i][typeIndex].equals("Stop")           ) ||
                  (mask.get(1) && data[i][typeIndex].equals("DIV")            ) ||
@@ -415,14 +416,14 @@ public class VarData {
                 int controlCount = 0;
                 for (int j=0; j < caseAt.length; j++) {
                     String caseTemp = samples[i][caseAt[j]][0].replaceAll(":", "");
-                    if (caseTemp.equals(genotype) &&
+                    if ( (caseTemp.equals(hetNonRefGen) || caseTemp.equals(homNonRefGen)) &&
                         Integer.parseInt(samples[i][caseAt[j]][1]) >= THRESHOLD) {
                         caseCount++;
                     }
                 }
                 for (int j=0; j < controlAt.length; j++) {
                     String controlTemp = samples[i][controlAt[j]][0].replaceAll(":","");
-                    if (controlTemp.equals(genotype) &&
+                    if ( (controlTemp.equals(hetNonRefGen) || controlTemp.equals(homNonRefGen)) &&
                         Integer.parseInt(samples[i][controlAt[j]][1]) >= THRESHOLD) {
                         controlCount++;
                     }

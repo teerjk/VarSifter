@@ -229,12 +229,14 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
 
             if (showVar.isSelected()) {
                 isShowVar = true;
-                geneViewButton.setEnabled(false);
+                //geneViewButton.setEnabled(false);
+                compHetPairViewButton.setEnabled(true);
                 linesl.setText("Number of Variant Positions: ");
             }
             else if (showGene.isSelected()) {
                 isShowVar = false;
-                geneViewButton.setEnabled(true);
+                //geneViewButton.setEnabled(true);
+                compHetPairViewButton.setEnabled(false);
                 linesl.setText("Number of Genes: ");
             }
             
@@ -302,7 +304,16 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
 
             //Use this button to return a VarSifter view of one gene
             //int l = vdat.dataDump().length - 1;
-            String geneRegex = "^" + (String)outTable.getValueAt(outTable.getSelectedRow(), 0) + "$";
+            String geneRegex = new String("");
+            if (showVar.isSelected()) {
+                HashMap<String, Integer> typeMap = vdat.returnDataTypeAt();
+                geneRegex = "^" + (String)outTable.getValueAt(outTable.getSelectedRow(), 
+                    ((Integer)typeMap.get("refseq")).intValue()) + "$";
+            }
+            else if (showGene.isSelected()) {
+                geneRegex = "^" + (String)outTable.getValueAt(outTable.getSelectedRow(), 0) + "$";
+            }
+
             vdat.filterData(new BitSet(), null, null, null, geneRegex);
                 //(String)outTable.getValueAt(outTable.getSelectedRow(), 0));
             VarData tempVdat = vdat.returnSubVarData(vdat, null);
@@ -693,12 +704,13 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         filterFile.setEnabled(false);
         notFilterFile.setEnabled(false);
         bedFilterFile.setEnabled(false);
-        geneViewButton.setEnabled(false);
+        //geneViewButton.setEnabled(false);
         if (vdat.returnParent() != null) {
             geneViewButton.setVisible(false);
         }
         compHetGeneViewButton.setEnabled(false);
         maskCBox();
+        mask = getFilterMask();
                 
         pane.add(tablePanel, BorderLayout.CENTER);
         pane.add(filtPane, BorderLayout.LINE_END);
