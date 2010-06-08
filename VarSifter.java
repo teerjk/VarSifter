@@ -125,6 +125,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
                                  notFilterFile,
                                  bedFilterFile
                                };
+    public final int MENDHETREC = 11;
 
     private JMenuItem openItem;
     private JMenuItem saveAsItem;
@@ -154,7 +155,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
 
     private JSpinner minAffSpinner = new JSpinner();
     private JLabel affSpinnerLabel = new JLabel("Diff. in at least:");
-    private JTextField geneRegexField = new JTextField();
+    private JTextField geneRegexField = new JTextField("");
 
     private JSpinner caseSpinner = new JSpinner();
     private JLabel caseSpinnerLabel = new JLabel("Var in cases (at least):");
@@ -241,12 +242,13 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             }
             
             String tempRegex;
-            if (geneRegexField.getText().equals("")) {
-                tempRegex = null;
-            }
-            else {
-                tempRegex = geneRegexField.getText();;
-            }
+            tempRegex = getRegex();
+            //if (geneRegexField.getText().equals("")) {
+            //    tempRegex = null;
+            //}
+            //else {
+            //    tempRegex = geneRegexField.getText();
+            //}
 
             spinnerData[vdat.AFF_NORM_PAIR] = ((Integer)minAffSpinner.getValue()).intValue();
             spinnerData[vdat.CASE] = ((Integer)caseSpinner.getValue()).intValue();
@@ -305,12 +307,12 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             //Use this button to return a VarSifter view of one gene
             //int l = vdat.dataDump().length - 1;
             String geneRegex = new String("");
-            if (showVar.isSelected()) {
+            if (isShowVar) {
                 HashMap<String, Integer> typeMap = vdat.returnDataTypeAt();
                 geneRegex = "^" + (String)outTable.getValueAt(outTable.getSelectedRow(), 
                     ((Integer)typeMap.get("refseq")).intValue()) + "$";
             }
-            else if (showGene.isSelected()) {
+            else {
                 geneRegex = "^" + (String)outTable.getValueAt(outTable.getSelectedRow(), 0) + "$";
             }
 
@@ -320,7 +322,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             VarSifter vs = new VarSifter(tempVdat);
             
             //Must return the filtered state to what it was, to avoid data mapping errors!
-            vdat.filterData(mask, geneFile, bedFile, spinnerData, null);
+            vdat.filterData(mask, geneFile, bedFile, spinnerData, getRegex());
         }
 
         else if (es == openItem) {
@@ -347,6 +349,33 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         else if (es == compHetViewItem) {
             //CompHetPane c = new CompHetPane();
             compHetParent.setVisible(true);
+        }
+
+        else if (es == compHetGeneViewButton) {
+            String geneRegex = new String("");
+            HashMap<String, Integer> typeMap = vdat.returnDataTypeAt();
+            int indexIndex = ((Integer)typeMap.get("Index")).intValue();
+            int mendHetRecIndex = ((Integer)typeMap.get("MendHetRec")).intValue();
+            if (isShowVar) {
+                geneRegex = "^" + (String)outTable.getValueAt(outTable.getSelectedRow(), 
+                    ((Integer)typeMap.get("refseq")).intValue()) + "$";
+            }
+            else {
+                geneRegex = "^" + (String)outTable.getValueAt(outTable.getSelectedRow(), 0) + "$";
+            }
+            BitSet tempBS = new BitSet();
+            tempBS.set(MENDHETREC);
+            vdat.filterData(tempBS, null, null, null, geneRegex);
+            String temp[][] = vdat.returnData();
+
+            //Must return the filtered state to what it was, to avoid data mapping errors!
+            vdat.filterData(mask, geneFile, bedFile, spinnerData, getRegex());
+
+            String[] index = new String[temp.length];
+            for (int i=0; i<temp.length; i++) {
+                index[i] = temp[i][indexIndex] + "," + temp[i][mendHetRecIndex];
+            }
+            CompHetView c = new CompHetView(index, vdat);
         }
 
         else if (es == compHetPairViewButton) {
@@ -791,10 +820,12 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
 
         if (typeMap.containsKey("MendHetRec")) {
             mendCompHet.setEnabled(true);
+            compHetGeneViewButton.setEnabled(true);
             compHetPairViewButton.setEnabled(true);
         }
         else {
             mendCompHet.setEnabled(false);
+            compHetGeneViewButton.setEnabled(false);
             compHetPairViewButton.setEnabled(false);
         }
         
@@ -842,6 +873,20 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         }
 
     }      
+
+    /* *************
+    *   get regex or null if nothing
+    *  *************
+    */
+    private String getRegex() {
+        if (geneRegexField.getText().equals("")) {
+            return null;
+        }
+        else {
+            return geneRegexField.getText();
+        }
+    }
+
 
     /* *************
     *   initialize  minAffSpinner

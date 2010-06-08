@@ -704,12 +704,13 @@ public class VarData {
     public String[][] returnIndexPairs(String[] inPair) {
         
         HashMap<String, String> inSet = new HashMap<String, String>();
-        String[][] out = new String[inPair.length-1][4];
+        String[][] out = new String[inPair.length-1][8];
         int indexIndex = (dataTypeAt.containsKey("Index")) ? dataTypeAt.get("Index") : -1;
         int cdPredIndex = (dataTypeAt.containsKey("CDPred_score")) ? dataTypeAt.get("CDPred_score") : -1;
         int lfIndex = (dataTypeAt.containsKey("LeftFlank")) ? dataTypeAt.get("LeftFlank") : -1;
         int geneIndex = (dataTypeAt.containsKey("refseq")) ? dataTypeAt.get("refseq") : -1;
         int chromIndex = dataTypeAt.get("Chr");
+        int typeIndex = dataTypeAt.get("type");
 
         for (int i=0; i<inPair.length; i++) {
             inSet.put(inPair[i], "-");
@@ -717,15 +718,19 @@ public class VarData {
 
         for (int i=0; i<data.length; i++) {
             if (inSet.containsKey(data[i][indexIndex])) {
-                inSet.put(data[i][indexIndex], (data[i][cdPredIndex] + ":" + data[i][lfIndex]) );
+                inSet.put(data[i][indexIndex], (data[i][geneIndex] + ":" +
+                                                data[i][chromIndex] + ":" + 
+                                                data[i][lfIndex] + ":" +
+                                                data[i][cdPredIndex] + ":" + 
+                                                data[i][typeIndex]) );
             }
         }
 
         for (int i=0; i<out.length; i++) {
             //out[i][0] = inSet.get(inPair[0]);
             //out[i][1] = inSet.get(inPair[i+1]);
-            System.arraycopy( inSet.get(inPair[0]).split(":", 0), 0, out[i], 0, 2);
-            System.arraycopy( inSet.get(inPair[i+1]).split(":", 0), 0, out[i], 2, 2);
+            System.arraycopy( inSet.get(inPair[0]).split(":", 0), 0, out[i], 0, 5);
+            System.arraycopy( inSet.get(inPair[i+1]).split(":", 0), 2, out[i], 5, 3);
         }
         return out;
 
