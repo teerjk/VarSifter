@@ -230,14 +230,10 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
 
             if (showVar.isSelected()) {
                 isShowVar = true;
-                //geneViewButton.setEnabled(false);
-                compHetPairViewButton.setEnabled(true);
                 linesl.setText("Number of Variant Positions: ");
             }
             else if (showGene.isSelected()) {
                 isShowVar = false;
-                //geneViewButton.setEnabled(true);
-                compHetPairViewButton.setEnabled(false);
                 linesl.setText("Number of Genes: ");
             }
             
