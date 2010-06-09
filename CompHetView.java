@@ -97,8 +97,8 @@ public class CompHetView extends JFrame {
         JScrollPane sPane = new JScrollPane(outTable,
             ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
             ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-        //sPane.setPreferredSize(new Dimension(610,400));
-        outTable.setPreferredSize(new Dimension(610,400));
+        sPane.setPreferredSize(new Dimension(610,400));
+        //outTable.setPreferredSize(new Dimension(610,400));
         outTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
         outTable.setDefaultRenderer(Number.class, new VarScoreRenderer());
         pane.add(sPane);

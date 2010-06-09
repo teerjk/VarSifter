@@ -18,7 +18,7 @@ import components.TableSorter;
 
 public class VarSifter extends JFrame implements ListSelectionListener, ActionListener, TableModelListener {
     
-    final String version = "0.6";
+    final String version = "0.6a";
     final String id = "$Id$";
 
     final String govWork = "PUBLIC DOMAIN NOTICE\n" +
@@ -145,6 +145,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     private JButton geneViewButton = new JButton("View Variants for Selected Gene");
     private JButton compHetGeneViewButton = new JButton("View by Gene");
     private JButton compHetPairViewButton = new JButton("View Pairs of Selected Position");
+    private JButton compHetAllButton = new JButton("View All Compound Hets");
 
     private JFrame compHetParent = new JFrame("Compound Het Views");
 
@@ -387,6 +388,26 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
                 showError("Not available for \"Show Gene\" view - please re-filter with \"Show Variants\"");
             }
 
+        }
+
+        else if (es == compHetAllButton) {
+            HashMap<String, Integer> typeMap = vdat.returnDataTypeAt();
+            int indexIndex = ((Integer)typeMap.get("Index")).intValue();
+            int mendHetRecIndex = ((Integer)typeMap.get("MendHetRec")).intValue();
+            String geneRegex = ".";
+            BitSet tempBS = new BitSet();
+            tempBS.set(MENDHETREC);
+            vdat.filterData(tempBS, null, null, null, geneRegex);
+            String temp[][] = vdat.returnData();
+
+            //Must return the filtered state to what it was, to avoid data mapping errors!
+            vdat.filterData(mask, geneFile, bedFile, spinnerData, getRegex());
+
+            String[] index = new String[temp.length];
+            for (int i=0; i<temp.length; i++) {
+                index[i] = temp[i][indexIndex] + "," + temp[i][mendHetRecIndex];
+            }
+            CompHetView c = new CompHetView(index, vdat);
         }
         
         else if (es == aboutItem) {
@@ -762,9 +783,12 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         buttonPane.add(compHetGeneViewButton);
         buttonPane.add(Box.createRigidArea(new Dimension(0,10)));
         buttonPane.add(compHetPairViewButton);
+        buttonPane.add(Box.createRigidArea(new Dimension(0,10)));
+        buttonPane.add(compHetAllButton);
 
         compHetGeneViewButton.addActionListener(this);
         compHetPairViewButton.addActionListener(this);
+        compHetAllButton.addActionListener(this);
 
         compHetPane.add(buttonPane);
         compHetParent.add(compHetPane);
@@ -824,11 +848,13 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             mendCompHet.setEnabled(true);
             compHetGeneViewButton.setEnabled(true);
             compHetPairViewButton.setEnabled(true);
+            compHetAllButton.setEnabled(true);
         }
         else {
             mendCompHet.setEnabled(false);
             compHetGeneViewButton.setEnabled(false);
             compHetPairViewButton.setEnabled(false);
+            compHetAllButton.setEnabled(false);
         }
         
         if (typeMap.containsKey("MendDom")) {
