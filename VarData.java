@@ -61,7 +61,7 @@ public class VarData {
             lineCount = 0;
         }
         catch (IOException ioe) {
-            VarSifter.showError(ioe);
+            VarSifter.showError(ioe.toString());
             System.out.println(ioe);
             System.exit(1);
         }
@@ -200,7 +200,7 @@ public class VarData {
             br.close();
         }
         catch (IOException ioe) {
-            VarSifter.showError(ioe);
+            VarSifter.showError(ioe.toString());
             System.out.println(ioe);
             System.exit(1);
         }
