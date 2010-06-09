@@ -375,12 +375,18 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         }
 
         else if (es == compHetPairViewButton) {
-            HashMap<String, Integer> typeMap = vdat.returnDataTypeAt();
-            int row = outTable.getSelectedRow();
-            String index = outTable.getValueAt(row, ((Integer)typeMap.get("Index")).intValue()).toString();
-            index += ("," + outTable.getValueAt(row, ((Integer)typeMap.get("MendHetRec")).intValue()).toString());
-            //System.out.println(index);
-            CompHetView c = new CompHetView(index, vdat);
+            if (isShowVar) {
+                HashMap<String, Integer> typeMap = vdat.returnDataTypeAt();
+                int row = outTable.getSelectedRow();
+                String index = outTable.getValueAt(row, ((Integer)typeMap.get("Index")).intValue()).toString();
+                index += ("," + outTable.getValueAt(row, ((Integer)typeMap.get("MendHetRec")).intValue()).toString());
+                //System.out.println(index);
+                CompHetView c = new CompHetView(index, vdat);
+            }
+            else {
+                showError("Not available for \"Show Gene\" view - please re-filter with \"Show Variants\"");
+            }
+
         }
         
         else if (es == aboutItem) {
@@ -920,6 +926,14 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         controlSpinner.setMaximumSize(controlSpinner.getPreferredSize());
     }
 
+    /* *************
+    *   Display error as dialog
+    *  *************
+    */
+    public static void showError(String err) {
+        JOptionPane.showMessageDialog(null, err, "Error!", JOptionPane.ERROR_MESSAGE);
+    }
+
 
     /* *************
     *   Open data
@@ -944,6 +958,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             System.out.println("No File opened.");
 
             if (vdat == null) {
+                showError("This program really only works if you open a file. Exiting.");
                 System.out.println("This program really only works if you open a file. Exiting.");
                 System.exit(0);
             }
@@ -1018,6 +1033,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
                 }
                 pw.close();
                 if (pw.checkError()) {
+                    showError("Error Detected writing file! File NOT saved!");
                     System.out.println("Error Detected writing file!");
                 }
                 else {

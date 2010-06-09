@@ -61,6 +61,7 @@ public class VarData {
             lineCount = 0;
         }
         catch (IOException ioe) {
+            VarSifter.showError(ioe);
             System.out.println(ioe);
             System.exit(1);
         }
@@ -175,6 +176,8 @@ public class VarData {
                 }
 
                 if (temp.length != numCols) {
+                    VarSifter.showError("*** Input file appears to be malformed - column number not same as header! " +
+                        "Line: " + (lineCount+2) + " ***");
                     System.out.println("*** Input file appears to be malformed - column number not same as header! " +
                         "Line: " + (lineCount+2) + " ***");
                     System.exit(1);
@@ -197,6 +200,7 @@ public class VarData {
             br.close();
         }
         catch (IOException ioe) {
+            VarSifter.showError(ioe);
             System.out.println(ioe);
             System.exit(1);
         }
@@ -329,6 +333,7 @@ public class VarData {
                 geneSet = returnGeneSet(geneFile);
             }
             else {
+                VarSifter.showError("!!! geneFile not defined, so can't use it to filter !!!");
                 System.out.println("!!! geneFile not defined, so can't use it to filter !!!");
             }
         }
@@ -339,6 +344,7 @@ public class VarData {
                 bedHash = returnBedHash(bedFile);
             }
             else {
+                VarSifter.showError("!!! bedFile not defined, so nothing to filter with !!!");
                 System.out.println("!!! bedFile not defined, so nothing to filter with !!!");
             }
         }
