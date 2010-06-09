@@ -18,7 +18,7 @@ import components.TableSorter;
 
 public class VarSifter extends JFrame implements ListSelectionListener, ActionListener, TableModelListener {
     
-    final String version = "0.5c";
+    final String version = "0.6";
     final String id = "$Id$";
 
     final String govWork = "PUBLIC DOMAIN NOTICE\n" +
@@ -767,7 +767,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         compHetPane.add(buttonPane);
         compHetParent.add(compHetPane);
         compHetParent.pack();
-        compHetParent.setVisible(true);
+        //compHetParent.setVisible(true);
 
     }
 

@@ -30,7 +30,6 @@ public class CompHetView extends JFrame {
         String[] temp = index.split(",", 0);
 
         if (temp.length == 2 && temp[1].equals("0")) {
-            System.out.println("Not a compound Het pair!");
             data = new String[][]{ { "Not a compound Het pair!" } };
             columnName = new String[]{""};
         }
@@ -52,24 +51,30 @@ public class CompHetView extends JFrame {
         super("Compound Het Gene View");
         int pairs = 0;
         
-        String[][] temp = new String[indices.length][];
-        for (int i=0; i<indices.length;i++) {
-            temp[i] = indices[i].split(",", 0);
-            pairs += (temp[i].length - 1);
+        if (indices.length == 0) {
+            data = new String[][]{ { "No compound hets" } };
+            columnName = new String[] {""};
         }
-        data = new String[pairs][];
-        pairs = 0;
-
-        for (int i=0; i<temp.length; i++) {
-            String[][] outTemp = vdat.returnIndexPairs(temp[i]);
-            for (int j=0; j<outTemp.length; j++) {
-                data[pairs+j] = new String[outTemp[j].length];
-                //System.out.println(outTemp[j][0] + " " + outTemp[j].length);
-                System.arraycopy(outTemp[j], 0, data[pairs+j], 0, outTemp[j].length);
+        else {
+            String[][] temp = new String[indices.length][];
+            for (int i=0; i<indices.length;i++) {
+                temp[i] = indices[i].split(",", 0);
+                pairs += (temp[i].length - 1);
             }
-            pairs += outTemp.length;
+            data = new String[pairs][];
+            pairs = 0;
+
+            for (int i=0; i<temp.length; i++) {
+                String[][] outTemp = vdat.returnIndexPairs(temp[i]);
+                for (int j=0; j<outTemp.length; j++) {
+                    data[pairs+j] = new String[outTemp[j].length];
+                    //System.out.println(outTemp[j][0] + " " + outTemp[j].length);
+                    System.arraycopy(outTemp[j], 0, data[pairs+j], 0, outTemp[j].length);
+                }
+                pairs += outTemp.length;
+            }
+            columnName = new String[]{"refseq", "Chr", "A_pos", "A_score", "A_type",  "B_pos", "B_score", "B_type"};
         }
-        columnName = new String[]{"refseq", "Chr", "A_pos", "A_score", "A_type",  "B_pos", "B_score", "B_type"};
         initTable();
 
     }
@@ -81,7 +86,7 @@ public class CompHetView extends JFrame {
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         JPanel pane = new JPanel();
         pane.setLayout(new BoxLayout(pane, BoxLayout.X_AXIS));
-        pane.setPreferredSize(new Dimension(610, 400));
+        pane.setPreferredSize(new Dimension(630, 400));
         //pane.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
 
         outTable = new JTable();
@@ -92,7 +97,8 @@ public class CompHetView extends JFrame {
         JScrollPane sPane = new JScrollPane(outTable,
             ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
             ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-        //sPane.setPreferredSize(outTable.getPreferredSize());
+        //sPane.setPreferredSize(new Dimension(610,400));
+        outTable.setPreferredSize(new Dimension(610,400));
         outTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
         outTable.setDefaultRenderer(Number.class, new VarScoreRenderer());
         pane.add(sPane);
