@@ -719,6 +719,10 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         filtPane.add(bFiltPane);
         filtPane.add(Box.createRigidArea(new Dimension(0,10)));
         filtPane.add(geneViewButton);
+        JScrollPane filtScroll = new JScrollPane(filtPane, 
+            ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
+            ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        filtScroll.setBorder(null);
 
         //Stats (line count)
         JPanel stats = new JPanel();
@@ -765,7 +769,8 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         mask = getFilterMask();
                 
         pane.add(tablePanel, BorderLayout.CENTER);
-        pane.add(filtPane, BorderLayout.LINE_END);
+        pane.add(filtScroll, BorderLayout.LINE_END);
+        //pane.add(filtPane, BorderLayout.LINE_END);
         add(pane);
         pack();
         setVisible(true);
