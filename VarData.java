@@ -707,10 +707,10 @@ public class VarData {
     *   Return pairs of positions based on index
     *  **********
     */
-    public String[][] returnIndexPairs(String[] inPair) {
+    public String[][] returnIndexPairs(String[] inPair, boolean isSamples) {
         
         HashMap<String, String> inSet = new HashMap<String, String>();
-        String[][] out = new String[inPair.length-1][8];
+        String[][] out = new String[inPair.length-1][];
         int indexIndex = (dataTypeAt.containsKey("Index")) ? dataTypeAt.get("Index") : -1;
         int cdPredIndex = (dataTypeAt.containsKey("CDPred_score")) ? dataTypeAt.get("CDPred_score") : -1;
         int lfIndex = (dataTypeAt.containsKey("LeftFlank")) ? dataTypeAt.get("LeftFlank") : -1;
@@ -723,20 +723,36 @@ public class VarData {
         }
 
         for (int i=0; i<data.length; i++) {
+            StringBuilder sb = new StringBuilder(64);
             if (inSet.containsKey(data[i][indexIndex])) {
-                inSet.put(data[i][indexIndex], (data[i][geneIndex] + ":" +
-                                                data[i][chromIndex] + ":" + 
-                                                data[i][lfIndex] + ":" +
-                                                data[i][cdPredIndex] + ":" + 
-                                                data[i][typeIndex]) );
+                sb.append ((data[i][geneIndex] + ";" +
+                           data[i][chromIndex] + ";" + 
+                           data[i][lfIndex] + ";" +
+                           data[i][cdPredIndex] + ";" + 
+                           data[i][typeIndex]) );
+                
+                if (isSamples) {
+                    sb.append(";");
+                    for (int j=0; j<sampleNames.length; j++) {
+                        for (int k=0; k<S_FIELDS; k++) {
+                            sb.append(samples[i][j][k] + ";");
+                        }
+                    }
+                    sb.deleteCharAt(sb.length() - 1);
+                }
+                inSet.put(data[i][indexIndex], sb.toString());
             }
         }
 
+        String[] firstTemp = inSet.get(inPair[0]).split(";", 0);
         for (int i=0; i<out.length; i++) {
-            //out[i][0] = inSet.get(inPair[0]);
-            //out[i][1] = inSet.get(inPair[i+1]);
-            System.arraycopy( inSet.get(inPair[0]).split(":", 0), 0, out[i], 0, 5);
-            System.arraycopy( inSet.get(inPair[i+1]).split(":", 0), 2, out[i], 5, 3);
+            //System.arraycopy( inSet.get(inPair[0]).split(";", 0), 0, out[i], 0, 5);
+            //System.arraycopy( inSet.get(inPair[i+1]).split(";", 0), 2, out[i], 5, 3);
+            out[i] = new String[ ((firstTemp.length * 2) - 2) ];
+            String[] nextTemp = inSet.get(inPair[i+1]).split(";",0);
+
+            System.arraycopy( firstTemp, 0, out[i], 0, firstTemp.length );
+            System.arraycopy( nextTemp, 2, out[i], firstTemp.length, (nextTemp.length - 2) );
         }
         return out;
 
@@ -767,6 +783,11 @@ public class VarData {
     
     public String[] returnSampleNames() {
         return sampleNames;
+    }
+
+
+    public String[] returnSampleNamesOrig() {
+        return sampleNamesOrig;
     }
 
 

@@ -14,6 +14,10 @@ public class CompHetView extends JFrame {
 
     private JTable outTable;
     private TableSorter sorter;
+    private final String[] columnDefaultName = new String[]{"refseq", "Chr", 
+                                                            "A_pos", "A_score", "A_type",  
+                                                            "B_pos", "B_score", "B_type"};
+    private final int COLUMN_NUMBER = 3;
     private String[] columnName;
     private String[][] data;
     
@@ -22,7 +26,7 @@ public class CompHetView extends JFrame {
     *   Initiate GUI
     *  ****************
     */
-    public CompHetView(String index, VarData vdat) {
+    public CompHetView(String index, VarData vdat, boolean isSamples) {
 
         super("Compound Het Pair View");
         
@@ -34,8 +38,21 @@ public class CompHetView extends JFrame {
             columnName = new String[]{""};
         }
         else {
-            data = vdat.returnIndexPairs(temp);
-            columnName = new String[]{"refseq", "Chr", "A_pos", "A_score", "A_type",  "B_pos", "B_score", "B_type"};
+            data = vdat.returnIndexPairs(temp, isSamples);
+            if (isSamples) {
+                String[] sampleNames = vdat.returnSampleNamesOrig();
+                int defaultNameLength = columnDefaultName.length;
+                int sampleNameLength = sampleNames.length;
+                columnName = new String[defaultNameLength + (sampleNameLength * 2)];
+                System.arraycopy(columnDefaultName, 0, columnName, 0, defaultNameLength - COLUMN_NUMBER);
+                System.arraycopy(sampleNames, 0, columnName, defaultNameLength - COLUMN_NUMBER, sampleNameLength);
+                System.arraycopy(columnDefaultName, defaultNameLength - COLUMN_NUMBER, columnName, 
+                                 (defaultNameLength - COLUMN_NUMBER + sampleNameLength), COLUMN_NUMBER);
+                System.arraycopy(sampleNames, 0, columnName, (defaultNameLength + sampleNameLength), sampleNameLength);
+            }
+            else {
+                columnName = columnDefaultName;
+            }
         }
 
         //for (int i=0; i<data.length; i++) {
@@ -46,7 +63,7 @@ public class CompHetView extends JFrame {
         
     }
 
-    public CompHetView(String[] indices, VarData vdat) {
+    public CompHetView(String[] indices, VarData vdat, boolean isSamples) {
 
         super("Compound Het Gene View");
         int pairs = 0;
@@ -65,7 +82,7 @@ public class CompHetView extends JFrame {
             pairs = 0;
 
             for (int i=0; i<temp.length; i++) {
-                String[][] outTemp = vdat.returnIndexPairs(temp[i]);
+                String[][] outTemp = vdat.returnIndexPairs(temp[i], isSamples);
                 for (int j=0; j<outTemp.length; j++) {
                     data[pairs+j] = new String[outTemp[j].length];
                     //System.out.println(outTemp[j][0] + " " + outTemp[j].length);
@@ -73,7 +90,20 @@ public class CompHetView extends JFrame {
                 }
                 pairs += outTemp.length;
             }
-            columnName = new String[]{"refseq", "Chr", "A_pos", "A_score", "A_type",  "B_pos", "B_score", "B_type"};
+            if (isSamples) {
+                String[] sampleNames = vdat.returnSampleNamesOrig();
+                int defaultNameLength = columnDefaultName.length;
+                int sampleNameLength = sampleNames.length;
+                columnName = new String[defaultNameLength + (sampleNameLength * 2)];
+                System.arraycopy(columnDefaultName, 0, columnName, 0, defaultNameLength - COLUMN_NUMBER);
+                System.arraycopy(sampleNames, 0, columnName, defaultNameLength - COLUMN_NUMBER, sampleNameLength);
+                System.arraycopy(columnDefaultName, defaultNameLength - COLUMN_NUMBER, columnName, 
+                                 (defaultNameLength - COLUMN_NUMBER + sampleNameLength), COLUMN_NUMBER);
+                System.arraycopy(sampleNames, 0, columnName, (defaultNameLength + sampleNameLength), sampleNameLength);
+            }
+            else {
+                columnName = columnDefaultName;
+            }
         }
         initTable();
 
@@ -85,7 +115,7 @@ public class CompHetView extends JFrame {
         //initiate parent window
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         JPanel pane = new JPanel();
-        pane.setLayout(new BoxLayout(pane, BoxLayout.X_AXIS));
+        pane.setLayout(new BoxLayout(pane, BoxLayout.Y_AXIS));
         pane.setPreferredSize(new Dimension(630, 400));
         //pane.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
 
@@ -101,7 +131,15 @@ public class CompHetView extends JFrame {
         //outTable.setPreferredSize(new Dimension(610,400));
         outTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
         outTable.setDefaultRenderer(Number.class, new VarScoreRenderer());
+
+        JLabel linesl = new JLabel("Number of positions (Every pair is seen twice): ");
+        JLabel lines = new JLabel( (Integer.toString(outTable.getRowCount())));
+        JPanel stats = new JPanel();
+        stats.add(linesl);
+        stats.add(lines);
+        
         pane.add(sPane);
+        pane.add(stats);
         add(pane);
         pack();
         setVisible(true);

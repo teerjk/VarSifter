@@ -18,7 +18,7 @@ import components.TableSorter;
 
 public class VarSifter extends JFrame implements ListSelectionListener, ActionListener, TableModelListener {
     
-    final String version = "0.6a";
+    final String version = "0.6b";
     final String id = "$Id$";
 
     final String govWork = "PUBLIC DOMAIN NOTICE\n" +
@@ -143,6 +143,8 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     private JButton filterFileButton = new JButton("Choose Gene File Filter");
     private JButton bedFilterFileButton = new JButton("Choose Bed File Filter");
     private JButton geneViewButton = new JButton("View Variants for Selected Gene");
+
+    private JCheckBox compHetSamples = new JCheckBox("Show Sample Details");
     private JButton compHetGeneViewButton = new JButton("View by Gene");
     private JButton compHetPairViewButton = new JButton("View Pairs of Selected Position");
     private JButton compHetAllButton = new JButton("View All Compound Hets");
@@ -372,7 +374,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             for (int i=0; i<temp.length; i++) {
                 index[i] = temp[i][indexIndex] + "," + temp[i][mendHetRecIndex];
             }
-            CompHetView c = new CompHetView(index, vdat);
+            CompHetView c = new CompHetView(index, vdat, compHetSamples.isSelected());
         }
 
         else if (es == compHetPairViewButton) {
@@ -382,7 +384,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
                 String index = outTable.getValueAt(row, ((Integer)typeMap.get("Index")).intValue()).toString();
                 index += ("," + outTable.getValueAt(row, ((Integer)typeMap.get("MendHetRec")).intValue()).toString());
                 //System.out.println(index);
-                CompHetView c = new CompHetView(index, vdat);
+                CompHetView c = new CompHetView(index, vdat, compHetSamples.isSelected());
             }
             else {
                 showError("Not available for \"Show Gene\" view - please re-filter with \"Show Variants\"");
@@ -407,7 +409,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             for (int i=0; i<temp.length; i++) {
                 index[i] = temp[i][indexIndex] + "," + temp[i][mendHetRecIndex];
             }
-            CompHetView c = new CompHetView(index, vdat);
+            CompHetView c = new CompHetView(index, vdat, compHetSamples.isSelected());
         }
         
         else if (es == aboutItem) {
@@ -785,6 +787,8 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         buttonPane.setLayout(new BoxLayout(buttonPane, BoxLayout.Y_AXIS));
         buttonPane.add(new JLabel("Choose Compound Het View:"));
         buttonPane.add(Box.createRigidArea(new Dimension(0,15)));
+        buttonPane.add(compHetSamples);
+        buttonPane.add(Box.createRigidArea(new Dimension(0,10)));
         buttonPane.add(compHetGeneViewButton);
         buttonPane.add(Box.createRigidArea(new Dimension(0,10)));
         buttonPane.add(compHetPairViewButton);
