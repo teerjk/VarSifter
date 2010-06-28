@@ -106,6 +106,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     private JCheckBox filterFile = new JCheckBox("Include Gene File");
     private JCheckBox notFilterFile = new JCheckBox("Exclude Gene File");
     private JCheckBox bedFilterFile = new JCheckBox("Include Bed File Regions");
+    private JCheckBox customQuery = new JCheckBox("Custom Query");
 
     private JCheckBox[] cBox = { stop,
                                  div, 
@@ -123,15 +124,17 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
                                  caseControl,
                                  filterFile,
                                  notFilterFile,
-                                 bedFilterFile
+                                 bedFilterFile,
+                                 customQuery
                                };
-    public final int MENDHETREC = 11;
+    public final int MENDHETREC = 11; //index of mendCompHet
 
     private JMenuItem openItem;
     private JMenuItem saveAsItem;
     private JMenuItem saveViewItem;
     private JMenuItem exitItem;
     private JMenuItem compHetViewItem;
+    private JMenuItem customQueryViewItem;
     private JMenuItem aboutItem;
 
     private JButton apply = new JButton("Apply Filter");
@@ -150,6 +153,9 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     private JButton compHetAllButton = new JButton("View All Compound Hets");
 
     private JFrame compHetParent = new JFrame("Compound Het Views");
+
+    private JFrame customQueryParent = new JFrame("Custom Query");
+    private CustomQueryView cqPane;
 
     private int[] spinnerData = new int[3]; //Hold data for Spinner values (use int values from VarData)
     
@@ -290,19 +296,6 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
 
         else if (es == geneViewButton) {
 
-            /* ************
-            *   Testing only - must replace!!!
-            *  ************
-            */
-            /*
-            BitSet test = new BitSet(vdat.returnData().length);
-            for (int i=0; i < 5; i++) {
-                test.set(i);
-            }
-            test.set(6);
-            VarSifter vs = new VarSifter(vdat.returnSubVarData(vdat, test));
-            */
-
             //Use this button to return a VarSifter view of one gene
             //int l = vdat.dataDump().length - 1;
             String geneRegex = new String("");
@@ -348,6 +341,10 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         else if (es == compHetViewItem) {
             //CompHetPane c = new CompHetPane();
             compHetParent.setVisible(true);
+        }
+
+        else if (es == customQueryViewItem) {
+            customQueryParent.setVisible(true);
         }
 
         else if (es == compHetGeneViewButton) {
@@ -426,10 +423,15 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         }
 
         else if (es == check) {
-            int row = outTable.getSelectedRow();
-            int col = outTable.getSelectedColumn();
-            System.out.println(row + "\t" + col + "\t" + outTable.getValueAt(row,col).getClass() +
-                "\t" + outTable.getColumnClass(col));
+            //int row = outTable.getSelectedRow();
+            //int col = outTable.getSelectedColumn();
+            //System.out.println(row + "\t" + col + "\t" + outTable.getValueAt(row,col).getClass() +
+            //    "\t" + outTable.getColumnClass(col));
+
+            CompileCustomQuery c = new CompileCustomQuery();
+            if (c.compileCustom()) {
+                c.run(vdat);
+            }
         }
     }
     
@@ -559,12 +561,14 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         saveViewItem = new JMenuItem("Save Current View As");
         exitItem = new JMenuItem("Exit");
         compHetViewItem = new JMenuItem("Viewing Compound Hets");
+        customQueryViewItem = new JMenuItem("Custom Query");
         aboutItem = new JMenuItem("About VarSifter");
         fileMenu.add(openItem);
         fileMenu.add(saveAsItem);
         fileMenu.add(saveViewItem);
         fileMenu.add(exitItem);
         viewMenu.add(compHetViewItem);
+        viewMenu.add(customQueryViewItem);
         helpMenu.add(aboutItem);
         mBar.add(fileMenu);
         mBar.add(viewMenu);
@@ -721,6 +725,8 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         filtPane.add(bFiltPane);
         filtPane.add(Box.createRigidArea(new Dimension(0,10)));
         filtPane.add(geneViewButton);
+        //filtPane.add(Box.createRigidArea(new Dimension(0,10)));
+        //filtPane.add(check);
         JScrollPane filtScroll = new JScrollPane(filtPane, 
             ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
             ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
@@ -751,6 +757,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         saveAsItem.addActionListener(this);
         saveViewItem.addActionListener(this);
         compHetViewItem.addActionListener(this);
+        customQueryViewItem.addActionListener(this);
         exitItem.addActionListener(this);
         aboutItem.addActionListener(this);
         check.addActionListener(this);
@@ -803,6 +810,18 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         compHetParent.add(compHetPane);
         compHetParent.pack();
         //compHetParent.setVisible(true);
+
+        //Initialize (but don't display) customQueryParent
+        cqPane = new CustomQueryView(vdat);
+        cqPane.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JPanel customQueryPane = new JPanel();
+        customQueryPane.setLayout(new BoxLayout(customQueryPane, BoxLayout.Y_AXIS));
+        customQueryPane.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
+        customQueryPane.add(cqPane);
+        customQueryPane.add(customQuery);
+        customQueryParent.add(customQueryPane);
+        customQueryParent.pack();
+        customQueryParent.setVisible(true);
 
     }
 

@@ -7,8 +7,8 @@ import java.util.Vector;
 
 public class VarData {
     
-    final int H_LINES  = 1;   //Number of header lines
-    final int S_FIELDS = 3;   //Number of columns for each sample
+    final static int H_LINES  = 1;   //Number of header lines
+    final static int S_FIELDS = 3;   //Number of columns for each sample
 
     final int AFF_NORM_PAIR = 0;
     final int CASE = 1;
@@ -281,13 +281,13 @@ public class VarData {
     *   -change this.mask indices (so that correct bit is being read - same order as cbox)
     *   -change this.filterSet indices (so that correct bitset is being used)
     *   -increment TOTAL_FILTERS (or TOTAL_TYPE_FILTERS)
-    *   -add test with correct this.mask index
+    *   -add a test block with correct this.mask index
     *  ***********
     */
     public void filterData(BitSet mask, String geneFile, String bedFile, int[] spinnerData, String geneQuery) {
         dataIsIncluded.set(0,data.length);
         //dataIsIncluded.clear();
-        final int TOTAL_FILTERS = 10 + 1; //Number of non-type filters plus 1 (all type filters)
+        final int TOTAL_FILTERS = 11 + 1; //Number of non-type filters plus 1 (all type filters)
         final int TOTAL_TYPE_FILTERS = 7;
         BitSet[] filterSet = new BitSet[TOTAL_FILTERS];
         BitSet geneFilter = new BitSet(data.length);
@@ -325,8 +325,8 @@ public class VarData {
             }
         }
         
-        //Start filtering!
-        
+        //Prepare certain tests
+
         //filterFile
         if (mask.get(14) || mask.get(15)) {
             if (geneFile != null) {
@@ -349,11 +349,16 @@ public class VarData {
             }
         }
 
+        //Gene name filter
         if (geneQuery != null) {
             geneQueryPat = Pattern.compile(geneQuery, Pattern.CASE_INSENSITIVE);
             geneFilter.clear();
         }
         
+
+        //Start filtering!
+        
+        // variant type
         for (int i = 0; i < data.length; i++) {
             String[] tempGeno = { data[i][refAlleleIndex], data[i][varAlleleIndex] };
             String homNonRefGen = (tempGeno[1] + tempGeno[1]);
@@ -376,27 +381,33 @@ public class VarData {
                 filterSet[0].set(i);
             }
 
+            //dbSNP
             if ( (mask.get(7) && data[i][dbSNPIndex].equals("-")             )
                 ) {
                 filterSet[1].set(i);
             }
             
+            //Mendelian recessive (Hom recessive)
             if (mask.get(8) && Integer.parseInt(data[i][mendRecIndex]) > 0) {
                 filterSet[2].set(i);
             }
             
+            //Mendelian Dominant
             if (mask.get(9) && Integer.parseInt(data[i][mendDomIndex]) > 0) {
                 filterSet[3].set(i);
             }
 
+            //Mendelian Inconsistant
             if (mask.get(10) && Integer.parseInt(data[i][mendBadIndex]) > 0) {
                 filterSet[4].set(i);
             }
                 
+            //Mendelian Compound Het (Het Recessive)
             if (mask.get(11) && ! data[i][mendHetRecIndex].equals("0,")) {
                 filterSet[5].set(i);
             }
 
+            //Affected different from Normal
             if (mask.get(12)) {
                 int count = 0;
                 for (int j=0; j < affAt.length; j++) {
@@ -417,6 +428,7 @@ public class VarData {
                 }
             }
 
+            // Variant allele in >=x cases, <=y controls
             if (mask.get(13)) {
                 int caseCount = 0;
                 int controlCount = 0;
@@ -439,17 +451,17 @@ public class VarData {
                 }
             }
 
-                        
-
+            //Gene Filter File (include)                        
             if (mask.get(14) && geneSet.contains(data[i][geneIndex])) {
                 filterSet[8].set(i);
             }
-
+            
+            //Gene Filter File (exclude)
             if (mask.get(15) && !geneSet.contains(data[i][geneIndex])) {
                 filterSet[9].set(i);
             }
             
-            
+            //Bed Filter File (include)
             if (mask.get(16) && bedHash[0].get(data[i][chrIndex]) != null) {
                 Object[] starts = ((HashMap<String, Vector<Integer>>)bedHash[0]).get(data[i][chrIndex]).toArray();
                 Object[] ends = ((HashMap<String, Vector<Integer>>)bedHash[1]).get(data[i][chrIndex]).toArray();
@@ -467,7 +479,7 @@ public class VarData {
                 }
             }
 
-
+            // Gene name Filter (TextArea)
             if (geneQuery != null) {
                 if ((geneQueryPat.matcher(data[i][geneIndex])).find()) {
                     //System.out.println(i + "\t" + data[i][geneIndex]);
@@ -477,12 +489,28 @@ public class VarData {
                 
                         
         }
+
+        //Custom Query - outside data loop (it will loop by itself
+
+        if (mask.get(17)) {
+            CompileCustomQuery c = new CompileCustomQuery();
+            if (c.compileCustom()) {
+                filterSet[11] = c.run(this);
+                filterSet[11].set(data.length + 1);
+            }
+            else {
+                VarSifter.showError("Error with custom query - not applied!!");
+            }
+        }
+
         
+        //Apply all filters; intersection if that filter was used
         for (BitSet fs : filterSet) {
             if (fs.get(data.length + 1)) {
                 dataIsIncluded.and(fs);
             }
         }
+
         dataIsIncluded.and(geneFilter);
         filterOutput();
     }
