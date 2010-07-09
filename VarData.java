@@ -277,7 +277,9 @@ public class VarData {
     *   Filter mutation type
     *
     *   To add new filters, must do the following:
+    *   -Add new JCheckBox
     *   -Add entry to JCheckBox[] VarSifter.cBox
+    *   -Display new JCheckBox
     *   -change this.mask indices (so that correct bit is being read - same order as cbox)
     *   -change this.filterSet indices (so that correct bitset is being used)
     *   -increment TOTAL_FILTERS (or TOTAL_TYPE_FILTERS)
@@ -288,7 +290,7 @@ public class VarData {
         dataIsIncluded.set(0,data.length);
         //dataIsIncluded.clear();
         final int TOTAL_FILTERS = 11 + 1; //Number of non-type filters plus 1 (all type filters)
-        final int TOTAL_TYPE_FILTERS = 7;
+        final int TOTAL_TYPE_FILTERS = 8;
         BitSet[] filterSet = new BitSet[TOTAL_FILTERS];
         BitSet geneFilter = new BitSet(data.length);
         geneFilter.set(0, data.length);
@@ -328,7 +330,7 @@ public class VarData {
         //Prepare certain tests
 
         //filterFile
-        if (mask.get(14) || mask.get(15)) {
+        if (mask.get(15) || mask.get(16)) {
             if (geneFile != null) {
                 geneSet = returnGeneSet(geneFile);
             }
@@ -339,7 +341,7 @@ public class VarData {
         }
 
         //bedFilterFile
-        if (mask.get(16)) {
+        if (mask.get(17)) {
             if (bedFile != null) {
                 bedHash = returnBedHash(bedFile);
             }
@@ -370,45 +372,46 @@ public class VarData {
             //System.out.println(hetNonRefGen);
            
             if ( (mask.get(0) && data[i][typeIndex].equals("Stop")           ) ||
-                 (mask.get(1) && data[i][typeIndex].equals("DIV")            ) ||
-                 (mask.get(2) && data[i][typeIndex].equals("Splice-site")    ) ||
-                 (mask.get(3) && data[i][typeIndex].equals("Non-synonymous") ) ||
-                 (mask.get(4) && data[i][typeIndex].equals("Synonymous")     ) ||
-                 (mask.get(5) && data[i][typeIndex].equals("NC")             ) ||
-                 (mask.get(6) && data[i][typeIndex].contains("UTR")          )
+                 (mask.get(1) && data[i][typeIndex].equals("DIV-fs")         ) ||
+                 (mask.get(2) && data[i][typeIndex].equals("DIV-c")          ) ||
+                 (mask.get(3) && data[i][typeIndex].equals("Splice-site")    ) ||
+                 (mask.get(4) && data[i][typeIndex].equals("Non-synonymous") ) ||
+                 (mask.get(5) && data[i][typeIndex].equals("Synonymous")     ) ||
+                 (mask.get(6) && data[i][typeIndex].equals("NC")             ) ||
+                 (mask.get(7) && data[i][typeIndex].contains("UTR")          )
                 ) {
 
                 filterSet[0].set(i);
             }
 
             //dbSNP
-            if ( (mask.get(7) && data[i][dbSNPIndex].equals("-")             )
+            if ( (mask.get(8) && data[i][dbSNPIndex].equals("-")             )
                 ) {
                 filterSet[1].set(i);
             }
             
             //Mendelian recessive (Hom recessive)
-            if (mask.get(8) && Integer.parseInt(data[i][mendRecIndex]) > 0) {
+            if (mask.get(9) && Integer.parseInt(data[i][mendRecIndex]) == 1) {
                 filterSet[2].set(i);
             }
             
             //Mendelian Dominant
-            if (mask.get(9) && Integer.parseInt(data[i][mendDomIndex]) > 0) {
+            if (mask.get(10) && Integer.parseInt(data[i][mendDomIndex]) == 1) {
                 filterSet[3].set(i);
             }
 
             //Mendelian Inconsistant
-            if (mask.get(10) && Integer.parseInt(data[i][mendBadIndex]) > 0) {
+            if (mask.get(11) && Integer.parseInt(data[i][mendBadIndex]) == 1) {
                 filterSet[4].set(i);
             }
                 
             //Mendelian Compound Het (Het Recessive)
-            if (mask.get(11) && ! data[i][mendHetRecIndex].equals("0,")) {
+            if (mask.get(12) && ! data[i][mendHetRecIndex].equals("0,")) {
                 filterSet[5].set(i);
             }
 
             //Affected different from Normal
-            if (mask.get(12)) {
+            if (mask.get(13)) {
                 int count = 0;
                 for (int j=0; j < affAt.length; j++) {
                     String affTemp = samples[i][affAt[j]][0];
@@ -429,7 +432,7 @@ public class VarData {
             }
 
             // Variant allele in >=x cases, <=y controls
-            if (mask.get(13)) {
+            if (mask.get(14)) {
                 int caseCount = 0;
                 int controlCount = 0;
                 for (int j=0; j < caseAt.length; j++) {
@@ -452,17 +455,17 @@ public class VarData {
             }
 
             //Gene Filter File (include)                        
-            if (mask.get(14) && geneSet.contains(data[i][geneIndex])) {
+            if (mask.get(15) && geneSet.contains(data[i][geneIndex])) {
                 filterSet[8].set(i);
             }
             
             //Gene Filter File (exclude)
-            if (mask.get(15) && !geneSet.contains(data[i][geneIndex])) {
+            if (mask.get(16) && !geneSet.contains(data[i][geneIndex])) {
                 filterSet[9].set(i);
             }
             
             //Bed Filter File (include)
-            if (mask.get(16) && bedHash[0].get(data[i][chrIndex]) != null) {
+            if (mask.get(17) && bedHash[0].get(data[i][chrIndex]) != null) {
                 Object[] starts = ((HashMap<String, Vector<Integer>>)bedHash[0]).get(data[i][chrIndex]).toArray();
                 Object[] ends = ((HashMap<String, Vector<Integer>>)bedHash[1]).get(data[i][chrIndex]).toArray();
                 int lf = Integer.parseInt(data[i][lfIndex]);
@@ -492,7 +495,7 @@ public class VarData {
 
         //Custom Query - outside data loop (it will loop by itself
 
-        if (mask.get(17)) {
+        if (mask.get(18)) {
             CompileCustomQuery c = new CompileCustomQuery();
             if (c.compileCustom()) {
                 filterSet[11] = c.run(this);
@@ -662,6 +665,20 @@ public class VarData {
     */
     public HashMap<String, Integer> returnDataTypeAt() {
         return (HashMap<String, Integer>)dataTypeAt.clone();
+    }
+
+
+    /* **********
+    *   Return the data value at a given row, column 
+    *  **********
+    */
+    public String returnDataValueAt(int row, String colType) {
+        if (dataTypeAt.containsKey(colType)) {
+            return outData[row][dataTypeAt.get(colType)];
+        }
+        else {
+            return null;
+        }
     }
 
     

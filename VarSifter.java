@@ -18,7 +18,7 @@ import components.TableSorter;
 
 public class VarSifter extends JFrame implements ListSelectionListener, ActionListener, TableModelListener {
     
-    final String version = "0.6b";
+    final String version = "0.6c";
     final String id = "$Id$";
 
     final String govWork = "PUBLIC DOMAIN NOTICE\n" +
@@ -68,6 +68,9 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     "NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS\n" +
     "SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.";
 
+    final String geneNotFoundError  = new String("It looks like you may have switched columns! "
+        + "Switch them so the refseq names are in the first column!");
+
     final int VARIANT_FILE = 0;
     final int GENE_FILTER_FILE = 1;
     final int BED_FILTER_FILE = 2;
@@ -89,7 +92,8 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     private JLabel lines = new JLabel();
 
     private JCheckBox stop = new JCheckBox("Stop");
-    private JCheckBox div = new JCheckBox("DIV");
+    private JCheckBox divFS = new JCheckBox("DIV coding frameshift");
+    private JCheckBox divC = new JCheckBox("DIV coding (no frameshift)");
     private JCheckBox splice = new JCheckBox("Splice-Site");
     private JCheckBox nonsyn = new JCheckBox("Non-synonymous");
     private JCheckBox syn = new JCheckBox("Synonymous");
@@ -109,7 +113,8 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     private JCheckBox customQuery = new JCheckBox("Custom Query");
 
     private JCheckBox[] cBox = { stop,
-                                 div, 
+                                 divFS, 
+                                 divC,
                                  splice, 
                                  nonsyn, 
                                  syn,
@@ -127,7 +132,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
                                  bedFilterFile,
                                  customQuery
                                };
-    public final int MENDHETREC = 11; //index of mendCompHet
+    public final int MENDHETREC = 12; //index of mendCompHet
 
     private JMenuItem openItem;
     private JMenuItem saveAsItem;
@@ -300,16 +305,21 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             //int l = vdat.dataDump().length - 1;
             String geneRegex = new String("");
             if (isShowVar) {
-                HashMap<String, Integer> typeMap = vdat.returnDataTypeAt();
-                geneRegex = "^" + (String)outTable.getValueAt(outTable.getSelectedRow(), 
-                    ((Integer)typeMap.get("refseq")).intValue()) + "$";
+                int dataRowIndex = sorter.modelIndex(outTable.getSelectedRow());
+                String geneName = vdat.returnDataValueAt(dataRowIndex, "refseq");
+                geneRegex = "^" + geneName + "$";
             }
             else {
-                geneRegex = "^" + (String)outTable.getValueAt(outTable.getSelectedRow(), 0) + "$";
+                try {
+                    geneRegex = "^" + (String)outTable.getValueAt(outTable.getSelectedRow(), 0) + "$";
+                }
+                catch (ClassCastException cce) {
+                    showError(geneNotFoundError);
+                    return;
+                }
             }
 
             vdat.filterData(new BitSet(), null, null, null, geneRegex);
-                //(String)outTable.getValueAt(outTable.getSelectedRow(), 0));
             VarData tempVdat = vdat.returnSubVarData(vdat, null);
             VarSifter vs = new VarSifter(tempVdat);
             
@@ -352,12 +362,20 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             HashMap<String, Integer> typeMap = vdat.returnDataTypeAt();
             int indexIndex = ((Integer)typeMap.get("Index")).intValue();
             int mendHetRecIndex = ((Integer)typeMap.get("MendHetRec")).intValue();
+            
+            int dataRowIndex = sorter.modelIndex(outTable.getSelectedRow());
+            String geneName = vdat.returnDataValueAt(dataRowIndex, "refseq");
             if (isShowVar) {
-                geneRegex = "^" + (String)outTable.getValueAt(outTable.getSelectedRow(), 
-                    ((Integer)typeMap.get("refseq")).intValue()) + "$";
+                geneRegex = "^" + geneName + "$";
             }
             else {
-                geneRegex = "^" + (String)outTable.getValueAt(outTable.getSelectedRow(), 0) + "$";
+                try {
+                    geneRegex = "^" + (String)outTable.getValueAt(outTable.getSelectedRow(), 0) + "$";
+                }
+                catch (ClassCastException cce) {
+                    showError(geneNotFoundError);
+                    return;
+                }
             }
             BitSet tempBS = new BitSet();
             tempBS.set(MENDHETREC);
@@ -376,10 +394,13 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
 
         else if (es == compHetPairViewButton) {
             if (isShowVar) {
-                HashMap<String, Integer> typeMap = vdat.returnDataTypeAt();
-                int row = outTable.getSelectedRow();
-                String index = outTable.getValueAt(row, ((Integer)typeMap.get("Index")).intValue()).toString();
-                index += ("," + outTable.getValueAt(row, ((Integer)typeMap.get("MendHetRec")).intValue()).toString());
+                //HashMap<String, Integer> typeMap = vdat.returnDataTypeAt();
+                int dataRowIndex = sorter.modelIndex(outTable.getSelectedRow());
+                String index = vdat.returnDataValueAt(dataRowIndex, "Index");
+                index += ("," + vdat.returnDataValueAt(dataRowIndex, "MendHetRec"));
+
+                //String index = outTable.getValueAt(row, ((Integer)typeMap.get("Index")).intValue()).toString();
+                //index += ("," + outTable.getValueAt(row, ((Integer)typeMap.get("MendHetRec")).intValue()).toString());
                 //System.out.println(index);
                 CompHetView c = new CompHetView(index, vdat, compHetSamples.isSelected());
             }
@@ -619,7 +640,8 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         includePane.setLayout(new BoxLayout(includePane, BoxLayout.Y_AXIS));
         includePane.setBorder(BorderFactory.createLineBorder(Color.black));
         includePane.add(stop);
-        includePane.add(div);
+        includePane.add(divFS);
+        includePane.add(divC);
         includePane.add(splice);
         includePane.add(utr);
         includePane.add(nonsyn);
@@ -821,7 +843,8 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         customQueryPane.add(customQuery);
         customQueryParent.add(customQueryPane);
         customQueryParent.pack();
-        customQueryParent.setVisible(true);
+        //customQueryParent.setVisible(true);
+        customQueryViewItem.setEnabled(false);
 
     }
 
