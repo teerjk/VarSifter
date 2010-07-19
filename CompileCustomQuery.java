@@ -1,6 +1,7 @@
 import java.net.URI;
 import java.util.Arrays;
 import java.util.BitSet;
+import java.io.File;
 
 import javax.tools.JavaCompiler;
 import javax.tools.JavaCompiler.CompilationTask;
@@ -10,24 +11,42 @@ import javax.tools.ToolProvider;
 import javax.tools.Diagnostic;
 import javax.tools.DiagnosticCollector;
 
+/**
+*   A class to dynamically compile a custom query object, load it, and execute the query method.
+*   Requires Java 1.6 or higher (full JDK, not just JRE).
+*   @author Jamie K. Teer
+*/
 public class CompileCustomQuery {
     String className = "QueryModule";
 
     public CompileCustomQuery() {
     }
-    public boolean compileCustom() {
+
+    /**
+    *   Compile the QueryModule class
+    *   @param customQuery The if statement (enclosed in parens) with which to search the data structure output
+    *                      by VarData.dataDump();
+    *   @return True if the compilation succeeds, false otherwise.
+    */
+    public boolean compileCustom(String customQuery) {
         DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<JavaFileObject>();
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
 
         StringBuilder out = new StringBuilder(64);
+        //System.out.println(customQuery);
 
         out.append( "import java.util.BitSet;\n" );
-        out.append( "public class " ).append(className).append( " {\n" );
-        out.append( "  public static BitSet executeCustomQuery(VarData vdat) {\n" );
+        out.append( "public class " ).append(className).append( " implements AbstractQueryModule {\n" );
+        out.append( "  public BitSet executeCustomQuery(VarData vdat) {\n" );
         out.append( "    String[][] allData = vdat.dataDump();\n" );
         out.append( "    BitSet bs = new BitSet(allData.length);\n" );
         out.append( "    for (int i=1;i<allData.length;i++) {\n");
-        out.append( "      if (allData[i][vdat.returnDataTypeAt().get(\"type\")].equals(\"Stop\")) {\n" );
+        
+        //out.append( "      if (allData[i][vdat.returnDataTypeAt().get(\"type\")].equals(\"Stop\")) {\n" );
+        out.append( "        if " );
+        out.append(              customQuery );
+        out.append( "                        {\n" );
+        
         out.append( "        bs.set(i-1);\n" );
         out.append( "      }\n" );
         out.append( "    }\n" );
@@ -63,7 +82,7 @@ public class CompileCustomQuery {
             return success;
         }
         else {
-            VarSifter.showError("Compile Failed!");
+            VarSifter.showError("Compile Failed! Check console output for details.");
             return success;
         }
     }
@@ -80,13 +99,29 @@ public class CompileCustomQuery {
     //    }
     //}
     
+    /**
+    *   Uses CustomClassLoader to reload QueryModule, and execute the query.
+    *   @param vdat VarData object containing desired data
+    *   @return BitSet where bits corresponding to rows passing filter are set.
+    */
     public BitSet run(VarData vdat) {
         try {
-            BitSet out = (BitSet)Class.forName(className).getDeclaredMethod("executeCustomQuery", new Class[] {VarData.class})
-                .invoke(null, new Object[] {vdat});
+
+            ClassLoader parentCL = getClass().getClassLoader();
+            //ClassLoader parentCL = Thread.currentThread().getContextClassLoader();
+            CustomClassLoader ccl = new CustomClassLoader(parentCL, className);
+            Class myObjectClass = ccl.loadClass(className);
+
+            AbstractQueryModule aqm = (AbstractQueryModule) myObjectClass.newInstance();
+            BitSet out = aqm.executeCustomQuery(vdat);
+            File cf = new File(className + ".class");
+            if (!cf.delete()) {
+                VarSifter.showError("Couldn't delete " + className + ".class. You may want to delete it.");
+            }
             return out;
         }
         catch (Exception e) {
+            VarSifter.showError("Error running custom query: check console output for details.");
             System.out.println("Error: " + e.toString());
             for (StackTraceElement st:e.getStackTrace()) {
                 System.out.println(st.getClassName());
@@ -96,6 +131,9 @@ public class CompileCustomQuery {
     }
 }
 
+/**
+*   A class to write the source to memory.
+*/
 class JavaSourceFromString extends SimpleJavaFileObject {
     final String code;
 

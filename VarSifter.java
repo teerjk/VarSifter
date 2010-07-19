@@ -18,7 +18,7 @@ import components.TableSorter;
 
 public class VarSifter extends JFrame implements ListSelectionListener, ActionListener, TableModelListener {
     
-    final String version = "0.6c";
+    final String version = "0.6d";
     final String id = "$Id$";
 
     final String govWork = "PUBLIC DOMAIN NOTICE\n" +
@@ -449,10 +449,6 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             //System.out.println(row + "\t" + col + "\t" + outTable.getValueAt(row,col).getClass() +
             //    "\t" + outTable.getColumnClass(col));
 
-            CompileCustomQuery c = new CompileCustomQuery();
-            if (c.compileCustom()) {
-                c.run(vdat);
-            }
         }
     }
     
@@ -835,16 +831,22 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
 
         //Initialize (but don't display) customQueryParent
         cqPane = new CustomQueryView(vdat);
-        cqPane.setAlignmentX(Component.LEFT_ALIGNMENT);
+        //cqPane.setAlignmentX(Component.LEFT_ALIGNMENT);
+        //customQuery.setAlignmentX(Component.LEFT_ALIGNMENT);
         JPanel customQueryPane = new JPanel();
+        customQueryPane.setPreferredSize(new Dimension(w/3 + 10, h/3+5));
         customQueryPane.setLayout(new BoxLayout(customQueryPane, BoxLayout.Y_AXIS));
         customQueryPane.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
-        customQueryPane.add(cqPane);
+        JScrollPane customViewScroll = new JScrollPane(cqPane, JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,
+                                                               JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        customViewScroll.setBorder(null);
+        customQueryPane.add(customViewScroll);
+        //customQueryPane.add(cqPane);
         customQueryPane.add(customQuery);
         customQueryParent.add(customQueryPane);
         customQueryParent.pack();
         //customQueryParent.setVisible(true);
-        customQueryViewItem.setEnabled(false);
+        //customQueryViewItem.setEnabled(false);
 
     }
 

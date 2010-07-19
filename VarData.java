@@ -37,6 +37,7 @@ public class VarData {
     private int[] controlAt;
     private VarData parentVarData = null;
     private int numCols = 0;         // Number of columns.  Set from first line, used to check subseq. lines
+    private String customQuery = "";
 
      /*    
     *    Constructor reads in the file specified by full path in String inFile.
@@ -71,7 +72,7 @@ public class VarData {
             boolean first = true;
             
             while ((line = br.readLine()) != null) {
-                String temp[] = line.split("\t", -1);
+                String temp[] = line.split("\t", 0);
                 String sampleTemp = "";
                 String sampleTempOrig = "";
                 String dataTemp = "";
@@ -497,7 +498,7 @@ public class VarData {
 
         if (mask.get(18)) {
             CompileCustomQuery c = new CompileCustomQuery();
-            if (c.compileCustom()) {
+            if ( c.compileCustom(customQuery) ) {
                 filterSet[11] = c.run(this);
                 filterSet[11].set(data.length + 1);
             }
@@ -868,6 +869,14 @@ public class VarData {
                            controlAt,
                            vdatIn
                            );
+    }
+
+    /* **********
+    *   Set the customized part of a custom query
+    *  **********
+    */
+    public void setCustomQuery(String in) {
+        customQuery = in;
     }
 
 
