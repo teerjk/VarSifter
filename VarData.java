@@ -5,6 +5,10 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Vector;
 
+
+/**
+*   The VarData class handles interaction with the data.  It loads the data, filters, and returns results.
+*/
 public class VarData {
     
     final static int H_LINES  = 1;   //Number of header lines
@@ -39,12 +43,13 @@ public class VarData {
     private int numCols = 0;         // Number of columns.  Set from first line, used to check subseq. lines
     private String customQuery = "";
 
-     /*    
+    /**    
     *    Constructor reads in the file specified by full path in String inFile.
     *    It first reads through the file just to count lines for first dimension
     *     of data[][] and samples[][][].  Then, it reads again to fill in the array.
+    *
+    *   @param inFile Absolute path to VS file to load.
     */
-
     public VarData(String inFile) {
         String line = new String();
         int lineCount = 0;
@@ -212,10 +217,10 @@ public class VarData {
                 
     }
 
-    /* ***********
+    /** 
     *   Constructor for making subsetted copies using 
     *   the factory method returnSubVarData
-    *  ***********
+    *  
     */
     private VarData(String[][] dataIn,
                     String[] dataNamesOrigIn,
@@ -253,9 +258,10 @@ public class VarData {
 
 
 
-    /* ***********
+    /** 
     *   Returns 2d array of all data
-    *  ***********
+    *  
+    *   @return A two-dimension array of the data (1st Dimension is row, 2nd is column)
     */
     public String[][] dataDump() {
         boolean first = true;
@@ -274,7 +280,16 @@ public class VarData {
         return out;
     }
     
-    /* ***********
+    /**
+    *   Filter the data
+    *
+    *   @param mask A BitSet describing which filters should be applied.  The filter number should be synchronized with the JCheckBox number in VarSifter.class!
+    *   @param geneFile Absolute path to a file containing a list of genes to filter on.
+    *   @param bedFile Absolute path to a file containing regions with which to filter in BED format.
+    *   @param spinnerData An array of ints representing the values in the VarSifter spinners: Indices defined by AFF_NORM_PAIR, CASE, CONTROL. 
+    *   @param geneQuery A regular expression used to filter on geneName
+    */
+    /* 
     *   Filter mutation type
     *
     *   To add new filters, must do the following:
@@ -285,7 +300,7 @@ public class VarData {
     *   -change this.filterSet indices (so that correct bitset is being used)
     *   -increment TOTAL_FILTERS (or TOTAL_TYPE_FILTERS)
     *   -add a test block with correct this.mask index
-    *  ***********
+    *  
     */
     public void filterData(BitSet mask, String geneFile, String bedFile, int[] spinnerData, String geneQuery) {
         dataIsIncluded.set(0,data.length);
@@ -497,13 +512,20 @@ public class VarData {
         //Custom Query - outside data loop (it will loop by itself
 
         if (mask.get(18)) {
-            CompileCustomQuery c = new CompileCustomQuery();
-            if ( c.compileCustom(customQuery) ) {
-                filterSet[11] = c.run(this);
-                filterSet[11].set(data.length + 1);
+            try {
+                CompileCustomQuery c = new CompileCustomQuery();
+                if ( c.compileCustom(customQuery) ) {
+                    filterSet[11] = c.run(this);
+                    filterSet[11].set(data.length + 1);
+                }
+                else {
+                    VarSifter.showError("Error with custom query - not applied!!");
+                }
             }
-            else {
-                VarSifter.showError("Error with custom query - not applied!!");
+            catch (NoClassDefFoundError e) {
+                VarSifter.showError("<html>Couldn't find a class needed for custom querying - most likely you are"
+                    + "<p>not running Java JDK 1.6 or greater.  See console for more details.");
+                System.out.println(e.toString());
             }
         }
 
@@ -519,9 +541,9 @@ public class VarData {
         filterOutput();
     }
 
-    /* ***********
+    /** 
     *   Handle the filtering
-    *  ***********
+    *  
     */
     private void filterOutput() {
          
@@ -544,19 +566,23 @@ public class VarData {
     }
 
 
-    /* ************
+    /** 
     *   Returns true if column is editable
-    *  ************
+    *  
+    *   @param col The number of the column to determine editable status
+    *   @return True if editable
     */
     public boolean isEditable(int col) {
         return dataIsEditable.get(col);
     }
 
 
-    /* ************
+    /** 
     *   Returns number of normal affected pairs or null
-    *   !!!!!!!! Deprecated in favor of countSampleType(int) !!!!!!!!!!!!
-    *  ************
+    *  
+    *   @deprecated Deprecated in favor of {@link #countSampleType(int)}
+    *   @return The number of affected/normal pairs
+    *   
     */
     public int countAffNorm() {
         //return (affAt != null && normAt != null);
@@ -569,9 +595,11 @@ public class VarData {
     }
 
 
-    /* ************
+    /** 
     *   Returns number of requested sample type
-    *  ************
+    *  
+    *   @param sType AFF_NORM_PAIR, CASE, or CONTROL
+    *   @return The number of samples of the requested type
     */
     public int countSampleType(int sType) {
         switch (sType) {
@@ -587,20 +615,19 @@ public class VarData {
     }
 
 
-    /* ************
+    /** 
     *   Returns true if we have mendelian filter columns
-    *   !!!!!!  Really only checks for "MendHomRec", which isn't right.!!!!
-    *   !!!!!!  Deprecated !!!!!!!
-    *  ************
+    *   @deprecated Deprecated Really only checks for "MendHomRec", which isn't right. Use {@link #returnDataTypeAt()} instead, and interrogate the hash for the desired filters.
+    *  
     */
     public boolean isMendFilt() {
         return (dataTypeAt.containsKey("MendHomRec"));
     }
 
 
-    /* ************
+    /** 
     *   Remove all filtering
-    *  ************
+    *  
     */
     public void resetOutput() {
         dataIsIncluded.set(0, data.length);
@@ -609,9 +636,12 @@ public class VarData {
 
     
 
-    /* ************
+    /** 
     *   Return a hash of Vectors containing start positions in a bedfile
-    *  ************
+    *  
+    *   @param inFile The Bedfile to load
+    *   @return An array of hashmaps.  Element 0: key=chrom, value = vector of starts.
+    *                                  Element 1: key=chrom, value = vector of ends.
     */
     private HashMap[] returnBedHash(String inFile) {
         HashMap<String, Vector<Integer>> outStart = new HashMap<String, Vector<Integer>>();
@@ -646,32 +676,41 @@ public class VarData {
     }
         
 
-    /* ************
+    /** 
     *   Return annotation data
-    *  ************
+    *  
+    *   @return Returns the annotaion data as a 2d array: [line][annotation column]
     */
     public String[][] returnData() {
         return outData;
     }
 
 
+    /**
+    *   Return the Annotation Column Names
+    *   @return Returns an array of the column header names
+    */
     public String[] returnDataNames() {
         return dataNames;
     }
 
 
-    /* **********
+    /** 
     *   Return a clone of dataTypeAt
-    *  **********
+    *  
+    *   @return A HashMap: key = Annotation column name  value: column number (0-based)
     */
     public HashMap<String, Integer> returnDataTypeAt() {
         return (HashMap<String, Integer>)dataTypeAt.clone();
     }
 
 
-    /* **********
+    /** 
     *   Return the data value at a given row, column 
-    *  **********
+    *  
+    *   @param row The row with the desired data (in the VarData object - not necessarily in the VarSifter view)
+    *   @param colType The header name of the column with the desired data
+    *   @return The data at the given position, or null if colType doesn't exist
     */
     public String returnDataValueAt(int row, String colType) {
         if (dataTypeAt.containsKey(colType)) {
@@ -683,18 +722,20 @@ public class VarData {
     }
 
     
-    /* **********
+    /** 
     *   Return the parent VarData or null if this is not a copy
-    *  **********
+    *  
+    *   @return The parent VarData object of this object, or null if none
     */
     public VarData returnParent() {
         return parentVarData;
     }
 
 
-    /* **********
+    /** 
     *   Return data collapsed on gene name
-    *  **********
+    *  
+    *   @return Data in a 2d array: [gene name][number of variants]
     */
     public String[][] returnGeneData() {
         String[][] tempGeneData;
@@ -720,6 +761,10 @@ public class VarData {
         return tempGeneData;
     }
 
+    /**
+    *   Return column name for the Gene view
+    *   @return Array of column names
+    */
     public String[] returnGeneNames() {
         return geneDataHeaders;
     }
@@ -727,9 +772,11 @@ public class VarData {
 
 
 
-    /* **********
+    /** 
     *   Get a HashSet from a file of gene names
-    *  **********
+    *  
+    *   @param inFile The gene file to read (one gene per line)
+    *   @return A Hashset of the gene names
     */
     private HashSet<String> returnGeneSet(String inFile) {
         HashSet<String> outSet = new HashSet<String>();
@@ -749,9 +796,12 @@ public class VarData {
     }
 
     
-    /* **********
+    /** 
     *   Return pairs of positions based on index
-    *  **********
+    *  
+    *   @param inPair An array of indices where the others are in CompoundHet status with the first
+    *   @param isSamples True if sample data is to be inlcluded in view
+    *   @return A 2-d array with the data [pair][columns]
     */
     public String[][] returnIndexPairs(String[] inPair, boolean isSamples) {
         
@@ -806,9 +856,11 @@ public class VarData {
 
 
 
-    /* **********
+    /** 
     *   Return samples
-    *  **********
+    *  
+    *   @param i The row (in this VarData object) for which to display sample information
+    *   @return A 2-d array of sample data [data type(Genotype, MPG score, Coverage)][Sample]
     */
     public String[][] returnSample(int i) {
         String[][] tempOutSamples;
@@ -827,19 +879,30 @@ public class VarData {
         return tempOutSamples;
     }
     
+    /**
+    *   Return Samples Names
+    *   @return Array of Sample Names
+    */
     public String[] returnSampleNames() {
         return sampleNames;
     }
 
-
+    
+    /**
+    *   Return Original sample column headers (not just names, but what was in the original file)
+    *   @return An array of original sample column headers
+    */
     public String[] returnSampleNamesOrig() {
         return sampleNamesOrig;
     }
 
 
-    /* **********
+    /** 
     *   Returns a new Object with a subset of the data
-    *  **********
+    *  
+    *   @param vdatIn The VarData object to use as a basis for a Sub VarData object
+    *   @param isInSubset BitSet where set bits determine which rows to include
+    *   @return A child VarData object (usually with a subset of data) that knows its parent
     */
     public VarData returnSubVarData(VarData vdatIn, BitSet isInSubset) {
         if (isInSubset == null) {
@@ -871,18 +934,22 @@ public class VarData {
                            );
     }
 
-    /* **********
+    /** 
     *   Set the customized part of a custom query
-    *  **********
+    *  
+    *   @param in The logical statement to use as a filter in the custom compiled QueryModule object
     */
     public void setCustomQuery(String in) {
         customQuery = in;
     }
 
 
-    /* **********
+    /** 
     *   Overwrite field in data[][] (comments for now)
-    *  **********
+    *  
+    *   @param row The row (in VarData.data rows that are set in dataIsIncluded) to modify
+    *   @param col The column (in VarData.data) to modify
+    *   @param newData The data to supplant to old data
     */
     public void setData(int row, int col, String newData) {
         int lastIndex = 0;

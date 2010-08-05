@@ -9,13 +9,12 @@ import java.io.*;
 import java.util.HashMap;
 import components.TableSorter;
 
-/* ****************
+/** 
 *   VarSifter is designed to read a flat file where a row contains a variant, and all sample info
 *    and allow sorting, and filtering of the data. This class is a wrapper that handles the GUI
 *    via Swing.
-*  ****************
+*  
 */
-
 public class VarSifter extends JFrame implements ListSelectionListener, ActionListener, TableModelListener {
     
     final String version = "0.6d";
@@ -187,10 +186,11 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
 
     //int lastRow = 0;    //Last row selected
 
-    /* ******************
+    /** 
     *   Initiate GUI, instantiate VarData
     *   Constructor using FileName
-    *  ******************
+    *  
+    *  @param inFile path to input file (VS format)
     */
     public VarSifter(String inFile) {
         
@@ -211,9 +211,10 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         initTable();
     }
 
-    /* *****************
+    /** 
     *   Constructor using VarData object
-    *  *****************
+    *  
+    *  @param vdatTemp VarData object
     */
     public VarSifter(VarData vdatTemp) {
         
@@ -228,9 +229,10 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     }
     
 
-    /* *************
+    /** 
     *   Handle Actions
-    *  *************
+    *  
+    *  @param e resulting from clicking a button, menuitem
     */
     public void actionPerformed(ActionEvent e) {
         Object es = e.getSource();
@@ -453,9 +455,10 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     }
     
 
-    /* *************
+    /** 
     *   Handle List Actions
-    *  *************
+    *  
+    *  @param e - changing the choice on the top table
     */
     public void valueChanged(ListSelectionEvent e) {
         ListSelectionModel lsme = (ListSelectionModel)e.getSource();
@@ -485,9 +488,10 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     }
 
 
-    /* *************
+    /** 
     *   Handle Table Actions
-    *  *************
+    *  
+    *  @param e (changing a value in the table)
     */
     public void tableChanged(TableModelEvent e) {
 
@@ -507,9 +511,10 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     }
 
 
-    /* *************
+    /** 
     *   Determine which boxes are checked
-    *  *************
+    *  
+    *   @return BitSet describing which boxes are checked
     */
     private BitSet getFilterMask() {
         BitSet m = new BitSet(cBox.length);
@@ -524,9 +529,11 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
 
 
 
-    /* *************
+    /** 
     *   Sets fitted column sizes
-    *  *************
+    *  
+    *   @param table the JTable holding the data
+    *   @param model the VarTableModel holding the data
     */
     public void initColSizes(JTable table, VarTableModel model) {
         
@@ -559,9 +566,9 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     }
 
 
-    /* *************
+    /** 
     *   Initialize Table
-    *  *************
+    *  
     */
     private void initTable() {
         JPanel pane = new JPanel();
@@ -830,31 +837,39 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         //compHetParent.setVisible(true);
 
         //Initialize (but don't display) customQueryParent
-        cqPane = new CustomQueryView(vdat);
-        //cqPane.setAlignmentX(Component.LEFT_ALIGNMENT);
-        //customQuery.setAlignmentX(Component.LEFT_ALIGNMENT);
-        JPanel customQueryPane = new JPanel();
-        customQueryPane.setPreferredSize(new Dimension(w/3 + 10, h/3+5));
-        customQueryPane.setLayout(new BoxLayout(customQueryPane, BoxLayout.Y_AXIS));
-        customQueryPane.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
-        JScrollPane customViewScroll = new JScrollPane(cqPane, JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,
-                                                               JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-        customViewScroll.setBorder(null);
-        customQueryPane.add(customViewScroll);
-        //customQueryPane.add(cqPane);
-        customQueryPane.add(customQuery);
-        customQueryParent.add(customQueryPane);
-        customQueryParent.pack();
-        //customQueryParent.setVisible(true);
-        //customQueryViewItem.setEnabled(false);
+        try {
+            cqPane = new CustomQueryView(vdat);
+            //cqPane.setAlignmentX(Component.LEFT_ALIGNMENT);
+            //customQuery.setAlignmentX(Component.LEFT_ALIGNMENT);
+            JPanel customQueryPane = new JPanel();
+            customQueryPane.setPreferredSize(new Dimension(w/3 + 10, h/3+5));
+            customQueryPane.setLayout(new BoxLayout(customQueryPane, BoxLayout.Y_AXIS));
+            customQueryPane.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
+            JScrollPane customViewScroll = new JScrollPane(cqPane, JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,
+                                                                   JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+            customViewScroll.setBorder(null);
+            customQueryPane.add(customViewScroll);
+            //customQueryPane.add(cqPane);
+            customQueryPane.add(customQuery);
+            customQueryParent.add(customQueryPane);
+            customQueryParent.pack();
+            //customQueryParent.setVisible(true);
+        }
+        catch (NoClassDefFoundError e) {
+            showError("<html>Required JUNG files are not in the same directory as the VarSifter.jar file."
+                + "<p>Disabling custom querying.");
+            customQueryViewItem.setEnabled(false);
+            customQuery.setEnabled(false);
+        }
 
     }
 
 
 
-    /* *************
+    /** 
     *   Redraw Table
-    *  *************
+    *  
+    *   @param newData VS file
     */
     private void redrawOutTable(String newData) {
         if (newData != null) {
@@ -884,9 +899,9 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     }
 
 
-    /* *************
+    /** 
     *   Disable unused CheckBoxes
-    *  *************
+    *  
     */
     private void maskCBox() {
         HashMap<String, Integer> typeMap = vdat.returnDataTypeAt();
@@ -955,9 +970,9 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
 
     }      
 
-    /* *************
+    /** 
     *   get regex or null if nothing
-    *  *************
+    *  
     */
     private String getRegex() {
         if (geneRegexField.getText().equals("")) {
@@ -969,9 +984,9 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     }
 
 
-    /* *************
+    /** 
     *   initialize  minAffSpinner
-    *  *************
+    *  
     */    
     private void drawMinAffSpinner() {
         if (vdat.countSampleType(vdat.AFF_NORM_PAIR) > 0) {
@@ -984,9 +999,9 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     }
 
 
-    /* *************
+    /** 
     *   initialize case, control spinners
-    *  *************
+    *  
     */
     private void drawCaseControlSpinner() {
         int caseCount = vdat.countSampleType(vdat.CASE);
@@ -1005,18 +1020,21 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         controlSpinner.setMaximumSize(controlSpinner.getPreferredSize());
     }
 
-    /* *************
+    /** 
     *   Display error as dialog
-    *  *************
+    *  
+    *   @param err An error message to display as a MessageDialog
     */
     public static void showError(String err) {
         JOptionPane.showMessageDialog(null, err, "Error!", JOptionPane.ERROR_MESSAGE);
     }
 
 
-    /* *************
+    /** 
     *   Open data
-    *  *************
+    *  
+    *   @param openType Type of file to open
+    *   @return Absolute path to file
     */
     private String openData(int openType) {
         File fcFile;
@@ -1061,9 +1079,11 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     }
 
     
-    /* *************
+    /** 
     *   Save data, either in place, or as new
-    *  *************
+    *  
+    *   @param fileName Name of file to save to
+    *   @param vdTemp The VarData object containing data to save
     */
     private void saveData(String fileName, VarData vdTemp) {
         File fcFile;
