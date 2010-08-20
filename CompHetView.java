@@ -5,11 +5,9 @@ import java.awt.event.*;
 import components.TableSorter;
 
 
-/* *******************
+/**
 *    Displays alternate view for compound het pairs
-*  *******************
 */
-
 public class CompHetView extends JFrame {
 
     private JTable outTable;
@@ -22,9 +20,12 @@ public class CompHetView extends JFrame {
     private String[][] data;
     
 
-    /* ****************
-    *   Initiate GUI
-    *  ****************
+    /**
+    *   Construct object using a single variant and its associated positions
+    *
+    *   @param index A comma separated string of indices of positions linked with a single variant
+    *   @param vdat VarData object holding the data
+    *   @param isSamples True if sample information is desired
     */
     public CompHetView(String index, VarData vdat, boolean isSamples) {
 
@@ -63,6 +64,13 @@ public class CompHetView extends JFrame {
         
     }
 
+    /**
+    *   Construct object using an array of variants and their associated positions
+    *
+    *   @param indices An array of comma separated strings of indices of positions
+    *   @param vdat VarData object holding the data
+    *   @param isSamples True if sample information is desired
+    */
     public CompHetView(String[] indices, VarData vdat, boolean isSamples) {
 
         super("Compound Het Gene View");
@@ -110,6 +118,9 @@ public class CompHetView extends JFrame {
     }
 
 
+    /**
+    *   Initialize the GUI
+    */
     private void initTable() {
 
         //initiate parent window

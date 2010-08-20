@@ -26,12 +26,11 @@ import edu.uci.ics.jung.visualization.control.PluggableGraphMouse;
 import edu.uci.ics.jung.visualization.control.PickingGraphMousePlugin;
 
 
-/* ********************
-*   A window to handle GUI for custom query string generation
-*     -This class will generate an if-statement for sifting data
-*  ********************
+/**
+*   Creates a window to handle GUI for custom query string generation
+*     This class will generate an if-statement for sifting data
+*
 */
-
 public class CustomQueryView extends JPanel implements ActionListener {
     String[] sampleNames;
     private VarData vdat;
@@ -69,7 +68,11 @@ public class CustomQueryView extends JPanel implements ActionListener {
     private VisualizationViewer<CustomVertex,Integer> vv;
     
 
-    //Initializer
+    /**
+    *   Initializer
+    *
+    *   @param inVdat VarData Object
+    */
     public CustomQueryView(VarData inVdat) {
         vdat = inVdat;
         sampleNames = vdat.returnSampleNames();
@@ -117,7 +120,9 @@ public class CustomQueryView extends JPanel implements ActionListener {
     }
 
 
-    //Initialize GUI
+    /**
+    *   Initialize GUI
+    */
     private void initTable() {
         //this.setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
         this.setLayout(new BorderLayout());
@@ -204,7 +209,11 @@ public class CustomQueryView extends JPanel implements ActionListener {
         //add(textScroll, BorderLayout.PAGE_END);
     }
 
-
+    /**
+    *   Handle Actions
+    *
+    *   @param e resulting from clicking a button
+    */
     public void actionPerformed(ActionEvent e) {
         Object es = e.getSource();
         //System.out.println(es);
@@ -258,6 +267,9 @@ public class CustomQueryView extends JPanel implements ActionListener {
 
     }
 
+    /**
+    *   Enable buttons to allow proper query building
+    */
     private void enableButtons(int[] buttonGroup, boolean toEnabled) {
         for (int bG: buttonGroup) {
             switch (bG) {
@@ -280,6 +292,9 @@ public class CustomQueryView extends JPanel implements ActionListener {
         }
     }
 
+    /**
+    *   Build the query based on what stage of button clicking one is at
+    */
     private void buildQueryVertex(String labelString, String queryString) {
         switch (vertexLabelCount) {
             case 1:
@@ -311,6 +326,9 @@ public class CustomQueryView extends JPanel implements ActionListener {
         }
     }
 
+    /**
+    * Link vertices with "and/or"
+    */
     private void linkVertices(String labelString, String queryString) {
         Set<CustomVertex> picked = vv.getPickedVertexState().getPicked();
         if (picked.size() >= 2) {
@@ -325,6 +343,9 @@ public class CustomQueryView extends JPanel implements ActionListener {
         }
     }
 
+    /**
+    *   Delete selected boxes
+    */
     private void deletePicked() {
         Set<CustomVertex> picked = vv.getPickedVertexState().getPicked();
         if (picked.size() > 0) {
@@ -343,10 +364,19 @@ public class CustomQueryView extends JPanel implements ActionListener {
         }
     }
 
+    /**
+    *   Return the built query (the if-statement)
+    *
+    *   @return String containing the if statement constructed by the GUI
+    */
     public String getQuery() {
         return outGroup;
     }
 
+
+    /**
+    *   Walk the tree, assmebling the query parameters at each node
+    */
     private void findLeavesAndWrite(CustomVertex rootVertex, Collection<String> parentStringGroup) {
         if (graph.getChildCount(rootVertex) > 0) {
             ArrayList<String> stringGroup = new ArrayList<String>();

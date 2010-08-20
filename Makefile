@@ -10,7 +10,7 @@ compile5:
 	${JAVAC5} VarSifter.java
 
 compile_check:
-	${JAVAC5} -Xlint:unchecked VarSifter.java
+	${JAVAC6} -Xlint:unchecked VarSifter.java
 
 compile6:
 	${JAVAC6} -cp jung/*:. -target 5 VarSifter.java
@@ -28,7 +28,12 @@ $(JAR_FILE):
 	fi
 	jar -cv0mf manifest.txt $@ @$(CLASS_LIST); \
 	rm $(CLASS_LIST)
+
+docs:
+	@cd html; \
+	javadoc -sourcepath ../ ../*.java
 	
 
 clean:
-	-rm *class */*class *jar
+	-rm *class */*class *jar; \
+	rm -rf html/*
