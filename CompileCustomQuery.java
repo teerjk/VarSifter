@@ -18,8 +18,10 @@ import javax.tools.DiagnosticCollector;
 */
 public class CompileCustomQuery {
     String className = "QueryModule";
+    private int refIndex;
 
-    public CompileCustomQuery() {
+    public CompileCustomQuery(int refAlleleIndex) {
+        refIndex = refAlleleIndex;
     }
 
     /**
@@ -37,15 +39,23 @@ public class CompileCustomQuery {
 
         out.append( "import java.util.BitSet;\n" );
         out.append( "public class " ).append(className).append( " implements AbstractQueryModule {\n" );
-        out.append( "  public BitSet executeCustomQuery(VarData vdat) {\n" );
+        out.append( "  public BitSet executeCustomQuery(VarData vdat, int refIndex) {\n" );
         out.append( "    String[][] allData = vdat.dataDump();\n" );
         out.append( "    BitSet bs = new BitSet(allData.length);\n" );
         out.append( "    for (int i=1;i<allData.length;i++) {\n");
-        
-        //out.append( "      if (allData[i][vdat.returnDataTypeAt().get(\"type\")].equals(\"Stop\")) {\n" );
+        out.append( "        String type = allData[i][vdat.returnDataTypeAt().get(\"type\")];\n");
+        out.append( "        String homRefAllele = allData[i][refIndex];\n");
+        out.append( "        String homRefGen;\n");
+        out.append( "        if (type.contains(\"DIV\")) {\n");
+        out.append( "           homRefGen = (homRefAllele + \":\" + homRefAllele);\n");
+        out.append( "        }\n");
+        out.append( "        else {\n");
+        out.append( "           homRefGen = (homRefAllele + homRefAllele);\n");
+        out.append( "        }\n");
+
         out.append( "        if " );
         out.append(              customQuery );
-        out.append( "                        {\n" );
+        out.append(                        " {\n" );
         
         out.append( "        bs.set(i-1);\n" );
         out.append( "      }\n" );
@@ -61,6 +71,7 @@ public class CompileCustomQuery {
         //out.append( "    }\n" );
 
         JavaFileObject file = new JavaSourceFromString(className, out.toString());
+        //System.out.println(out.toString());
 
         CompilationTask task = compiler.getTask(null,null,diagnostics,null,null,Arrays.asList(file));
         boolean success = task.call();
@@ -113,7 +124,7 @@ public class CompileCustomQuery {
             Class myObjectClass = ccl.loadClass(className);
 
             AbstractQueryModule aqm = (AbstractQueryModule) myObjectClass.newInstance();
-            BitSet out = aqm.executeCustomQuery(vdat);
+            BitSet out = aqm.executeCustomQuery(vdat, refIndex);
             File cf = new File(className + ".class");
             if (!cf.delete()) {
                 VarSifter.showError("Couldn't delete " + className + ".class. You may want to delete it.");

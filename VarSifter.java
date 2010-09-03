@@ -17,7 +17,7 @@ import components.TableSorter;
 */
 public class VarSifter extends JFrame implements ListSelectionListener, ActionListener, TableModelListener {
     
-    final String version = "0.6d";
+    final String version = "0.7";
     final String id = "$Id$";
 
     final String govWork = "PUBLIC DOMAIN NOTICE\n" +
@@ -75,6 +75,8 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     final int BED_FILTER_FILE = 2;
     final int MAX_COLUMN_SIZE = 150;
 
+    final String[] sampleTableLabels = {"Sample", "Genotype", "MPG score", "coverage"};
+
 
     final Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
     final int w = (int)dim.getWidth();
@@ -85,6 +87,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     private JTable outTable;
     private TableSorter sorter;
     private JTable sampleTable;
+    private TableSorter sampleSorter;
     private JScrollPane dataScroller;
     private JScrollPane sampleScroller;
     private ListSelectionModel lsm;
@@ -200,11 +203,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         setBounds(0, (h/8), (w/2), (h/2));
 
         if (inFile == null) {
-            //vdat = new VarData(openData());
             inFile = openData(VARIANT_FILE);
-        }
-        else {
-            //vdat = new VarData(inFile);
         }
         outTable = new JTable();
         redrawOutTable(inFile);
@@ -470,18 +469,22 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
                 rowIndex = 0;
             }
             int dataIndex = sorter.modelIndex(rowIndex);
+            sampleSorter.setTableHeader(null); //Do this to avoid a memory leak
 
             if (isShowVar) {
-                sampleTable.setModel(new VarTableModel(vdat.returnSample(dataIndex),
-                    vdat.returnSampleNames(), vdat ));
+                sampleSorter = new TableSorter((new VarTableModel(vdat.returnSample(dataIndex),
+                    sampleTableLabels, vdat )));
+                sampleTable.setModel(sampleSorter);
+                sampleSorter.setTableHeader(sampleTable.getTableHeader());
             }
             else {
-                sampleTable.setModel(new VarTableModel(new String[0][], null, vdat));
+                sampleSorter = new TableSorter((new VarTableModel(new String[0][], null, vdat)));
+                sampleTable.setModel(sampleSorter);
             }
             
             outTable.setRowSelectionInterval(rowIndex,rowIndex);
             //lastRow = rowIndex;
-            initColSizes(sampleTable, (VarTableModel)sampleTable.getModel());
+            initColSizes(sampleTable, (VarTableModel)((TableSorter)sampleTable.getModel()).getTableModel() );
             
             //System.out.println(outTable.getSelectedRow() + "\t" + rowIndex + "\t" + dataIndex);
         }
@@ -615,25 +618,28 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
         dataScroller.setPreferredSize(new Dimension((w/2), (h/4)));
         
-        sampleTable = new JTable( new VarTableModel(vdat.returnSample(outTable.getSelectedRow()),
-            vdat.returnSampleNames(), vdat ));
+        sampleSorter = new TableSorter( new VarTableModel(vdat.returnSample(outTable.getSelectedRow()),
+            sampleTableLabels, vdat ));
+        sampleTable = new JTable(sampleSorter);
+        sampleSorter.setTableHeader(sampleTable.getTableHeader());
         sampleTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
         sampleScroller = new JScrollPane(sampleTable,
-            ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER,
+            ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
             ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
         sampleScroller.setPreferredSize(new Dimension((w/2), 80));
         sampleScroller.setAlignmentY(Component.TOP_ALIGNMENT);
-        sampleTable.setDefaultRenderer(Object.class, new SampleScoreRenderer());
-        initColSizes(sampleTable, (VarTableModel)sampleTable.getModel());
+        //sampleTable.setDefaultRenderer(Object.class, new SampleScoreRenderer());
+        sampleTable.setDefaultRenderer(Number.class, new VarScoreRenderer());
+        initColSizes(sampleTable, (VarTableModel)((TableSorter)sampleTable.getModel()).getTableModel() );
         
         //Sample display
         JPanel samplePane = new JPanel();
         samplePane.setLayout(new BoxLayout(samplePane, BoxLayout.X_AXIS));
-        JLabel sL = new JLabel("<html>Genotype<p>MPG Score<p>Coverage</html>");
-        sL.setAlignmentY(Component.TOP_ALIGNMENT);
-        sL.setPreferredSize(new Dimension(80,80));
-        sL.setMaximumSize(new Dimension(80,80));
-        samplePane.add(sL);
+        //JLabel sL = new JLabel("<html>Genotype<p>MPG Score<p>Coverage</html>");
+        //sL.setAlignmentY(Component.TOP_ALIGNMENT);
+        //sL.setPreferredSize(new Dimension(80,80));
+        //sL.setMaximumSize(new Dimension(80,80));
+        //samplePane.add(sL);
         samplePane.add(sampleScroller);
         
         //Filters

@@ -177,6 +177,31 @@ public class VarData {
                         }
                     }
 
+                    //Handle map file if available
+
+                    File f = new File(inFile + ".map");
+                    if (f.exists()) {
+                        String mapLine = new String();
+                        HashMap<String, String> mapHash = new HashMap<String, String>();
+                        BufferedReader mapReader = new BufferedReader(new FileReader(f));
+                        while ((mapLine = mapReader.readLine()) != null) {
+                            if (mapLine.contains("=")) {
+                                String[] mapTemp = mapLine.split("=");
+                                mapHash.put(mapTemp[0], mapTemp[1]);
+                            }
+                        }
+                        mapReader.close();
+
+                        for (int i=0; i < sampleNames.length; i++) {
+                            String newName;
+                            if ((newName = mapHash.get(sampleNames[i])) != null) {
+                                sampleNames[i] = newName;
+                            }
+                        }
+
+                    }
+
+
                     first = false;
                     continue;
                 }
@@ -484,14 +509,14 @@ public class VarData {
             if (mask.get(17) && bedHash[0].get(data[i][chrIndex]) != null) {
                 Object[] starts = ((HashMap<String, Vector<Integer>>)bedHash[0]).get(data[i][chrIndex]).toArray();
                 Object[] ends = ((HashMap<String, Vector<Integer>>)bedHash[1]).get(data[i][chrIndex]).toArray();
-                int lf = Integer.parseInt(data[i][lfIndex]);
+                int pos = Integer.parseInt(data[i][lfIndex]) + 1;
 
                 for (int j=0; j<starts.length;j++) {
-                    if (lf < (Integer)starts[j]) {
+                    if (pos < (Integer)starts[j]) {
                         continue;
                     }
 
-                    if (lf <= (Integer)ends[j]) {
+                    if (pos <= (Integer)ends[j]) {
                         filterSet[10].set(i);
                         break;
                     }
@@ -513,7 +538,7 @@ public class VarData {
 
         if (mask.get(18)) {
             try {
-                CompileCustomQuery c = new CompileCustomQuery();
+                CompileCustomQuery c = new CompileCustomQuery(refAlleleIndex);
                 if ( c.compileCustom(customQuery) ) {
                     filterSet[11] = c.run(this);
                     filterSet[11].set(data.length + 1);
@@ -860,7 +885,7 @@ public class VarData {
     *   Return samples
     *  
     *   @param i The row (in this VarData object) for which to display sample information
-    *   @return A 2-d array of sample data [data type(Genotype, MPG score, Coverage)][Sample]
+    *   @return A 2-d array of sample data [sample_index][data type(SampleName, Genotype, MPG score, Coverage)]
     */
     public String[][] returnSample(int i) {
         String[][] tempOutSamples;
@@ -869,11 +894,12 @@ public class VarData {
             tempOutSamples = new String[0][];
         }
         else {
-            tempOutSamples = new String[S_FIELDS][sampleNames.length];
+            tempOutSamples = new String[sampleNames.length][S_FIELDS+1];
             for (int j = 0; j < sampleNames.length; j++) {
                 for (int k = 0; k < S_FIELDS; k++) {
-                    tempOutSamples[k][j] = outSamples[i][j][k];
+                    tempOutSamples[j][k+1] = outSamples[i][j][k];
                 }
+                tempOutSamples[j][0] = sampleNames[j];
             }
         }
         return tempOutSamples;

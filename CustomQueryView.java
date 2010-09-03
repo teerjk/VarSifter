@@ -44,6 +44,10 @@ public class CustomQueryView extends JPanel implements ActionListener {
     final int ACTION = 1;
     final int LOGICAL = 2;
 
+    private JButton[] fixedButtons = {
+                                       new JButton("Homozygous Reference"),
+                                       new JButton("NA"),
+                                     };
     private JButton[] sampleButtons;
     
     private JButton exactMatch = new JButton("Exactly Matches");
@@ -78,7 +82,7 @@ public class CustomQueryView extends JPanel implements ActionListener {
         sampleNames = vdat.returnSampleNames();
         dataTypeAt = vdat.returnDataTypeAt();
         annoSize = dataTypeAt.size();
-        sampleButtons = new JButton[sampleNames.length];
+        sampleButtons = new JButton[sampleNames.length + fixedButtons.length];
 
         graph = new DelegateForest<CustomVertex,Integer>();
         layout = new TreeLayout<CustomVertex,Integer>(graph);
@@ -111,8 +115,11 @@ public class CustomQueryView extends JPanel implements ActionListener {
         //vv.getRenderer().getVertexLabelRenderer().setPosition(Position.CNTR);
         
         String out = new String("");
-        for (int i=0; i<sampleNames.length; i++) {
-            sampleButtons[i] = new JButton(sampleNames[i]);
+        for (int i=0; i<fixedButtons.length; i++) {
+            sampleButtons[i] = fixedButtons[i];
+        }
+        for (int i=fixedButtons.length; i < (sampleNames.length + fixedButtons.length); i++) {
+            sampleButtons[i] = new JButton(sampleNames[i - fixedButtons.length]);
         }
 
         initQuery();
@@ -130,13 +137,28 @@ public class CustomQueryView extends JPanel implements ActionListener {
         //        ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER,
         //        ScrollPaneConstants.HORIZONTAL_SCROLLBAR_ALWAYS);
 
+        JPanel fixedPane = new JPanel();
+        fixedPane.setLayout(new BoxLayout(fixedPane, BoxLayout.Y_AXIS));
+        fixedPane.setBorder(BorderFactory.createCompoundBorder(
+                                BorderFactory.createLineBorder(Color.black),
+                                BorderFactory.createEmptyBorder(7,7,7,7)
+                            ));
+        for (int i=0; i<fixedButtons.length; i++) {
+            fixedPane.add(sampleButtons[i]);
+            sampleButtons[i].addActionListener(this);
+            if (i != (fixedButtons.length - 1)) {
+                fixedPane.add(Box.createRigidArea(new Dimension(0,5)));
+            }
+        }
+
+
         JPanel samplePane = new JPanel();
         samplePane.setLayout(new BoxLayout(samplePane, BoxLayout.Y_AXIS));
         samplePane.setBorder(BorderFactory.createCompoundBorder(
                                 BorderFactory.createLineBorder(Color.black),
                                 BorderFactory.createEmptyBorder(7,7,7,7)
                             ));
-        for (int i = 0; i<sampleButtons.length; i++) {
+        for (int i = fixedButtons.length; i<sampleButtons.length; i++) {
             //sampleButtons[i].setName( ((Integer)i).toString() );
             samplePane.add(sampleButtons[i]);
             sampleButtons[i].addActionListener(this);
@@ -194,6 +216,9 @@ public class CustomQueryView extends JPanel implements ActionListener {
         JPanel controlPane = new JPanel();
         controlPane.setLayout(new BoxLayout(controlPane, BoxLayout.Y_AXIS));
 
+        controlPane.add(new JLabel("Genotypes:"));
+        controlPane.add(fixedPane);
+        controlPane.add(Box.createRigidArea(new Dimension(0,5)));
         controlPane.add(new JLabel("Samples:"));
         controlPane.add(samplePane);
         controlPane.add(Box.createRigidArea(new Dimension(0,5)));
@@ -242,11 +267,20 @@ public class CustomQueryView extends JPanel implements ActionListener {
             linkVertices("Or", " || ");
         }
         else {
-            for (int i=0; i<sampleButtons.length; i++) {
+            //Handle non-sample buttons here (HomRef, NA, etc)
+            if (es == sampleButtons[0]) {
+                buildQueryVertex(sampleButtons[0].getText(), "homRefGen");
+            }
+            else if (es == sampleButtons[1]) {
+                buildQueryVertex(sampleButtons[1].getText(), "\"NA\"");
+            }
+
+            //Now Handle sample buttons
+            for (int i=fixedButtons.length; i<(sampleButtons.length); i++) {
                 if (es == sampleButtons[i]) {
                     String labelTemp = sampleButtons[i].getText();
                     labelTemp = labelTemp.replaceFirst("\\.NA$", "");
-                    String queryTemp = ("allData[i][" + ((i * VarData.S_FIELDS) + annoSize) + "]");
+                    String queryTemp = ("allData[i][" + (( (i - fixedButtons.length) * VarData.S_FIELDS) + annoSize) + "]");
                     buildQueryVertex(labelTemp, queryTemp);
                     //graph.addVertex(sampleButtons[i].getText());
                     break;
