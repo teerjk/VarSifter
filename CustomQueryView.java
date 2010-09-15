@@ -20,8 +20,9 @@ import edu.uci.ics.jung.visualization.decorators.ToStringLabeller;
 import edu.uci.ics.jung.visualization.decorators.EdgeShape;
 import edu.uci.ics.jung.visualization.renderers.Renderer.VertexLabel.Position;
 import edu.uci.ics.jung.visualization.renderers.VertexLabelAsShapeRenderer;
-//import edu.uci.ics.jung.visualization.control.DefaultModalGraphMouse;
-//import edu.uci.ics.jung.visualization.control.ModalGraphMouse;
+import edu.uci.ics.jung.visualization.GraphZoomScrollPane;
+import edu.uci.ics.jung.visualization.control.DefaultModalGraphMouse;
+import edu.uci.ics.jung.visualization.control.ModalGraphMouse;
 import edu.uci.ics.jung.visualization.control.PluggableGraphMouse;
 import edu.uci.ics.jung.visualization.control.PickingGraphMousePlugin;
 
@@ -61,6 +62,7 @@ public class CustomQueryView extends JPanel implements ActionListener {
     private JButton apply = new JButton("Apply");
     private JButton delete = new JButton("Delete Selected");
     private JButton clear = new JButton("Clear All");
+    private JComboBox modeBox;
     
     private JTextField outText = new JTextField();
     private StringBuilder query;
@@ -103,8 +105,13 @@ public class CustomQueryView extends JPanel implements ActionListener {
         vv.getRenderContext().setEdgeShapeTransformer(new EdgeShape.Line());
         vv.getRenderer().setVertexLabelRenderer(vlasr);
 
-        PluggableGraphMouse graphMouse = new PluggableGraphMouse();
-        graphMouse.add(new PickingGraphMousePlugin());
+        //PluggableGraphMouse graphMouse = new PluggableGraphMouse();
+        //graphMouse.add(new PickingGraphMousePlugin());
+        final DefaultModalGraphMouse graphMouse = new DefaultModalGraphMouse();
+        modeBox = graphMouse.getModeComboBox();
+        modeBox.addItemListener(graphMouse.getModeListener());
+        graphMouse.setMode(ModalGraphMouse.Mode.PICKING);
+
         vv.setGraphMouse(graphMouse);
 
         //DefaultModalGraphMouse graphMouse = new DefaultModalGraphMouse();
@@ -198,6 +205,8 @@ public class CustomQueryView extends JPanel implements ActionListener {
         runPane.add(Box.createRigidArea(new Dimension(0,5)));
         runPane.add(clear);
         runPane.add(Box.createRigidArea(new Dimension(0,5)));
+        runPane.add(modeBox);
+        runPane.add(Box.createRigidArea(new Dimension(0,5)));
         outText.setMaximumSize(new Dimension( outText.getMaximumSize().width, 
                                               outText.getMinimumSize().height));
         runPane.add(outText);
@@ -230,7 +239,9 @@ public class CustomQueryView extends JPanel implements ActionListener {
         controlPane.add(Box.createRigidArea(new Dimension(0,5)));
         controlPane.add(runPane);
         add(controlPane, BorderLayout.LINE_START);
-        add(vv, BorderLayout.CENTER);
+        final GraphZoomScrollPane zoomPane = new GraphZoomScrollPane(vv);
+        add(zoomPane, BorderLayout.CENTER);
+        //add(vv, BorderLayout.CENTER);
         //add(textScroll, BorderLayout.PAGE_END);
     }
 

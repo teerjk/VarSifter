@@ -628,8 +628,9 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
         sampleScroller.setPreferredSize(new Dimension((w/2), 80));
         sampleScroller.setAlignmentY(Component.TOP_ALIGNMENT);
-        //sampleTable.setDefaultRenderer(Object.class, new SampleScoreRenderer());
-        sampleTable.setDefaultRenderer(Number.class, new VarScoreRenderer());
+        sampleTable.setDefaultRenderer(Object.class, new SampleScoreRenderer());
+        sampleTable.setDefaultRenderer(Number.class, new SampleScoreRenderer());
+        //sampleTable.setDefaultRenderer(Number.class, new VarScoreRenderer());
         initColSizes(sampleTable, (VarTableModel)((TableSorter)sampleTable.getModel()).getTableModel() );
         
         //Sample display

@@ -496,12 +496,12 @@ public class VarData {
             }
 
             //Gene Filter File (include)                        
-            if (mask.get(15) && geneSet.contains(data[i][geneIndex])) {
+            if (mask.get(15) && geneSet.contains(data[i][geneIndex].toLowerCase())) {
                 filterSet[8].set(i);
             }
             
             //Gene Filter File (exclude)
-            if (mask.get(16) && !geneSet.contains(data[i][geneIndex])) {
+            if (mask.get(16) && !geneSet.contains(data[i][geneIndex].toLowerCase())) {
                 filterSet[9].set(i);
             }
             
@@ -809,7 +809,7 @@ public class VarData {
             String line = new String();
             BufferedReader br = new BufferedReader(new FileReader(inFile));
             while ((line = br.readLine()) != null) {
-                outSet.add(line);
+                outSet.add(line.toLowerCase());
             }
             br.close();
         }
