@@ -5,6 +5,7 @@ import javax.swing.table.*;
 import java.awt.event.*;
 import java.util.BitSet;
 import java.util.ArrayList;
+import java.util.regex.*;
 import java.io.*;
 import java.util.HashMap;
 import components.TableSorter;
@@ -17,7 +18,7 @@ import components.TableSorter;
 */
 public class VarSifter extends JFrame implements ListSelectionListener, ActionListener, TableModelListener {
     
-    final String version = "0.7";
+    final String version = "0.7a";
     final String id = "$Id$";
 
     final String govWork = "PUBLIC DOMAIN NOTICE\n" +
@@ -139,6 +140,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     private JMenuItem openItem;
     private JMenuItem saveAsItem;
     private JMenuItem saveViewItem;
+    private JMenuItem preferViewItem;
     private JMenuItem exitItem;
     private JMenuItem compHetViewItem;
     private JMenuItem customQueryViewItem;
@@ -160,11 +162,11 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     private JButton compHetAllButton = new JButton("View All Compound Hets");
 
     private JFrame compHetParent = new JFrame("Compound Het Views");
-
     private JFrame customQueryParent = new JFrame("Custom Query");
     private CustomQueryView cqPane;
+    private JFrame preferViewParent = new JFrame("Preferences");
 
-    private int[] spinnerData = new int[3]; //Hold data for Spinner values (use int values from VarData)
+    private int[] spinnerData = new int[5]; //Hold data for Spinner values (use int values from VarData)
     
     private JLabel filterFileLabel = new JLabel("No Gene File Selected");
     private JLabel bedFilterFileLabel = new JLabel("No Bed File Selected");
@@ -172,11 +174,15 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     private JSpinner minAffSpinner = new JSpinner();
     private JLabel affSpinnerLabel = new JLabel("Diff. in at least:");
     private JTextField geneRegexField = new JTextField("");
+    private JTextField minMPGField = new JTextField(10);
+    private JTextField minMPGCovRatioField = new JTextField(10);
 
     private JSpinner caseSpinner = new JSpinner();
     private JLabel caseSpinnerLabel = new JLabel("Var in cases (at least):");
     private JSpinner controlSpinner = new JSpinner();
     private JLabel controlSpinnerLabel = new JLabel("Var in controls (this or fewer):");
+    private JSpinner minMPGSpinner = new JSpinner();
+    private JSpinner minMPGCovRatioSpinner = new JSpinner();
 
     private JLabel linesl = new JLabel("Number of Variant Positions: ");
     
@@ -186,6 +192,11 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
 
     private BitSet mask; //store selected filters on "Apply Filter" press
     private boolean isShowVar = true;
+    private DataFilter df = null;
+    public final static Pattern fDigits = Pattern.compile("^[0-9.]+$");
+
+    private int minMPG = 0;
+    private float minMPGCovRatio = 0f;
 
     //int lastRow = 0;    //Last row selected
 
@@ -252,20 +263,14 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
                 linesl.setText("Number of Genes: ");
             }
             
-            String tempRegex;
-            tempRegex = getRegex();
-            //if (geneRegexField.getText().equals("")) {
-            //    tempRegex = null;
-            //}
-            //else {
-            //    tempRegex = geneRegexField.getText();
-            //}
-
             spinnerData[vdat.AFF_NORM_PAIR] = ((Integer)minAffSpinner.getValue()).intValue();
             spinnerData[vdat.CASE] = ((Integer)caseSpinner.getValue()).intValue();
             spinnerData[vdat.CONTROL] = ((Integer)controlSpinner.getValue()).intValue();
+            spinnerData[vdat.MIN_MPG] = ((Integer)minMPGSpinner.getValue()).intValue();
+            spinnerData[vdat.MIN_MPG_COV] = ((Integer)minMPGCovRatioSpinner.getValue()).intValue();
            
-            vdat.filterData(mask, geneFile, bedFile, spinnerData, tempRegex);
+            df = new DataFilter(mask, geneFile, bedFile, spinnerData, getRegex(), getMinMPG(), getMinMPGCovRatio());
+            vdat.filterData(df);
             redrawOutTable(null);
             
         }
@@ -320,12 +325,13 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
                 }
             }
 
-            vdat.filterData(new BitSet(), null, null, null, geneRegex);
+            vdat.filterData(new DataFilter(new BitSet(), null, null, null, geneRegex, getMinMPG(), getMinMPGCovRatio()));
             VarData tempVdat = vdat.returnSubVarData(vdat, null);
             VarSifter vs = new VarSifter(tempVdat);
             
             //Must return the filtered state to what it was, to avoid data mapping errors!
-            vdat.filterData(mask, geneFile, bedFile, spinnerData, getRegex());
+            vdat.filterData(df);
+            //vdat.filterData(mask, geneFile, bedFile, spinnerData, getRegex());
         }
 
         else if (es == openItem) {
@@ -343,6 +349,10 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         else if (es == saveViewItem) {
             VarData subVdat = vdat.returnSubVarData(vdat, null);
             saveData(null, subVdat);
+        }
+
+        else if (es == preferViewItem) {
+            preferViewParent.setVisible(true);
         }
 
         else if (es == exitItem) {
@@ -380,11 +390,12 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             }
             BitSet tempBS = new BitSet();
             tempBS.set(MENDHETREC);
-            vdat.filterData(tempBS, null, null, null, geneRegex);
+            vdat.filterData(new DataFilter(tempBS, null, null, null, geneRegex, getMinMPG(), getMinMPGCovRatio()));
             String temp[][] = vdat.returnData();
 
             //Must return the filtered state to what it was, to avoid data mapping errors!
-            vdat.filterData(mask, geneFile, bedFile, spinnerData, getRegex());
+            vdat.filterData(df);
+            //vdat.filterData(mask, geneFile, bedFile, spinnerData, getRegex());
 
             String[] index = new String[temp.length];
             for (int i=0; i<temp.length; i++) {
@@ -418,11 +429,12 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             String geneRegex = ".";
             BitSet tempBS = new BitSet();
             tempBS.set(MENDHETREC);
-            vdat.filterData(tempBS, null, null, null, geneRegex);
+            vdat.filterData(new DataFilter(tempBS, null, null, null, geneRegex, getMinMPG(), getMinMPGCovRatio()));
             String temp[][] = vdat.returnData();
 
             //Must return the filtered state to what it was, to avoid data mapping errors!
-            vdat.filterData(mask, geneFile, bedFile, spinnerData, getRegex());
+            vdat.filterData(df);
+            //vdat.filterData(mask, geneFile, bedFile, spinnerData, getRegex());
 
             String[] index = new String[temp.length];
             for (int i=0; i<temp.length; i++) {
@@ -586,6 +598,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         openItem = new JMenuItem("Open File");
         saveAsItem = new JMenuItem("Save File As");
         saveViewItem = new JMenuItem("Save Current View As");
+        preferViewItem = new JMenuItem("Preferences");
         exitItem = new JMenuItem("Exit");
         compHetViewItem = new JMenuItem("Viewing Compound Hets");
         customQueryViewItem = new JMenuItem("Custom Query");
@@ -593,6 +606,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         fileMenu.add(openItem);
         fileMenu.add(saveAsItem);
         fileMenu.add(saveViewItem);
+        fileMenu.add(preferViewItem);
         fileMenu.add(exitItem);
         viewMenu.add(compHetViewItem);
         viewMenu.add(customQueryViewItem);
@@ -604,6 +618,8 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
 
         drawMinAffSpinner();
         drawCaseControlSpinner();
+        drawMinMPGSampleSpinner();
+        drawMinMPGCovRatioSampleSpinner();
         
         //outTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         outTable.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
@@ -788,6 +804,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         openItem.addActionListener(this);
         saveAsItem.addActionListener(this);
         saveViewItem.addActionListener(this);
+        preferViewItem.addActionListener(this);
         compHetViewItem.addActionListener(this);
         customQueryViewItem.addActionListener(this);
         exitItem.addActionListener(this);
@@ -843,20 +860,54 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         compHetParent.pack();
         //compHetParent.setVisible(true);
 
+        //Initialize (but don't display) preferViewPane
+        JPanel preferViewPane = new JPanel();
+        preferViewPane.setLayout(new BoxLayout(preferViewPane, BoxLayout.Y_AXIS));
+        preferViewPane.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
+        setJComponentSize(minMPGField);
+        setJComponentSize(minMPGCovRatioField);
+        minMPGField.setText(Integer.toString(minMPG));
+        minMPGCovRatioField.setText(Float.toString(minMPGCovRatio));
+        JPanel minMPGPane = new JPanel();
+        minMPGPane.setLayout(new BoxLayout(minMPGPane, BoxLayout.X_AXIS));
+        minMPGPane.add(new JLabel("Minimum MPG Score: "));
+        minMPGPane.add(minMPGField);
+        minMPGPane.add(new JLabel(" in at least "));
+        minMPGPane.add(minMPGSpinner);
+        minMPGPane.add(new JLabel(" samples."));
+        JPanel minMPGCovRatioPane = new JPanel();
+        minMPGCovRatioPane.setLayout(new BoxLayout(minMPGCovRatioPane, BoxLayout.X_AXIS));
+        minMPGCovRatioPane.add(new JLabel("Minimum (MPG score / coverage) ratio: "));
+        minMPGCovRatioPane.add(minMPGCovRatioField);
+        minMPGCovRatioPane.add(new JLabel(" in at least "));
+        minMPGCovRatioPane.add(minMPGCovRatioSpinner);
+        minMPGCovRatioPane.add(new JLabel(" samples."));
+
+        JPanel preferFilterPane = new JPanel();
+        preferFilterPane.setLayout(new BoxLayout(preferFilterPane, BoxLayout.Y_AXIS));
+        preferFilterPane.add(new JLabel("Choose minimum scores for filtering"));
+        preferFilterPane.add(Box.createRigidArea(new Dimension(0,15)));
+        preferFilterPane.add(minMPGPane);
+        preferFilterPane.add(Box.createRigidArea(new Dimension(0,10)));
+        preferFilterPane.add(minMPGCovRatioPane);
+        preferViewPane.add(preferFilterPane);
+        preferViewParent.add(preferViewPane);
+        preferViewParent.pack();
+                
+
         //Initialize (but don't display) customQueryParent
         try {
             cqPane = new CustomQueryView(vdat);
-            //cqPane.setAlignmentX(Component.LEFT_ALIGNMENT);
-            //customQuery.setAlignmentX(Component.LEFT_ALIGNMENT);
             JPanel customQueryPane = new JPanel();
             customQueryPane.setPreferredSize(new Dimension(w/3 + 10, h/3+5));
             customQueryPane.setLayout(new BoxLayout(customQueryPane, BoxLayout.Y_AXIS));
             customQueryPane.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
-            JScrollPane customViewScroll = new JScrollPane(cqPane, JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,
-                                                                   JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-            customViewScroll.setBorder(null);
-            customQueryPane.add(customViewScroll);
-            //customQueryPane.add(cqPane);
+            //JScrollPane customViewScroll = new JScrollPane(cqPane, JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,
+            //                                                       JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+            //customViewScroll.setBorder(null);
+            //customQueryPane.add(customViewScroll);
+            customQueryPane.add(cqPane);
+            customQueryPane.add(Box.createRigidArea(new Dimension(0,10)));
             customQueryPane.add(customQuery);
             customQueryParent.add(customQueryPane);
             customQueryParent.pack();
@@ -868,6 +919,9 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             customQueryViewItem.setEnabled(false);
             customQuery.setEnabled(false);
         }
+
+        df = new DataFilter(mask, geneFile, bedFile, spinnerData, getRegex(), getMinMPG(), getMinMPGCovRatio());
+
 
     }
 
@@ -885,6 +939,8 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             clear.doClick();
             drawMinAffSpinner();
             drawCaseControlSpinner();
+            drawMinMPGSampleSpinner();
+            drawMinMPGCovRatioSampleSpinner();
 
         }
         if (isShowVar) {
@@ -991,6 +1047,54 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     }
 
 
+    /**
+    *   Get minMPG Score
+    *   @return minMPG
+    */
+    private int getMinMPG() {
+        if (VarTableModel.digits.matcher(minMPGField.getText()).find()) {
+            int m = Integer.parseInt(minMPGField.getText());
+            if (m >= 0 && m<= 500) {
+                return m;
+            }
+            else {
+                showError("Please use an MPG score value between 0 and 500");
+                minMPGField.setText(Integer.toString(minMPG));
+                return minMPG;
+            }
+        }
+        else {
+            showError("Please use an MPG score value between 0 and 500");
+            minMPGField.setText(Integer.toString(minMPG));
+            return minMPG;
+        }
+    }
+
+
+    /**
+    *   Get minMPGCovRatio score
+    *   @return minMPGCovRatio
+    */
+    private float getMinMPGCovRatio() {
+        if (fDigits.matcher(minMPGCovRatioField.getText()).find()) {
+            float f = Float.parseFloat(minMPGCovRatioField.getText());
+            if (f >= 0f && f <= 5f) {
+                return f;
+            }
+            else {
+                showError("Please use an (MPG score / coverage) value between 0 and 5");
+                minMPGCovRatioField.setText(Float.toString(minMPGCovRatio));
+                return minMPGCovRatio;
+            }
+        }
+        else {
+            showError("Please use an (MPG score / coverage) value between 0 and 5");
+            minMPGCovRatioField.setText(Float.toString(minMPGCovRatio));
+            return minMPGCovRatio;
+        }
+    }
+
+
     /** 
     *   initialize  minAffSpinner
     *  
@@ -999,10 +1103,12 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         if (vdat.countSampleType(vdat.AFF_NORM_PAIR) > 0) {
             minAffSpinner.setModel(new SpinnerNumberModel(1, 1, vdat.countSampleType(vdat.AFF_NORM_PAIR), 1));
         }
-        Dimension d = minAffSpinner.getPreferredSize();
-        d.width = 60;
-        minAffSpinner.setPreferredSize(d);
-        minAffSpinner.setMaximumSize(minAffSpinner.getPreferredSize());
+        //Dimension d = minAffSpinner.getPreferredSize();
+        //d.width = 60;
+        //minAffSpinner.setPreferredSize(d);
+        //minAffSpinner.setMaximumSize(minAffSpinner.getPreferredSize());
+        setJComponentSize(minAffSpinner);
+        spinnerData[vdat.AFF_NORM_PAIR] = ((Integer)minAffSpinner.getValue()).intValue();
     }
 
 
@@ -1019,13 +1125,44 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         if (controlCount > 0) {
             controlSpinner.setModel(new SpinnerNumberModel(0, 0, controlCount, 1));
         }
-        Dimension d = caseSpinner.getPreferredSize();
-        d.width = 60;
-        caseSpinner.setPreferredSize(d);
-        caseSpinner.setMaximumSize(caseSpinner.getPreferredSize());
-        controlSpinner.setPreferredSize(d);
-        controlSpinner.setMaximumSize(controlSpinner.getPreferredSize());
+        //Dimension d = caseSpinner.getPreferredSize();
+        //d.width = 60;
+        //caseSpinner.setPreferredSize(d);
+        //caseSpinner.setMaximumSize(caseSpinner.getPreferredSize());
+        //controlSpinner.setPreferredSize(d);
+        //controlSpinner.setMaximumSize(controlSpinner.getPreferredSize());
+        setJComponentSize(caseSpinner);
+        setJComponentSize(controlSpinner);
+        spinnerData[vdat.CASE] = ((Integer)caseSpinner.getValue()).intValue();
+        spinnerData[vdat.CONTROL] = ((Integer)controlSpinner.getValue()).intValue();
     }
+
+
+    /**
+    *   Initialize minMPG sample Spinner
+    */
+    private void drawMinMPGSampleSpinner() {
+        int count = vdat.countSampleType(vdat.MIN_MPG);
+        if (count > 0) {
+            minMPGSpinner.setModel(new SpinnerNumberModel(0, 0, count, 1));
+        }
+        setJComponentSize(minMPGSpinner);
+        spinnerData[vdat.MIN_MPG] = ((Integer)minMPGSpinner.getValue()).intValue();
+    }
+
+
+    /**
+    *   Initialize minMPGCovRatio sample Spinner
+    */
+    private void drawMinMPGCovRatioSampleSpinner() {
+        int count = vdat.countSampleType(vdat.MIN_MPG_COV);
+        if (count > 0) {
+            minMPGCovRatioSpinner.setModel(new SpinnerNumberModel(0, 0, count, 1));
+        }
+        setJComponentSize(minMPGCovRatioSpinner);
+        spinnerData[vdat.MIN_MPG_COV] = ((Integer)minMPGCovRatioSpinner.getValue()).intValue();
+    }
+
 
     /** 
     *   Display error as dialog
@@ -1034,6 +1171,18 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     */
     public static void showError(String err) {
         JOptionPane.showMessageDialog(null, err, "Error!", JOptionPane.ERROR_MESSAGE);
+    }
+
+
+    /**
+    *   Set Spinner size
+    *   @param spin JSpinner to modify size
+    */
+    private void setJComponentSize(JComponent comp) {
+        Dimension d = comp.getPreferredSize();
+        d.width = 60;
+        comp.setPreferredSize(d);
+        comp.setMaximumSize(comp.getPreferredSize());
     }
 
 

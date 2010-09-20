@@ -37,7 +37,7 @@ public class SampleScoreRenderer extends DefaultTableCellRenderer {
     public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus,
                                                     int row, int column) {
         Component comp = super.getTableCellRendererComponent( table, value, isSelected, hasFocus, row, column);
-        float ratio = 1;
+        float ratio = 1.0f;
 
         if (table.getModel().getColumnCount() >= 4) {
             ratio = ((Integer)table.getModel().getValueAt(row, 2)).floatValue() 

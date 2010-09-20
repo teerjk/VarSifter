@@ -109,14 +109,11 @@ public class CustomQueryView extends JPanel implements ActionListener {
         //graphMouse.add(new PickingGraphMousePlugin());
         final DefaultModalGraphMouse graphMouse = new DefaultModalGraphMouse();
         modeBox = graphMouse.getModeComboBox();
+        modeBox.setMaximumSize(modeBox.getPreferredSize());
         modeBox.addItemListener(graphMouse.getModeListener());
         graphMouse.setMode(ModalGraphMouse.Mode.PICKING);
 
         vv.setGraphMouse(graphMouse);
-
-        //DefaultModalGraphMouse graphMouse = new DefaultModalGraphMouse();
-        //vv.setGraphMouse(graphMouse);
-        //graphMouse.setMode(ModalGraphMouse.Mode.PICKING);
 
         //vv.getRenderContext().setVertexLabelTransformer(new ToStringLabeller());
         //vv.getRenderer().getVertexLabelRenderer().setPosition(Position.CNTR);
@@ -205,11 +202,17 @@ public class CustomQueryView extends JPanel implements ActionListener {
         runPane.add(Box.createRigidArea(new Dimension(0,5)));
         runPane.add(clear);
         runPane.add(Box.createRigidArea(new Dimension(0,5)));
-        runPane.add(modeBox);
-        runPane.add(Box.createRigidArea(new Dimension(0,5)));
+
+        JPanel extraPane = new JPanel();
+        extraPane.setLayout(new BoxLayout(extraPane, BoxLayout.Y_AXIS));
+        extraPane.setBorder(BorderFactory.createEmptyBorder(7,7,7,7));
+        extraPane.setAlignmentX(Component.LEFT_ALIGNMENT);
+        extraPane.add(modeBox);
+        extraPane.add(Box.createRigidArea(new Dimension(0,5)));
         outText.setMaximumSize(new Dimension( outText.getMaximumSize().width, 
                                               outText.getMinimumSize().height));
-        runPane.add(outText);
+        extraPane.add(outText);
+        extraPane.add(Box.createVerticalGlue());
 
         exactMatch.addActionListener(this);
         noMatch.addActionListener(this);
@@ -224,6 +227,9 @@ public class CustomQueryView extends JPanel implements ActionListener {
         
         JPanel controlPane = new JPanel();
         controlPane.setLayout(new BoxLayout(controlPane, BoxLayout.Y_AXIS));
+        JScrollPane controlScroller = new JScrollPane(controlPane, JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,
+                                                                   JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        controlScroller.setBorder(null);
 
         controlPane.add(new JLabel("Genotypes:"));
         controlPane.add(fixedPane);
@@ -238,7 +244,8 @@ public class CustomQueryView extends JPanel implements ActionListener {
         controlPane.add(connectPane);
         controlPane.add(Box.createRigidArea(new Dimension(0,5)));
         controlPane.add(runPane);
-        add(controlPane, BorderLayout.LINE_START);
+        controlPane.add(extraPane);
+        add(controlScroller, BorderLayout.LINE_START);
         final GraphZoomScrollPane zoomPane = new GraphZoomScrollPane(vv);
         add(zoomPane, BorderLayout.CENTER);
         //add(vv, BorderLayout.CENTER);

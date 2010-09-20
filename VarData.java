@@ -17,6 +17,8 @@ public class VarData {
     final int AFF_NORM_PAIR = 0;
     final int CASE = 1;
     final int CONTROL = 2;
+    final int MIN_MPG = 3;
+    final int MIN_MPG_COV = 4;
 
     final int THRESHOLD = 10;
     
@@ -308,6 +310,9 @@ public class VarData {
     /**
     *   Filter the data
     *
+    *   @param df DataFilter object with the filtering options
+    */
+    /*
     *   @param mask A BitSet describing which filters should be applied.  The filter number should be synchronized with the JCheckBox number in VarSifter.class!
     *   @param geneFile Absolute path to a file containing a list of genes to filter on.
     *   @param bedFile Absolute path to a file containing regions with which to filter in BED format.
@@ -327,7 +332,19 @@ public class VarData {
     *   -add a test block with correct this.mask index
     *  
     */
-    public void filterData(BitSet mask, String geneFile, String bedFile, int[] spinnerData, String geneQuery) {
+    //public void filterData(BitSet mask, String geneFile, String bedFile, int[] spinnerData, String geneQuery) {
+    public void filterData(DataFilter df) {
+        BitSet mask = df.getMask();
+        String geneFile = df.getGeneFile();
+        String bedFile = df.getBedFile();
+        int[] spinnerData = df.getSpinnerData();
+        String geneQuery = df.getGeneQuery();
+        int minMPG = df.getMinMPG();
+        float minMPGCovRatio = df.getMinMPGCovRatio();
+        //System.out.println("min: " + minMPG + " mc: " + minMPGCovRatio + " minSpin:" + spinnerData[MIN_MPG] + 
+        //    " minCovSpin: " + spinnerData[MIN_MPG_COV]);
+
+
         dataIsIncluded.set(0,data.length);
         //dataIsIncluded.clear();
         final int TOTAL_FILTERS = 11 + 1; //Number of non-type filters plus 1 (all type filters)
@@ -335,6 +352,8 @@ public class VarData {
         BitSet[] filterSet = new BitSet[TOTAL_FILTERS];
         BitSet geneFilter = new BitSet(data.length);
         geneFilter.set(0, data.length);
+        BitSet qualFilter = new BitSet(data.length);
+        qualFilter.set(0, data.length);
         Pattern geneQueryPat = null;
         
         int typeIndex = dataTypeAt.get("type");
@@ -530,6 +549,24 @@ public class VarData {
                     geneFilter.set(i);
                 }
             }
+
+            // Qual filters
+            if (minMPG != 0 || minMPGCovRatio != 0) {
+                int minMPGCount = 0;
+                int minMPGCovCount = 0;
+                for (int j=0; j < sampleNames.length; j++) {
+                    if (Integer.parseInt(samples[i][j][1]) >= minMPG) {
+                        minMPGCount++;
+                    }
+                    if ( !samples[i][j][2].equals("0") &&
+                         (Float.parseFloat(samples[i][j][1]) / Float.parseFloat(samples[i][j][2]) ) >= minMPGCovRatio) {
+                        minMPGCovCount++;
+                    }
+                }
+                if (minMPGCount < spinnerData[MIN_MPG] || minMPGCovCount < spinnerData[MIN_MPG_COV]) {
+                    qualFilter.clear(i);
+                }
+            }
                 
                         
         }
@@ -563,6 +600,7 @@ public class VarData {
         }
 
         dataIsIncluded.and(geneFilter);
+        dataIsIncluded.and(qualFilter);
         filterOutput();
     }
 
@@ -634,6 +672,9 @@ public class VarData {
                 return (caseAt != null) ? caseAt.length : 0;
             case 2: // Control
                 return (controlAt != null) ? controlAt.length : 0;
+            case 3: // minMPG
+            case 4: // minMPGCovRatio
+                return (sampleNames != null) ? sampleNames.length : 0;
             default:
                 return 0;
         }

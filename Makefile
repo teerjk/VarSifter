@@ -31,7 +31,7 @@ $(JAR_FILE):
 
 docs:
 	@cd html; \
-	javadoc -sourcepath ../ ../*.java
+	javadoc -private -sourcepath ../ ../*.java
 	
 
 clean:
