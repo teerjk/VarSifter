@@ -18,7 +18,7 @@ import components.TableSorter;
 */
 public class VarSifter extends JFrame implements ListSelectionListener, ActionListener, TableModelListener {
     
-    final String version = "0.7a";
+    final String version = "0.7b";
     final String id = "$Id$";
 
     final String govWork = "PUBLIC DOMAIN NOTICE\n" +
@@ -325,7 +325,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
                 }
             }
 
-            vdat.filterData(new DataFilter(new BitSet(), null, null, null, geneRegex, getMinMPG(), getMinMPGCovRatio()));
+            vdat.filterData(new DataFilter(new BitSet(), null, null, spinnerData, geneRegex, getMinMPG(), getMinMPGCovRatio()));
             VarData tempVdat = vdat.returnSubVarData(vdat, null);
             VarSifter vs = new VarSifter(tempVdat);
             
@@ -390,7 +390,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             }
             BitSet tempBS = new BitSet();
             tempBS.set(MENDHETREC);
-            vdat.filterData(new DataFilter(tempBS, null, null, null, geneRegex, getMinMPG(), getMinMPGCovRatio()));
+            vdat.filterData(new DataFilter(tempBS, null, null, spinnerData, geneRegex, getMinMPG(), getMinMPGCovRatio()));
             String temp[][] = vdat.returnData();
 
             //Must return the filtered state to what it was, to avoid data mapping errors!
@@ -429,7 +429,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             String geneRegex = ".";
             BitSet tempBS = new BitSet();
             tempBS.set(MENDHETREC);
-            vdat.filterData(new DataFilter(tempBS, null, null, null, geneRegex, getMinMPG(), getMinMPGCovRatio()));
+            vdat.filterData(new DataFilter(tempBS, null, null, spinnerData, geneRegex, getMinMPG(), getMinMPGCovRatio()));
             String temp[][] = vdat.returnData();
 
             //Must return the filtered state to what it was, to avoid data mapping errors!
