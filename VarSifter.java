@@ -1175,8 +1175,8 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
 
 
     /**
-    *   Set Spinner size
-    *   @param spin JSpinner to modify size
+    *   Set Component size
+    *   @param comp Component for which to modify size
     */
     private void setJComponentSize(JComponent comp) {
         Dimension d = comp.getPreferredSize();
