@@ -10,10 +10,10 @@ compile5:
 	${JAVAC5} VarSifter.java
 
 compile_check:
-	${JAVAC6} -Xlint:unchecked VarSifter.java
+	${JAVAC6} -J-Xmx1G -cp jung/*:. -Xlint:unchecked VarSifter.java
 
-compile6:
-	${JAVAC6} -cp jung/*:. -target 5 VarSifter.java
+compile6: clean
+	${JAVAC6} -J-Xmx1G -cp jung/*:. -target 5 VarSifter.java
 
 build: $(CLASS_LIST) $(JAR_FILE)
 

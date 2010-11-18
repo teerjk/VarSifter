@@ -5,23 +5,51 @@ import java.util.regex.*;
 *   VarTableModel describes the data in the table
 */
 public class VarTableModel extends AbstractTableModel {
-    private Object[][] data;
+    protected Object[][] data;
     private String[] columnNames;
     public final static int HIDDEN = 301;   //use this flag to hide a cell
-    private Object[] largestInColumn;
-    private VarData vdat;
+    protected Object[] largestInColumn;
+    protected VarData vdat;
+    protected AbstractMapper[] mapper;
     
     public final static Pattern digits = Pattern.compile("^-?\\d+$");
+
+    /**
+    *   Dummy Constructor - only for use when subclassing!
+    */
+    public VarTableModel() {
+        vdat = null;
+        mapper = null;
+        data = null;
+        largestInColumn = null;
+
+    }
     
     /**
     *   Constructor
     *
     *   @param inData An array of arrays [row][column]
     *   @param colN An array of column names
+    *   @param inMap An array of Abstract Mapper objects, one for each column of data
     *   @param v A VarData object holding all of the data
     */
-    public VarTableModel(String[][] inData, String[] colN, VarData v) {
+    public VarTableModel(int[][] inData, String[] colN, AbstractMapper[] inMap, VarData v) {
         vdat = v;
+        mapper = inMap;
+        if (inData.length !=0) {
+            data = new Object[inData.length][inData[0].length];
+            largestInColumn = new Object[inData[0].length];
+        }
+
+        initModel(inData, colN, 0);
+    }
+
+
+    /**
+    *   Common constructor
+    *   @param offset This determine where to start sample handling - use 1 to ignore sample name (1st column)
+    */
+    protected void initModel(int[][] inData, String[] colN, int offset) {
         
         if (inData.length == 0) {
             data = new Object[][]{ {"No Results to Show"} };
@@ -29,15 +57,14 @@ public class VarTableModel extends AbstractTableModel {
             largestInColumn = new Object[]{data[0][0]};
         }
         else {
-            data = new Object[inData.length][inData[0].length];
-            largestInColumn = new Object[inData[0].length];
             columnNames = colN;
             boolean first = true;
-
-            
-            for ( int i = 0; i < inData.length; i++) {
-                for (int j = 0; j < inData[i].length; j++) {
                         
+            for ( int i = 0; i < inData.length; i++) {
+                for (int j = offset; j < inData[i].length; j++) {
+                    int mapIndex = j - offset; //Must do this to ensure we get the right sampleMapper index!
+                    
+                    /*
                     if (digits.matcher(inData[i][j]).find() && !vdat.isEditable(j)) {
                         data[i][j] = Integer.parseInt(inData[i][j]);
                         
@@ -51,6 +78,29 @@ public class VarTableModel extends AbstractTableModel {
                         if (first || inData[i][j].length() > largestInColumn[j].toString().length()) {
                             largestInColumn[j] = inData[i][j];
                         }
+                    }
+                    */
+
+                    // ###new
+                    switch (mapper[mapIndex].getDataType()) {
+                        case VarData.INTEGER:
+                            data[i][j] = new Integer(inData[i][j]);
+                            if (first || (Integer)data[i][j] > (Integer)largestInColumn[j]) {
+                                largestInColumn[j] = data[i][j];
+                            }
+                            break;
+                        case VarData.FLOAT:
+                            data[i][j] = new Float(mapper[mapIndex].getFloat(inData[i][j]));
+                            if (first || (Float)data[i][j] > (Float)largestInColumn[j]) {
+                                largestInColumn[j] = data[i][j];
+                            }
+                            break;
+                        case VarData.STRING:
+                            data[i][j] = mapper[mapIndex].getString(inData[i][j]);
+                            if (first || ((String)data[i][j]).length() > largestInColumn[j].toString().length()) {
+                                largestInColumn[j] = data[i][j];
+                            }
+                            break;
                     }
                 }
                 first = false;
@@ -108,6 +158,8 @@ public class VarTableModel extends AbstractTableModel {
 
     /**
     *   Return the class of a given column
+    *   !!! Note that this affects TableCellRenderer behavior!!!
+    *   As the class is no longer "Object", Class type must be explicit.
     *
     *   @param c The column number
     *   @return The class of the data in the column

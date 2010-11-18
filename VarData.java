@@ -4,6 +4,7 @@ import java.util.BitSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Vector;
+import java.util.ArrayList;
 
 
 /**
@@ -25,18 +26,37 @@ public class VarData {
     final String[] geneDataHeaders = {"refseq", "Var Count"};
     final String[] ALLELES = {"A", "C", "G", "T"};
 
-    private String[][] data;            // Fields: [line][var_annotations]
-    private String[][] outData;         // Gets returned (can be filtered)
+    final static int INTEGER = 0;
+    final static int FLOAT = 1;
+    final static int STRING = 2;
+
+    //private String[][] data;            // Fields: [line][var_annotations]
+    //private String[][] outData;         // Gets returned (can be filtered)
     private String[] dataNamesOrig;     // All data names, for writing purposes
     private String[] dataNames;
-    private String[][][] samples;       // Fields: [line][sampleName][genotype:MPGscore:coverage]
-    private String[][][] outSamples;    // Gets returned (can be filtered)
+    //private String[][][] samples;       // Fields: [line][sampleName][genotype:MPGscore:coverage]
+    //private String[][][] outSamples;    // Gets returned (can be filtered)
     private String[] sampleNamesOrig;   // All sample names, for writing purposes
     private String[] sampleNames;
+
+    //New fields
+    private int[][] data;           // Fields: [line][var_annotation col]
+    private int[][] outData;        // Gets returned (can be filtered)
+    private int[][][] samples;      // Fields: [line][sampleName][genotype:MPGscore:coverage]
+    private int[][][] outSamples;   // Gets returned (can be filtered)
+    private int[] classList = null;
+    private ArrayList<AbstractMapper> annotMapperBuilder = new ArrayList<AbstractMapper>();  //Build an array of AbstractMappers for annotations
+    private AbstractMapper[] annotMapper = new AbstractMapper[0];                  //the annotation AbstractMapper array
+    private AbstractMapper[] sampleMapper = new AbstractMapper[S_FIELDS];      //The SampleMapper array
+
+    private int[] compHetFields;
+
+    private final static Pattern fDigits = VarSifter.fDigits;
+    private final static Pattern digits = VarTableModel.digits;
+
     private BitSet dataIsIncluded;      // A mask used to filter data, samples
     private BitSet dataIsEditable = new BitSet();      // Which data elements can be edited
     private HashMap<String, Integer> dataTypeAt = new HashMap<String, Integer>();
-    //public HashMap<String, Integer> dataTypeAt = new HashMap<String, Integer>();
     private int[] affAt;
     private int[] normAt;
     private int[] caseAt;
@@ -56,15 +76,49 @@ public class VarData {
         String line = new String();
         int lineCount = 0;
         long time = System.currentTimeMillis();
+        boolean first = true;
         
         try {
             BufferedReader br = new BufferedReader(new FileReader(inFile));
             while ((line = br.readLine()) != null) {
                 lineCount++;
+                String[] temp = line.split("\t", 0);
+                if (first) {
+                    numCols = temp.length;
+                    classList = new int[temp.length];
+                    for (int i=0; i<classList.length; i++) {
+                        classList[i] = INTEGER;
+                    }
+                    first = false;
+                    continue;
+                }
+                    
+                if (temp.length != numCols) {
+                    VarSifter.showError("*** Input file appears to be malformed - column number not same as header! " +
+                        "Line: " + (lineCount+2) + " ***");
+                    System.out.println("*** Input file appears to be malformed - column number not same as header! " +
+                        "Line: " + (lineCount+2) + " ***");
+                    System.exit(1);
+                }
+                
+                //Determine class of each column, change if not int
+                for (int i=0; i<temp.length; i++) {
+                    if (classList[i] == STRING) {
+                        continue;
+                    }
+                        if (fDigits.matcher(temp[i]).matches()) {
+                            classList[i] = FLOAT;
+                        }
+                        else if (!digits.matcher(temp[i]).matches()) {
+                            classList[i] = STRING;
+                        }
+                }
+
             }
-            data = new String[lineCount - H_LINES][];
-            samples = new String[lineCount - H_LINES][][];
+            data = new int[lineCount - H_LINES][];
+            samples = new int[lineCount - H_LINES][][];
             dataIsIncluded = new BitSet(lineCount - H_LINES);
+
             br.close();
             lineCount = 0;
         }
@@ -73,10 +127,11 @@ public class VarData {
             System.out.println(ioe);
             System.exit(1);
         }
+        first = true;
+        //TESTING System.out.println("Parse finished: " + (System.currentTimeMillis() - time));
 
         try {
             BufferedReader br = new BufferedReader(new FileReader(inFile));
-            boolean first = true;
             
             while ((line = br.readLine()) != null) {
                 String temp[] = line.split("\t", 0);
@@ -87,18 +142,21 @@ public class VarData {
                 String normPos = "";
                 String casePos = "";
                 String controlPos = "";
+
+                long startT = System.currentTimeMillis();
+                long annotT;
+                long sampleT;
                 
                 //Handle the Header
                 if (first) {
                     
-                    numCols = temp.length;
-                    Pattern samPat = Pattern.compile("NA");
-                    Pattern edPat = Pattern.compile("Comments");
-                    Pattern samAff = Pattern.compile("aff");
-                    Pattern samNorm = Pattern.compile("norm");
-                    Pattern genePat = Pattern.compile("refseq");
-                    Pattern casePat = Pattern.compile("case");
-                    Pattern controlPat = Pattern.compile("control");
+                    final Pattern samPat = Pattern.compile("NA");
+                    final Pattern edPat = Pattern.compile("Comments");
+                    final Pattern samAff = Pattern.compile("aff");
+                    final Pattern samNorm = Pattern.compile("norm");
+                    final Pattern genePat = Pattern.compile("refseq");
+                    final Pattern casePat = Pattern.compile("case");
+                    final Pattern controlPat = Pattern.compile("control");
                     String[] affPosArr;
                     String[] normPosArr;
                     String[] casePosArr;
@@ -107,6 +165,7 @@ public class VarData {
                     int sampleCount = 0;
                     
                     for (int i=0; i < temp.length; i++) {
+                        // Is column a sample?
                         if ((samPat.matcher(temp[i])).find()) {
 
                             //System.out.println(title + "\t");
@@ -131,23 +190,47 @@ public class VarData {
                             sampleCount++;
                             sampleTempOrig += (temp[i] + "\t");
                         }
+                        //Is column an annotation?
                         else {
                             dataTemp += (temp[i] + "\t");
 
                             // May want to read a flag from header - then can make checkboxes from this.
+                            if (dataTypeAt.containsKey(temp[i])) {
+                                VarSifter.showError("Multiple columns have the same name, which is not allowed.  "
+                                    + "Please rename column #" + (i+1) + ": \"" + temp[i] + "\"");
+                                System.exit(1);
+                            }
                             dataTypeAt.put(temp[i], i);
 
                             if ((edPat.matcher(temp[i])).find()) {
                                 dataIsEditable.set(i);
                             }
+                            
+                            switch (classList[i]) {
+                                case INTEGER:
+                                    annotMapperBuilder.add(new IntMapper());
+                                    break;
+                                case FLOAT:
+                                    annotMapperBuilder.add(new FloatMapper());
+                                    break;
+                                case STRING:
+                                    annotMapperBuilder.add(new StringMapper());
+                                    break;
+                            }
+
                             dataCount++;
                         }
                     }
                     
+                    sampleMapper[0] = new StringMapper();
+                    sampleMapper[1] = new IntMapper();
+                    sampleMapper[2] = new IntMapper();
+
                     sampleNames = sampleTemp.split("\t");
                     sampleNamesOrig = sampleTempOrig.split("\t");
                     dataNames = dataTemp.split("\t");
                     dataNamesOrig = dataNames; //Will have to change this when not all data included
+                    annotMapper = annotMapperBuilder.toArray(annotMapper);
                     
                     if (affPos.length() > 0 && normPos.length() > 0) {
                         affPosArr = affPos.split("\t");
@@ -208,29 +291,80 @@ public class VarData {
                     continue;
                 }
 
-                if (temp.length != numCols) {
-                    VarSifter.showError("*** Input file appears to be malformed - column number not same as header! " +
-                        "Line: " + (lineCount+2) + " ***");
-                    System.out.println("*** Input file appears to be malformed - column number not same as header! " +
-                        "Line: " + (lineCount+2) + " ***");
-                    System.exit(1);
-                }
                 
                 //Fill data array (annotations)
-                data[lineCount] = new String[dataNames.length];
-                System.arraycopy(temp, 0, data[lineCount], 0, dataNames.length);
+                data[lineCount] = new int[dataNames.length];
+                //System.arraycopy(temp, 0, data[lineCount], 0, dataNames.length);
+                for (int i=0; i < dataNames.length; i++) {
+                    int index;
+                    switch (classList[i]) {
+                        case INTEGER:
+                            data[lineCount][i] = Integer.parseInt(temp[i]);
+                            break;
+                        case FLOAT:
+                            float f = Float.parseFloat(temp[i]);
+                            index = annotMapper[i].getIndexOf(f);
+                            if (index == -1) {
+                                index = annotMapper[i].addData(f);
+                            }
+                            data[lineCount][i] = index;
+                            break;
+                        case STRING:
+                            index = annotMapper[i].getIndexOf(temp[i]);
+                            if (index == -1) {
+                                index = annotMapper[i].addData(temp[i]);
+                            }
+                            data[lineCount][i] = index;
+                            break;
+                    }
+                }
+
+                annotT = (System.currentTimeMillis() - startT);
+
                 
                 //Fill samples array (genotypes)
-                samples[lineCount] = new String[sampleNames.length][S_FIELDS];
+                samples[lineCount] = new int[sampleNames.length][S_FIELDS];
                 
                 //System.out.println(temp.length);
                 for (int i = 0; i < sampleNames.length; i++) {
-                    System.arraycopy(temp, (dataNames.length + (i * S_FIELDS)), samples[lineCount][i], 0, S_FIELDS);
+                    //System.arraycopy(temp, (dataNames.length + (i * S_FIELDS)), samples[lineCount][i], 0, S_FIELDS);
+                    for (int j=0; j<S_FIELDS; j++) {
+                        int dataIndex = dataNames.length + (i * S_FIELDS) + j;
+                        int index;
+                        switch(classList[dataIndex]) {
+                            case INTEGER:
+                                samples[lineCount][i][j] = Integer.parseInt(temp[dataIndex]);
+                                break;
+                            case FLOAT:
+                                float f = Float.parseFloat(temp[dataIndex]);
+                                index = sampleMapper[j].getIndexOf(f);
+                                if (index == -1) {
+                                    index = sampleMapper[j].addData(f);
+                                }
+                                samples[lineCount][i][j] = index;
+                                break;
+                            case STRING:
+                                //System.out.println("sampleMappers: " + sampleMapper.length + "   " +temp[dataIndex]);
+                                index = sampleMapper[j].getIndexOf(temp[dataIndex]);
+                                if (index == -1) {
+                                    index = sampleMapper[j].addData(temp[dataIndex]);
+                                }
+                                samples[lineCount][i][j] = index;
+                                break;
+                        }
+                    }
                 }
+
+                sampleT = (System.currentTimeMillis() - startT - annotT);
                 
                 lineCount++;
+                if (lineCount % 1000 == 0) {
+                    //TESTING System.out.println(lineCount + " Annot: " + annotT + " Sample: " + sampleT );
+                    System.out.print(".");
+                }
             }
             br.close();
+            System.out.println();
         }
         catch (IOException ioe) {
             VarSifter.showError(ioe.toString());
@@ -238,9 +372,26 @@ public class VarData {
             System.exit(1);
         }
 
+        //indices for CompHet view
+        compHetFields = new int[5];
+        compHetFields[0] = (dataTypeAt.containsKey("refseq")) ? dataTypeAt.get("refseq") : -1;  //Gene name
+        compHetFields[1] = dataTypeAt.get("Chr");    //chrom
+        compHetFields[2] = dataTypeAt.get("LeftFlank"); //left flank
+        compHetFields[3] = (dataTypeAt.containsKey("CDPred_score")) ? dataTypeAt.get("CDPred_score") : -1; //cdPred
+        compHetFields[4] = dataTypeAt.get("type"); //variant type
+
         resetOutput();  //Initialize outData and outSamples
         
-        //System.out.println((System.currentTimeMillis() - time));
+        //TESTING System.out.println("File Read finished: " + (System.currentTimeMillis() - time));
+        /* TESTING
+        for (int i =0; i<dataNames.length; i++) {
+            System.out.println(i + " " + classList[i] + " " + annotMapper[i].getDataType() + " " + annotMapper[i].getLength());
+        }
+
+        for (int i=dataNames.length; i<classList.length; i++) {
+            System.out.println(i + " " + classList[i] + " " + sampleMapper[(i-dataNames.length) % S_FIELDS].getDataType() + " " + sampleMapper[(i-dataNames.length) % S_FIELDS].getLength());
+        }
+        */
                 
     }
 
@@ -249,10 +400,10 @@ public class VarData {
     *   the factory method returnSubVarData
     *  
     */
-    private VarData(String[][] dataIn,
+    private VarData(int[][] dataIn,
                     String[] dataNamesOrigIn,
                     String[] dataNamesIn,
-                    String[][][] samplesIn,
+                    int[][][] samplesIn,
                     String[] sampleNamesOrigIn,
                     String[] sampleNamesIn,
                     BitSet dataIsEditableIn,
@@ -261,7 +412,9 @@ public class VarData {
                     int[] normAtIn,
                     int[] caseAtIn,
                     int[] controlAtIn,
-                    VarData parentVarDataIn
+                    VarData parentVarDataIn,
+                    AbstractMapper[] annotMapperIn,
+                    AbstractMapper[] sampleMapperIn                    
                     ) {
         data = dataIn;
         dataNamesOrig = dataNamesOrigIn;
@@ -276,6 +429,8 @@ public class VarData {
         caseAt = caseAtIn;
         controlAt = controlAtIn;
         parentVarData = parentVarDataIn;
+        annotMapper = annotMapperIn;
+        sampleMapper = sampleMapperIn;
 
         dataIsIncluded = new BitSet(data.length);
 
@@ -290,18 +445,18 @@ public class VarData {
     *  
     *   @return A two-dimension array of the data (1st Dimension is row, 2nd is column)
     */
-    public String[][] dataDump() {
+    public int[][] dataDump() {
         boolean first = true;
-        String[][] out = new String[data.length + 1][dataNamesOrig.length + sampleNamesOrig.length];
+        int[][] out = new int[data.length][dataNamesOrig.length + sampleNamesOrig.length];
         
         //header
-        System.arraycopy(dataNamesOrig, 0, out[0], 0, dataNamesOrig.length);
-        System.arraycopy(sampleNamesOrig, 0, out[0], dataNamesOrig.length, sampleNamesOrig.length);
+        //System.arraycopy(dataNamesOrig, 0, out[0], 0, dataNamesOrig.length);
+        //System.arraycopy(sampleNamesOrig, 0, out[0], dataNamesOrig.length, sampleNamesOrig.length);
 
         for (int i=0; i < data.length; i++) {
-            System.arraycopy(data[i], 0, out[i+1], 0, dataNamesOrig.length);
+            System.arraycopy(data[i], 0, out[i], 0, dataNamesOrig.length);
             for (int j=0; j < sampleNames.length; j++) {
-                System.arraycopy(samples[i][j], 0, out[i+1], (dataNamesOrig.length + (j * S_FIELDS)), S_FIELDS);
+                System.arraycopy(samples[i][j], 0, out[i], (dataNamesOrig.length + (j * S_FIELDS)), S_FIELDS);
             }
         }
         return out;
@@ -367,8 +522,9 @@ public class VarData {
         int geneIndex = dataTypeAt.get("refseq");
         int chrIndex = dataTypeAt.get("Chr");
         int lfIndex = dataTypeAt.get("LeftFlank");
+        int notMendHetRec = -1;
         HashSet<String> geneSet = new HashSet<String>();
-        HashMap[] bedHash = null;
+        HashMap[] bedHash = null;   //<String, Vector<Integer>>
 
         //Set up type filters (filterSet[0], as all types are folded into one filter)
         filterSet[0] = new BitSet(data.length + 1);
@@ -388,6 +544,30 @@ public class VarData {
         }
         
         //Prepare certain tests
+
+        // Type filters
+        int[] types = new int[TOTAL_TYPE_FILTERS+1];
+        types[0] = annotMapper[typeIndex].getIndexOf("Stop");
+        types[1] = annotMapper[typeIndex].getIndexOf("DIV-fs");
+        types[2] = annotMapper[typeIndex].getIndexOf("DIV-c");
+        types[3] = annotMapper[typeIndex].getIndexOf("Splice-site");
+        types[4] = annotMapper[typeIndex].getIndexOf("Non-synonymous");
+        types[5] = annotMapper[typeIndex].getIndexOf("Synonymous");
+        types[6] = annotMapper[typeIndex].getIndexOf("NC");
+        types[7] = annotMapper[typeIndex].getIndexOf("3'UTR");
+        types[8] = annotMapper[typeIndex].getIndexOf("5'UTR");
+
+        //dbSNP
+        int nodbSNP = annotMapper[dbSNPIndex].getIndexOf("-");
+
+        //menHetRec
+        if (mask.get(12)) {
+            notMendHetRec = annotMapper[mendHetRecIndex].getIndexOf("0,");
+        }
+
+        //aff/norm
+        int naInt = annotMapper[refAlleleIndex].getIndexOf("NA");
+
 
         //filterFile
         if (mask.get(15) || mask.get(16)) {
@@ -422,7 +602,9 @@ public class VarData {
         
         // variant type
         for (int i = 0; i < data.length; i++) {
-            String[] tempGeno = { data[i][refAlleleIndex], data[i][varAlleleIndex] };
+            String[] tempGeno = { annotMapper[refAlleleIndex].getString(data[i][refAlleleIndex]), 
+                                  annotMapper[varAlleleIndex].getString(data[i][varAlleleIndex]) 
+                                };
             String homNonRefGen = (tempGeno[1] + tempGeno[1]);
             java.util.Arrays.sort(tempGeno);
             String hetNonRefGen = "";
@@ -431,42 +613,43 @@ public class VarData {
             }
             //System.out.println(hetNonRefGen);
            
-            if ( (mask.get(0) && data[i][typeIndex].equals("Stop")           ) ||
-                 (mask.get(1) && data[i][typeIndex].equals("DIV-fs")         ) ||
-                 (mask.get(2) && data[i][typeIndex].equals("DIV-c")          ) ||
-                 (mask.get(3) && data[i][typeIndex].equals("Splice-site")    ) ||
-                 (mask.get(4) && data[i][typeIndex].equals("Non-synonymous") ) ||
-                 (mask.get(5) && data[i][typeIndex].equals("Synonymous")     ) ||
-                 (mask.get(6) && data[i][typeIndex].equals("NC")             ) ||
-                 (mask.get(7) && data[i][typeIndex].contains("UTR")          )
+            if ( (mask.get(0) && data[i][typeIndex] == types[0] ) ||
+                 (mask.get(1) && data[i][typeIndex] == types[1] ) ||
+                 (mask.get(2) && data[i][typeIndex] == types[2] ) ||
+                 (mask.get(3) && data[i][typeIndex] == types[3] ) ||
+                 (mask.get(4) && data[i][typeIndex] == types[4] ) ||
+                 (mask.get(5) && data[i][typeIndex] == types[5] ) ||
+                 (mask.get(6) && data[i][typeIndex] == types[6] ) ||
+                 (mask.get(7) && data[i][typeIndex] == types[7] ) ||
+                 (mask.get(7) && data[i][typeIndex] == types[8] )       
                 ) {
 
                 filterSet[0].set(i);
             }
 
             //dbSNP
-            if ( (mask.get(8) && data[i][dbSNPIndex].equals("-")             )
+            if ( mask.get(8) && ( annotMapper[dbSNPIndex].getString(data[i][dbSNPIndex]).matches("^0|-$") )
                 ) {
                 filterSet[1].set(i);
             }
             
             //Mendelian recessive (Hom recessive)
-            if (mask.get(9) && Integer.parseInt(data[i][mendRecIndex]) == 1) {
+            if (mask.get(9) && data[i][mendRecIndex] == 1) {
                 filterSet[2].set(i);
             }
             
             //Mendelian Dominant
-            if (mask.get(10) && Integer.parseInt(data[i][mendDomIndex]) == 1) {
+            if (mask.get(10) && data[i][mendDomIndex] == 1) {
                 filterSet[3].set(i);
             }
 
             //Mendelian Inconsistant
-            if (mask.get(11) && Integer.parseInt(data[i][mendBadIndex]) == 1) {
+            if (mask.get(11) && data[i][mendBadIndex] == 1) {
                 filterSet[4].set(i);
             }
                 
             //Mendelian Compound Het (Het Recessive)
-            if (mask.get(12) && ! data[i][mendHetRecIndex].equals("0,")) {
+            if (mask.get(12) && data[i][mendHetRecIndex] != notMendHetRec) {
                 filterSet[5].set(i);
             }
 
@@ -474,13 +657,13 @@ public class VarData {
             if (mask.get(13)) {
                 int count = 0;
                 for (int j=0; j < affAt.length; j++) {
-                    String affTemp = samples[i][affAt[j]][0];
-                    String normTemp = samples[i][normAt[j]][0];
-                    if (!affTemp.equals(normTemp) &&
-                        !affTemp.equals("NA") &&
-                        !normTemp.equals("NA") &&
-                        Integer.parseInt(samples[i][affAt[j]][1]) >= THRESHOLD &&
-                        Integer.parseInt(samples[i][normAt[j]][1]) >= THRESHOLD) {
+                    int affTemp = samples[i][affAt[j]][0];
+                    int normTemp = samples[i][normAt[j]][0];
+                    if (affTemp != normTemp &&
+                        affTemp != naInt &&
+                        normTemp != naInt &&
+                        samples[i][affAt[j]][1] >= THRESHOLD &&
+                        samples[i][normAt[j]][1] >= THRESHOLD) {
 
                         count++;
                     }
@@ -496,16 +679,16 @@ public class VarData {
                 int caseCount = 0;
                 int controlCount = 0;
                 for (int j=0; j < caseAt.length; j++) {
-                    String caseTemp = samples[i][caseAt[j]][0].replaceAll(":", "");
+                    String caseTemp = sampleMapper[0].getString(samples[i][caseAt[j]][0]).replaceAll(":", "");
                     if ( (caseTemp.equals(hetNonRefGen) || caseTemp.equals(homNonRefGen)) &&
-                        Integer.parseInt(samples[i][caseAt[j]][1]) >= THRESHOLD) {
+                        samples[i][caseAt[j]][1] >= THRESHOLD) {
                         caseCount++;
                     }
                 }
                 for (int j=0; j < controlAt.length; j++) {
-                    String controlTemp = samples[i][controlAt[j]][0].replaceAll(":","");
+                    String controlTemp = sampleMapper[0].getString(samples[i][controlAt[j]][0]).replaceAll(":","");
                     if ( (controlTemp.equals(hetNonRefGen) || controlTemp.equals(homNonRefGen)) &&
-                        Integer.parseInt(samples[i][controlAt[j]][1]) >= THRESHOLD) {
+                        samples[i][controlAt[j]][1] >= THRESHOLD) {
                         controlCount++;
                     }
                 }
@@ -515,36 +698,40 @@ public class VarData {
             }
 
             //Gene Filter File (include)                        
-            if (mask.get(15) && geneSet.contains(data[i][geneIndex].toLowerCase())) {
+            if (mask.get(15) && geneSet.contains(annotMapper[geneIndex].getString(data[i][geneIndex]).toLowerCase())) {
                 filterSet[8].set(i);
             }
             
             //Gene Filter File (exclude)
-            if (mask.get(16) && !geneSet.contains(data[i][geneIndex].toLowerCase())) {
+            if (mask.get(16) && !geneSet.contains(annotMapper[geneIndex].getString(data[i][geneIndex]).toLowerCase())) {
                 filterSet[9].set(i);
             }
             
             //Bed Filter File (include)
-            if (mask.get(17) && bedHash[0].get(data[i][chrIndex]) != null) {
-                Object[] starts = ((HashMap<String, Vector<Integer>>)bedHash[0]).get(data[i][chrIndex]).toArray();
-                Object[] ends = ((HashMap<String, Vector<Integer>>)bedHash[1]).get(data[i][chrIndex]).toArray();
-                int pos = Integer.parseInt(data[i][lfIndex]) + 1;
+            if (mask.get(17)) {
+                String chrString = annotMapper[chrIndex].getString(data[i][chrIndex]);
+                if (bedHash[0].get(chrString) != null) {
 
-                for (int j=0; j<starts.length;j++) {
-                    if (pos < (Integer)starts[j]) {
-                        continue;
-                    }
+                    Object[] starts = ((HashMap<String, Vector<Integer>>)bedHash[0]).get(chrString).toArray();
+                    Object[] ends = ((HashMap<String, Vector<Integer>>)bedHash[1]).get(chrString).toArray();
+                    int pos = data[i][lfIndex] + 1;
 
-                    if (pos <= (Integer)ends[j]) {
-                        filterSet[10].set(i);
-                        break;
+                    for (int j=0; j<starts.length;j++) {
+                        if (pos < (Integer)starts[j]) {
+                            continue;
+                        }
+
+                        if (pos <= (Integer)ends[j]) {
+                            filterSet[10].set(i);
+                            break;
+                        }
                     }
                 }
             }
 
             // Gene name Filter (TextArea)
             if (geneQuery != null) {
-                if ((geneQueryPat.matcher(data[i][geneIndex])).find()) {
+                if ((geneQueryPat.matcher(annotMapper[geneIndex].getString(data[i][geneIndex]))).find()) {
                     //System.out.println(i + "\t" + data[i][geneIndex]);
                     geneFilter.set(i);
                 }
@@ -555,11 +742,11 @@ public class VarData {
                 int minMPGCount = 0;
                 int minMPGCovCount = 0;
                 for (int j=0; j < sampleNames.length; j++) {
-                    if (Integer.parseInt(samples[i][j][1]) >= minMPG) {
+                    if (samples[i][j][1] >= minMPG) {
                         minMPGCount++;
                     }
-                    if ( !samples[i][j][2].equals("0") &&
-                         (Float.parseFloat(samples[i][j][1]) / Float.parseFloat(samples[i][j][2]) ) >= minMPGCovRatio) {
+                    if ( samples[i][j][2] != 0 &&
+                         ((float)samples[i][j][1] / (float)samples[i][j][2]) >= minMPGCovRatio) {
                         minMPGCovCount++;
                     }
                 }
@@ -575,7 +762,7 @@ public class VarData {
 
         if (mask.get(18)) {
             try {
-                CompileCustomQuery c = new CompileCustomQuery(refAlleleIndex);
+                CompileCustomQuery c = new CompileCustomQuery();
                 if ( c.compileCustom(customQuery) ) {
                     filterSet[11] = c.run(this);
                     filterSet[11].set(data.length + 1);
@@ -615,8 +802,8 @@ public class VarData {
             outSamples = samples;
         }
         else {
-            outData = new String[dataIsIncluded.cardinality()][];
-            outSamples = new String[dataIsIncluded.cardinality()][][];
+            outData = new int[dataIsIncluded.cardinality()][];
+            outSamples = new int[dataIsIncluded.cardinality()][][];
             int j = 0;
             for (int i=0; i < data.length; i++) {
                 if (dataIsIncluded.get(i)) {
@@ -740,6 +927,16 @@ public class VarData {
         outHash[1] = outEnd;
         return outHash;
     }
+
+
+    /**
+    *   Return array of indices used in CompHetView
+    *
+    *   @return Array of annotation indices used in CompHetView
+    */
+    public int[] returnCompHetFields() {
+        return compHetFields;
+    }
         
 
     /** 
@@ -747,7 +944,7 @@ public class VarData {
     *  
     *   @return Returns the annotaion data as a 2d array: [line][annotation column]
     */
-    public String[][] returnData() {
+    public int[][] returnData() {
         return outData;
     }
 
@@ -758,6 +955,24 @@ public class VarData {
     */
     public String[] returnDataNames() {
         return dataNames;
+    }
+
+
+    /**
+    *   Return annotation lookup map
+    *   @return array of lookup maps (in order of annotation column)
+    */
+    public AbstractMapper[] returnAnnotMap() {
+        return annotMapper;
+    }
+
+
+    /**
+    *   Return sample lookup map
+    *   @return array of sample lookup maps (entry for each unique sample field)
+    */
+    public AbstractMapper[] returnSampleMap() {
+        return sampleMapper;
     }
 
 
@@ -780,7 +995,8 @@ public class VarData {
     */
     public String returnDataValueAt(int row, String colType) {
         if (dataTypeAt.containsKey(colType)) {
-            return outData[row][dataTypeAt.get(colType)];
+            int index = dataTypeAt.get(colType);
+            return annotMapper[index].getString(outData[row][index]);
         }
         else {
             return null;
@@ -801,14 +1017,14 @@ public class VarData {
     /** 
     *   Return data collapsed on gene name
     *  
-    *   @return Data in a 2d array: [gene name][number of variants]
+    *   @return Data in a 2d array: [gene name key][number of variants]
     */
-    public String[][] returnGeneData() {
-        String[][] tempGeneData;
-        HashMap<String, Integer> tempGeneHash = new HashMap<String, Integer>();
+    public int[][] returnGeneData() {
+        int[][] tempGeneData;
+        HashMap<Integer, Integer> tempGeneHash = new HashMap<Integer, Integer>();
 
         for (int i=0; i<outData.length; i++) {
-            String geneName = outData[i][dataTypeAt.get("refseq")];
+            int geneName = outData[i][dataTypeAt.get("refseq")];
             if (tempGeneHash.containsKey(geneName)) {
                 tempGeneHash.put(geneName, tempGeneHash.get(geneName) + 1);
             }
@@ -817,11 +1033,11 @@ public class VarData {
             }
         }
 
-        tempGeneData = new String[tempGeneHash.size()][geneDataHeaders.length];
+        tempGeneData = new int[tempGeneHash.size()][geneDataHeaders.length];
         int i = 0;
-        for (String j : tempGeneHash.keySet()) {
-            tempGeneData[i][0] = j;
-            tempGeneData[i][1] = tempGeneHash.get(j).toString();
+        for (Integer j : tempGeneHash.keySet()) {
+            tempGeneData[i][0] = j.intValue();
+            tempGeneData[i][1] = tempGeneHash.get(j).intValue();
             i++;
         }
         return tempGeneData;
@@ -869,24 +1085,30 @@ public class VarData {
     *   @param isSamples True if sample data is to be inlcluded in view
     *   @return A 2-d array with the data [pair][columns]
     */
-    public String[][] returnIndexPairs(String[] inPair, boolean isSamples) {
+    public int[][] returnIndexPairs(String[] inPair, boolean isSamples) {
         
-        HashMap<String, String> inSet = new HashMap<String, String>();
-        String[][] out = new String[inPair.length-1][];
+        //HashMap<String, String> inSet = new HashMap<String, String>();
+        ArrayList<Integer> inSet = new ArrayList<Integer>();
+        int[][] out = new int[inPair.length-1][];
+        int[][] eachPair = new int[inPair.length][];
         int indexIndex = (dataTypeAt.containsKey("Index")) ? dataTypeAt.get("Index") : -1;
-        int cdPredIndex = (dataTypeAt.containsKey("CDPred_score")) ? dataTypeAt.get("CDPred_score") : -1;
-        int lfIndex = (dataTypeAt.containsKey("LeftFlank")) ? dataTypeAt.get("LeftFlank") : -1;
-        int geneIndex = (dataTypeAt.containsKey("refseq")) ? dataTypeAt.get("refseq") : -1;
-        int chromIndex = dataTypeAt.get("Chr");
-        int typeIndex = dataTypeAt.get("type");
+        //int cdPredIndex = (dataTypeAt.containsKey("CDPred_score")) ? dataTypeAt.get("CDPred_score") : -1;
+        //int lfIndex = (dataTypeAt.containsKey("LeftFlank")) ? dataTypeAt.get("LeftFlank") : -1;
+        //int geneIndex = (dataTypeAt.containsKey("refseq")) ? dataTypeAt.get("refseq") : -1;
+        //int chromIndex = dataTypeAt.get("Chr");
+        //int typeIndex = dataTypeAt.get("type");
 
         for (int i=0; i<inPair.length; i++) {
-            inSet.put(inPair[i], "-");
+            inSet.add(new Integer(inPair[i]));
         }
 
         for (int i=0; i<data.length; i++) {
-            StringBuilder sb = new StringBuilder(64);
-            if (inSet.containsKey(data[i][indexIndex])) {
+            //StringBuilder sb = new StringBuilder(64);
+           
+            if (inSet.contains(data[i][indexIndex])) {
+                int p = inSet.indexOf(data[i][indexIndex]);
+
+                /*
                 sb.append ((data[i][geneIndex] + ";" +
                            data[i][chromIndex] + ";" + 
                            data[i][lfIndex] + ";" +
@@ -903,18 +1125,41 @@ public class VarData {
                     sb.deleteCharAt(sb.length() - 1);
                 }
                 inSet.put(data[i][indexIndex], sb.toString());
+                */
+                
+                if (isSamples) {
+                    eachPair[p] = new int[compHetFields.length + (sampleNames.length * S_FIELDS)];
+                    for (int j = compHetFields.length; j < eachPair[p].length; j+=S_FIELDS) {
+                        int sampleIndex = (j - compHetFields.length) / S_FIELDS;
+                        eachPair[p][j]   = samples[i][sampleIndex][0];
+                        eachPair[p][j+1] = samples[i][sampleIndex][1];
+                        eachPair[p][j+2] = samples[i][sampleIndex][2];
+                    }
+                }
+                else {
+                    eachPair[p] = new int[5];
+                }
+                for (int j=0; j<compHetFields.length; j++) {
+                    eachPair[p][j] = data[i][compHetFields[j]];
+                }
+                //eachPair[p][0] = data[i][geneIndex];
+                //eachPair[p][1] = data[i][chromIndex];
+                //eachPair[p][2] = data[i][lfIndex];
+                //eachPair[p][3] = data[i][cdPredIndex];
+                //eachPair[p][4] = data[i][typeIndex];
+
             }
         }
 
-        String[] firstTemp = inSet.get(inPair[0]).split(";", 0);
+        //String[] firstTemp = inSet.get(inPair[0]).split(";", 0);
         for (int i=0; i<out.length; i++) {
             //System.arraycopy( inSet.get(inPair[0]).split(";", 0), 0, out[i], 0, 5);
             //System.arraycopy( inSet.get(inPair[i+1]).split(";", 0), 2, out[i], 5, 3);
-            out[i] = new String[ ((firstTemp.length * 2) - 2) ];
-            String[] nextTemp = inSet.get(inPair[i+1]).split(";",0);
+            out[i] = new int[ ((eachPair[0].length * 2) - 2) ];
+            //String[] nextTemp = inSet.get(inPair[i+1]).split(";",0);
 
-            System.arraycopy( firstTemp, 0, out[i], 0, firstTemp.length );
-            System.arraycopy( nextTemp, 2, out[i], firstTemp.length, (nextTemp.length - 2) );
+            System.arraycopy( eachPair[0], 0, out[i], 0, eachPair[0].length );
+            System.arraycopy( eachPair[i+1], 2, out[i], eachPair[0].length, (eachPair[i+1].length - 2) );
         }
         return out;
 
@@ -926,21 +1171,21 @@ public class VarData {
     *   Return samples
     *  
     *   @param i The row (in this VarData object) for which to display sample information
-    *   @return A 2-d array of sample data [sample_index][data type(SampleName, Genotype, MPG score, Coverage)]
+    *   @return A 2-d array of sample data indices [sample_index][data type(SampleName, Genotype, MPG score, Coverage)]
     */
-    public String[][] returnSample(int i) {
-        String[][] tempOutSamples;
+    public int[][] returnSample(int i) {
+        int[][] tempOutSamples;
         
         if (outSamples.length == 0) {
-            tempOutSamples = new String[0][];
+            tempOutSamples = new int[0][];
         }
         else {
-            tempOutSamples = new String[sampleNames.length][S_FIELDS+1];
+            tempOutSamples = new int[sampleNames.length][S_FIELDS+1];
             for (int j = 0; j < sampleNames.length; j++) {
                 for (int k = 0; k < S_FIELDS; k++) {
                     tempOutSamples[j][k+1] = outSamples[i][j][k];
                 }
-                tempOutSamples[j][0] = sampleNames[j];
+                tempOutSamples[j][0] = j;
             }
         }
         return tempOutSamples;
@@ -975,8 +1220,8 @@ public class VarData {
         if (isInSubset == null) {
             isInSubset = dataIsIncluded;
         }
-        String[][] subsetData = new String[isInSubset.cardinality()][data[0].length];
-        String[][][] subsetSamples = new String[subsetData.length][][];
+        int[][] subsetData = new int[isInSubset.cardinality()][data[0].length];
+        int[][][] subsetSamples = new int[subsetData.length][][];
         int lastPos = 0;
         for (int i=0; i < data.length; i++) {
             if (isInSubset.get(i)) {
@@ -997,7 +1242,9 @@ public class VarData {
                            normAt,
                            caseAt,
                            controlAt,
-                           vdatIn
+                           vdatIn,
+                           annotMapper,
+                           sampleMapper
                            );
     }
 
@@ -1023,11 +1270,16 @@ public class VarData {
         for (int i = 0; i <= row; i++) {
             lastIndex = ( dataIsIncluded.nextSetBit(lastIndex) + 1 );
         }
-        data[lastIndex - 1][col] = newData;
+        int index = annotMapper[col].getIndexOf(newData);
+        if (index == -1) {
+            index = annotMapper[col].addData(newData);
+        }
+        data[lastIndex - 1][col] = index;
     }
 
 
     public static void main(String args[]) {
+        /*
         String input = "test_data.txt";
         if (args.length > 0) {
             input = args[0];
@@ -1053,6 +1305,7 @@ public class VarData {
             }
             System.out.println();
         }
+        */
 
         //Test - unique and not NA between first 2 samples
         //for (int i = 0; i < vdat.samples.length; i++) {

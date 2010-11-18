@@ -18,10 +18,8 @@ import javax.tools.DiagnosticCollector;
 */
 public class CompileCustomQuery {
     String className = "QueryModule";
-    private int refIndex;
 
-    public CompileCustomQuery(int refAlleleIndex) {
-        refIndex = refAlleleIndex;
+    public CompileCustomQuery() {
     }
 
     /**
@@ -39,25 +37,38 @@ public class CompileCustomQuery {
 
         out.append( "import java.util.BitSet;\n" );
         out.append( "public class " ).append(className).append( " implements AbstractQueryModule {\n" );
-        out.append( "  public BitSet executeCustomQuery(VarData vdat, int refIndex) {\n" );
-        out.append( "    String[][] allData = vdat.dataDump();\n" );
+        out.append( "  public BitSet executeCustomQuery(VarData vdat) {\n" );
+        out.append( "    int[][] allData = vdat.dataDump();\n" );
         out.append( "    BitSet bs = new BitSet(allData.length);\n" );
-        out.append( "    for (int i=1;i<allData.length;i++) {\n");
-        out.append( "        String type = allData[i][vdat.returnDataTypeAt().get(\"type\")];\n");
-        out.append( "        String homRefAllele = allData[i][refIndex];\n");
-        out.append( "        String homRefGen;\n");
-        out.append( "        if (type.contains(\"DIV\")) {\n");
-        out.append( "           homRefGen = (homRefAllele + \":\" + homRefAllele);\n");
+        out.append( "    AbstractMapper[] annotMapper = vdat.returnAnnotMap();\n" );
+        out.append( "    AbstractMapper[] sampleMapper = vdat.returnSampleMap();\n" );
+        out.append( "    int typeIndex = vdat.returnDataTypeAt().get(\"type\");\n" );
+        out.append( "    int refIndex = vdat.returnDataTypeAt().get(\"ref_allele\");\n" );
+        out.append( "    int nonRefIndex = vdat.returnDataTypeAt().get(\"var_allele\");\n" );
+        out.append( "    int divNC = annotMapper[typeIndex].getIndexOf(\"DIV-NC\");\n" );
+        out.append( "    int divC  = annotMapper[typeIndex].getIndexOf(\"DIV-c\");\n" );
+        out.append( "    int divFS  = annotMapper[typeIndex].getIndexOf(\"DIV-fs\");\n" );
+        out.append( "    int NA_Allele = sampleMapper[0].getIndexOf(\"NA\");\n" );
+        out.append( "    for (int i=0;i<allData.length;i++) {\n");
+        out.append( "        int type = allData[i][typeIndex];\n");
+        out.append( "        String homRefAllele = annotMapper[refIndex].getString(allData[i][refIndex]);\n");
+        out.append( "        String homNonRefAllele = annotMapper[nonRefIndex].getString(allData[i][nonRefIndex]);\n");
+        out.append( "        int homRefGen;\n");
+        out.append( "        int homNonRefGen;\n");
+        out.append( "        if (type == divNC || type == divC || type == divFS) {\n");
+        out.append( "           homRefGen = sampleMapper[0].getIndexOf(homRefAllele + \":\" + homRefAllele);\n");
+        out.append( "           homNonRefGen = sampleMapper[0].getIndexOf(homNonRefAllele + \":\" + homNonRefAllele);\n");
         out.append( "        }\n");
         out.append( "        else {\n");
-        out.append( "           homRefGen = (homRefAllele + homRefAllele);\n");
+        out.append( "           homRefGen = sampleMapper[0].getIndexOf(homRefAllele + homRefAllele);\n");
+        out.append( "           homNonRefGen = sampleMapper[0].getIndexOf(homNonRefAllele + homNonRefAllele);\n");
         out.append( "        }\n");
 
         out.append( "        if " );
         out.append(              customQuery );
         out.append(                        " {\n" );
         
-        out.append( "        bs.set(i-1);\n" );
+        out.append( "        bs.set(i);\n" );
         out.append( "      }\n" );
         out.append( "    }\n" );
         out.append( "    return bs;\n" );
@@ -124,7 +135,7 @@ public class CompileCustomQuery {
             Class myObjectClass = ccl.loadClass(className);
 
             AbstractQueryModule aqm = (AbstractQueryModule) myObjectClass.newInstance();
-            BitSet out = aqm.executeCustomQuery(vdat, refIndex);
+            BitSet out = aqm.executeCustomQuery(vdat);
             File cf = new File(className + ".class");
             if (!cf.delete()) {
                 VarSifter.showError("Couldn't delete " + className + ".class. You may want to delete it.");

@@ -10,5 +10,5 @@ public interface AbstractQueryModule {
     *
     *   @param vdat VarData Object holding the data
     */
-    public abstract BitSet executeCustomQuery(VarData vdat, int refIndex);
+    public abstract BitSet executeCustomQuery(VarData vdat);
 }

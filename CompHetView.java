@@ -13,11 +13,12 @@ public class CompHetView extends JFrame {
     private JTable outTable;
     private TableSorter sorter;
     private final String[] columnDefaultName = new String[]{"refseq", "Chr", 
-                                                            "A_pos", "A_score", "A_type",  
-                                                            "B_pos", "B_score", "B_type"};
+                                                            "A_left flank", "A_score", "A_type",  
+                                                            "B_left flank", "B_score", "B_type"};
     private final int COLUMN_NUMBER = 3;
     private String[] columnName;
-    private String[][] data;
+    private int[][] data;
+    private VarData v;
     
 
     /**
@@ -35,8 +36,8 @@ public class CompHetView extends JFrame {
         String[] temp = index.split(",", 0);
 
         if (temp.length == 2 && temp[1].equals("0")) {
-            data = new String[][]{ { "Not a compound Het pair!" } };
-            columnName = new String[]{""};
+            data = new int[][]{ { } };
+            columnName = new String[]{"Not a compound Het pair!"};
         }
         else {
             data = vdat.returnIndexPairs(temp, isSamples);
@@ -60,6 +61,7 @@ public class CompHetView extends JFrame {
         //    System.out.println(data[i][0] + " <-> " + data[i][1]);
         //}
 
+        v = vdat;
         initTable();
         
     }
@@ -77,8 +79,8 @@ public class CompHetView extends JFrame {
         int pairs = 0;
         
         if (indices.length == 0) {
-            data = new String[][]{ { "No compound hets" } };
-            columnName = new String[] {""};
+            data = new int[][]{ { } };
+            columnName = new String[] {"No compound hets!"};
         }
         else {
             String[][] temp = new String[indices.length][];
@@ -86,13 +88,13 @@ public class CompHetView extends JFrame {
                 temp[i] = indices[i].split(",", 0);
                 pairs += (temp[i].length - 1);
             }
-            data = new String[pairs][];
+            data = new int[pairs][];
             pairs = 0;
 
             for (int i=0; i<temp.length; i++) {
-                String[][] outTemp = vdat.returnIndexPairs(temp[i], isSamples);
+                int[][] outTemp = vdat.returnIndexPairs(temp[i], isSamples);
                 for (int j=0; j<outTemp.length; j++) {
-                    data[pairs+j] = new String[outTemp[j].length];
+                    data[pairs+j] = new int[outTemp[j].length];
                     //System.out.println(outTemp[j][0] + " " + outTemp[j].length);
                     System.arraycopy(outTemp[j], 0, data[pairs+j], 0, outTemp[j].length);
                 }
@@ -113,6 +115,7 @@ public class CompHetView extends JFrame {
                 columnName = columnDefaultName;
             }
         }
+        v = vdat;
         initTable();
 
     }
@@ -131,7 +134,7 @@ public class CompHetView extends JFrame {
         //pane.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
 
         outTable = new JTable();
-        sorter = new TableSorter( new CompHetTableModel(data, columnName));
+        sorter = new TableSorter( new CompHetTableModel(data, columnName, v));
         outTable.setModel(sorter);
         sorter.setTableHeader(outTable.getTableHeader());
         //outTable = new JTable(data, columnName);

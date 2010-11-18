@@ -18,7 +18,7 @@ import components.TableSorter;
 */
 public class VarSifter extends JFrame implements ListSelectionListener, ActionListener, TableModelListener {
     
-    final String version = "0.7b";
+    final String version = "0.8d";
     final String id = "$Id$";
 
     final String govWork = "PUBLIC DOMAIN NOTICE\n" +
@@ -193,10 +193,13 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     private BitSet mask; //store selected filters on "Apply Filter" press
     private boolean isShowVar = true;
     private DataFilter df = null;
-    public final static Pattern fDigits = Pattern.compile("^[0-9.]+$");
+    public final static Pattern fDigits = Pattern.compile("^-?[0-9]+\\.[0-9]+$");
 
     private int minMPG = 0;
     private float minMPGCovRatio = 0f;
+
+    private AbstractMapper[] annotMapper;
+    private AbstractMapper[] sampleMapper;
 
     //int lastRow = 0;    //Last row selected
 
@@ -391,7 +394,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             BitSet tempBS = new BitSet();
             tempBS.set(MENDHETREC);
             vdat.filterData(new DataFilter(tempBS, null, null, spinnerData, geneRegex, getMinMPG(), getMinMPGCovRatio()));
-            String temp[][] = vdat.returnData();
+            int temp[][] = vdat.returnData();
 
             //Must return the filtered state to what it was, to avoid data mapping errors!
             vdat.filterData(df);
@@ -399,7 +402,8 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
 
             String[] index = new String[temp.length];
             for (int i=0; i<temp.length; i++) {
-                index[i] = temp[i][indexIndex] + "," + temp[i][mendHetRecIndex];
+                index[i] = annotMapper[indexIndex].getString(temp[i][indexIndex]) + "," 
+                    + annotMapper[mendHetRecIndex].getString(temp[i][mendHetRecIndex]);
             }
             CompHetView c = new CompHetView(index, vdat, compHetSamples.isSelected());
         }
@@ -430,7 +434,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             BitSet tempBS = new BitSet();
             tempBS.set(MENDHETREC);
             vdat.filterData(new DataFilter(tempBS, null, null, spinnerData, geneRegex, getMinMPG(), getMinMPGCovRatio()));
-            String temp[][] = vdat.returnData();
+            int temp[][] = vdat.returnData();
 
             //Must return the filtered state to what it was, to avoid data mapping errors!
             vdat.filterData(df);
@@ -438,7 +442,8 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
 
             String[] index = new String[temp.length];
             for (int i=0; i<temp.length; i++) {
-                index[i] = temp[i][indexIndex] + "," + temp[i][mendHetRecIndex];
+                index[i] = annotMapper[indexIndex].getString(temp[i][indexIndex]) + "," 
+                    + annotMapper[mendHetRecIndex].getString(temp[i][mendHetRecIndex]);
             }
             CompHetView c = new CompHetView(index, vdat, compHetSamples.isSelected());
         }
@@ -457,10 +462,10 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         }
 
         else if (es == check) {
-            //int row = outTable.getSelectedRow();
-            //int col = outTable.getSelectedColumn();
-            //System.out.println(row + "\t" + col + "\t" + outTable.getValueAt(row,col).getClass() +
-            //    "\t" + outTable.getColumnClass(col));
+            int row = outTable.getSelectedRow();
+            int col = outTable.getSelectedColumn();
+            System.out.println(row + "\t" + col + "\t" + outTable.getValueAt(row,col).getClass() +
+                "\t" + outTable.getColumnClass(col));
 
         }
     }
@@ -484,19 +489,19 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             sampleSorter.setTableHeader(null); //Do this to avoid a memory leak
 
             if (isShowVar) {
-                sampleSorter = new TableSorter((new VarTableModel(vdat.returnSample(dataIndex),
+                sampleSorter = new TableSorter((new SampleTableModel(vdat.returnSample(dataIndex),
                     sampleTableLabels, vdat )));
                 sampleTable.setModel(sampleSorter);
                 sampleSorter.setTableHeader(sampleTable.getTableHeader());
             }
             else {
-                sampleSorter = new TableSorter((new VarTableModel(new String[0][], null, vdat)));
+                sampleSorter = new TableSorter((new SampleTableModel(new int[0][], null, vdat)));
                 sampleTable.setModel(sampleSorter);
             }
             
             outTable.setRowSelectionInterval(rowIndex,rowIndex);
             //lastRow = rowIndex;
-            initColSizes(sampleTable, (VarTableModel)((TableSorter)sampleTable.getModel()).getTableModel() );
+            initColSizes(sampleTable, (SampleTableModel)((TableSorter)sampleTable.getModel()).getTableModel() );
             
             //System.out.println(outTable.getSelectedRow() + "\t" + rowIndex + "\t" + dataIndex);
         }
@@ -625,7 +630,8 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         outTable.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
         outTable.setRowSelectionInterval(0,0);
         outTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
-        outTable.setDefaultRenderer(Number.class, new VarScoreRenderer());
+        outTable.setDefaultRenderer(Integer.class, new VarScoreRenderer());
+        outTable.setDefaultRenderer(Float.class, new FloatScoreRenderer(6));
         lsm = outTable.getSelectionModel();
         lsm.addListSelectionListener(this);
         
@@ -634,7 +640,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
         dataScroller.setPreferredSize(new Dimension((w/2), (h/4)));
         
-        sampleSorter = new TableSorter( new VarTableModel(vdat.returnSample(outTable.getSelectedRow()),
+        sampleSorter = new TableSorter( new SampleTableModel(vdat.returnSample(outTable.getSelectedRow()),
             sampleTableLabels, vdat ));
         sampleTable = new JTable(sampleSorter);
         sampleSorter.setTableHeader(sampleTable.getTableHeader());
@@ -647,7 +653,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         sampleTable.setDefaultRenderer(Object.class, new SampleScoreRenderer());
         sampleTable.setDefaultRenderer(Number.class, new SampleScoreRenderer());
         //sampleTable.setDefaultRenderer(Number.class, new VarScoreRenderer());
-        initColSizes(sampleTable, (VarTableModel)((TableSorter)sampleTable.getModel()).getTableModel() );
+        initColSizes(sampleTable, (SampleTableModel)((TableSorter)sampleTable.getModel()).getTableModel() );
         
         //Sample display
         JPanel samplePane = new JPanel();
@@ -943,13 +949,22 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             drawMinMPGCovRatioSampleSpinner();
 
         }
+        HashMap<String, Integer> typeMap = vdat.returnDataTypeAt();
+        int refseqIndex = ((Integer)typeMap.get("refseq")).intValue();
+        annotMapper = vdat.returnAnnotMap();
+        sampleMapper = vdat.returnSampleMap();
         if (isShowVar) {
             sorter = new TableSorter( new VarTableModel(vdat.returnData(),
-            vdat.returnDataNames(), vdat ));
+                                          vdat.returnDataNames(), 
+                                          annotMapper,
+                                          vdat ));
         }
         else {
+            AbstractMapper[] geneMap = { annotMapper[refseqIndex], new IntMapper() };
             sorter = new TableSorter( new VarTableModel(vdat.returnGeneData(),
-            vdat.returnGeneNames(), vdat ));
+                                          vdat.returnGeneNames(), 
+                                          geneMap,
+                                          vdat ));
         }
         //sorter.addTableModelListener(this); //Probably wrong...
         ((VarTableModel)sorter.getTableModel()).addTableModelListener(this);
@@ -1273,13 +1288,47 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             try {
                 
                 PrintWriter pw = new PrintWriter(new BufferedWriter(new FileWriter(fcFile)));
-                String[][] outData = vdTemp.dataDump();
+                int[][] outData = vdTemp.dataDump();
+                String[] dataNames = vdat.returnDataNames();
+                String[] sampleNamesOrig = vdat.returnSampleNamesOrig();
+
+                //header
+                StringBuilder outString = new StringBuilder(100);
+                for (int j=0; j < dataNames.length; j++) {
+                    outString.append(dataNames[j] + "\t");
+                }
+                for (int j=0; j < sampleNamesOrig.length; j++) {
+                    outString.append(sampleNamesOrig[j] + "\t");
+                }
+                outString.deleteCharAt(outString.length() - 1 );
+                pw.println(outString.toString());
+
 
                 for (int i=0; i < outData.length; i++) {
-                    StringBuilder outString = new StringBuilder(100);
+                    outString = new StringBuilder(100);
                                     
-                    for (int j=0; j < outData[i].length; j++) {
-                        outString.append(outData[i][j] + "\t");
+                    for (int j=0; j < dataNames.length; j++) {
+                        switch (annotMapper[j].getDataType()) {
+                            case VarData.INTEGER:
+                                outString.append(outData[i][j] + "\t");
+                                break;
+                            case VarData.FLOAT:
+                            case VarData.STRING:
+                                outString.append(annotMapper[j].getString(outData[i][j]) + "\t"); 
+                                break;
+                        }
+                    }
+                    for (int j=dataNames.length; j < outData[i].length; j++) {
+                        switch (sampleMapper[(j-dataNames.length) % VarData.S_FIELDS].getDataType()) {
+                            case VarData.INTEGER:
+                                outString.append(outData[i][j] + "\t");
+                                break;
+                            case VarData.FLOAT:
+                            case VarData.STRING:
+                                outString.append(sampleMapper[(j-dataNames.length) % VarData.S_FIELDS].getString(
+                                                    outData[i][j]) + "\t"); 
+                                break;
+                        }
                     }
                     outString.deleteCharAt(outString.length() - 1);
                     //outString.append(newLine);

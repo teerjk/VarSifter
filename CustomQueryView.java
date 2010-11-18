@@ -47,6 +47,7 @@ public class CustomQueryView extends JPanel implements ActionListener {
 
     private JButton[] fixedButtons = {
                                        new JButton("Homozygous Reference"),
+                                       new JButton("Homozygous Non-reference"),
                                        new JButton("NA"),
                                      };
     private JButton[] sampleButtons;
@@ -272,11 +273,10 @@ public class CustomQueryView extends JPanel implements ActionListener {
             graph = new DelegateForest<CustomVertex,Integer>();
         }
         else if (es == exactMatch) {
-            buildQueryVertex("==",".equals(");
+            buildQueryVertex("==","==");
         }
         else if (es == noMatch) {
-            query.insert(0,"!");
-            buildQueryVertex("!=",".equals(");
+            buildQueryVertex("!=","!=");
         }
         else if (es == andButton) {
             linkVertices("And", " && ");
@@ -290,7 +290,10 @@ public class CustomQueryView extends JPanel implements ActionListener {
                 buildQueryVertex(sampleButtons[0].getText(), "homRefGen");
             }
             else if (es == sampleButtons[1]) {
-                buildQueryVertex(sampleButtons[1].getText(), "\"NA\"");
+                buildQueryVertex(sampleButtons[1].getText(), "homNonRefGen");
+            }
+            else if (es == sampleButtons[2]) {
+                buildQueryVertex(sampleButtons[2].getText(), "NA_Allele");
             }
 
             //Now Handle sample buttons
@@ -298,7 +301,8 @@ public class CustomQueryView extends JPanel implements ActionListener {
                 if (es == sampleButtons[i]) {
                     String labelTemp = sampleButtons[i].getText();
                     labelTemp = labelTemp.replaceFirst("\\.NA$", "");
-                    String queryTemp = ("allData[i][" + (( (i - fixedButtons.length) * VarData.S_FIELDS) + annoSize) + "]");
+                    String queryTemp = ("allData[i][" 
+                                        + (( (i - fixedButtons.length) * VarData.S_FIELDS) + annoSize) + "]");
                     buildQueryVertex(labelTemp, queryTemp);
                     //graph.addVertex(sampleButtons[i].getText());
                     break;
@@ -368,7 +372,7 @@ public class CustomQueryView extends JPanel implements ActionListener {
                 break;
             case 3:
                 vertexLabel.append(labelString);
-                query.append(queryString + "))");
+                query.append(queryString + ")");
                 query.insert(0, "(");
                 graph.addVertex(new CustomVertex(vertexLabel.toString(), query.toString()));
                 enableButtons(new int[] {LOGICAL}, true);
@@ -448,7 +452,7 @@ public class CustomQueryView extends JPanel implements ActionListener {
         }
         else {
             parentStringGroup.add(rootVertex.getQuery());
-            if (!rootVertex.getQuery().contains("equals")) {
+            if (!rootVertex.getQuery().contains("=")) {
                 VarSifter.showError("It looks like one of the bottom elements is not a comparison: this will probably not work!");
             }
         }
