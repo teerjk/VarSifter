@@ -51,6 +51,7 @@ public class VarData {
 
     private int[] compHetFields;
 
+    private final static Pattern vcf = Pattern.compile("^##fileformat=VCF");
     private final static Pattern fDigits = VarSifter.fDigits;
     private final static Pattern digits = VarTableModel.digits;
 
@@ -73,6 +74,97 @@ public class VarData {
     *   @param inFile Absolute path to VS file to load.
     */
     public VarData(String inFile) {
+
+        try {
+            BufferedReader br = new BufferedReader(new FileReader(inFile));
+            String line = br.readLine();
+            
+            if (vcf.matcher(line).find()) { //VCF file
+            }
+            else {  //VarSifter file
+                br.close();
+                loadVSFile(inFile);
+            }
+        }
+        catch (IOException ioe) {
+            VarSifter.showError(ioe.toString());
+            System.out.println(ioe);
+            System.exit(1);
+        }
+
+
+        //indices for CompHet view
+        compHetFields = new int[5];
+        compHetFields[0] = (dataTypeAt.containsKey("refseq")) ? dataTypeAt.get("refseq") : -1;  //Gene name
+        compHetFields[1] = dataTypeAt.get("Chr");    //chrom
+        compHetFields[2] = dataTypeAt.get("LeftFlank"); //left flank
+        compHetFields[3] = (dataTypeAt.containsKey("CDPred_score")) ? dataTypeAt.get("CDPred_score") : -1; //cdPred
+        compHetFields[4] = dataTypeAt.get("type"); //variant type
+
+        resetOutput();  //Initialize outData and outSamples
+        
+        //TESTING System.out.println("File Read finished: " + (System.currentTimeMillis() - time));
+        /* TESTING
+        for (int i =0; i<dataNames.length; i++) {
+            System.out.println(i + " " + classList[i] + " " + annotMapper[i].getDataType() + " " + annotMapper[i].getLength());
+        }
+
+        for (int i=dataNames.length; i<classList.length; i++) {
+            System.out.println(i + " " + classList[i] + " " + sampleMapper[(i-dataNames.length) % S_FIELDS].getDataType() + " " + sampleMapper[(i-dataNames.length) % S_FIELDS].getLength());
+        }
+        */
+                
+    }
+
+    /** 
+    *   Constructor for making subsetted copies using 
+    *   the factory method returnSubVarData
+    *  
+    */
+    private VarData(int[][] dataIn,
+                    String[] dataNamesOrigIn,
+                    String[] dataNamesIn,
+                    int[][][] samplesIn,
+                    String[] sampleNamesOrigIn,
+                    String[] sampleNamesIn,
+                    BitSet dataIsEditableIn,
+                    HashMap<String, Integer> dataTypeAtIn,
+                    int[] affAtIn,
+                    int[] normAtIn,
+                    int[] caseAtIn,
+                    int[] controlAtIn,
+                    VarData parentVarDataIn,
+                    AbstractMapper[] annotMapperIn,
+                    AbstractMapper[] sampleMapperIn                    
+                    ) {
+        data = dataIn;
+        dataNamesOrig = dataNamesOrigIn;
+        dataNames = dataNamesIn;
+        samples = samplesIn;
+        sampleNamesOrig = sampleNamesOrigIn;
+        sampleNames = sampleNamesIn;
+        dataIsEditable = (BitSet)dataIsEditableIn.clone();
+        dataTypeAt = (HashMap<String, Integer>)dataTypeAtIn.clone();
+        affAt = affAtIn;
+        normAt = normAtIn;
+        caseAt = caseAtIn;
+        controlAt = controlAtIn;
+        parentVarData = parentVarDataIn;
+        annotMapper = annotMapperIn;
+        sampleMapper = sampleMapperIn;
+
+        dataIsIncluded = new BitSet(data.length);
+
+        resetOutput();
+
+    }
+
+    /**
+    *   Load data structures by parsing a VarSifter file
+    *
+    *   @param file Absolute path to VarSifter file
+    */
+    private void loadVSFile(String inFile) {
         String line = new String();
         int lineCount = 0;
         long time = System.currentTimeMillis();
@@ -372,73 +464,8 @@ public class VarData {
             System.exit(1);
         }
 
-        //indices for CompHet view
-        compHetFields = new int[5];
-        compHetFields[0] = (dataTypeAt.containsKey("refseq")) ? dataTypeAt.get("refseq") : -1;  //Gene name
-        compHetFields[1] = dataTypeAt.get("Chr");    //chrom
-        compHetFields[2] = dataTypeAt.get("LeftFlank"); //left flank
-        compHetFields[3] = (dataTypeAt.containsKey("CDPred_score")) ? dataTypeAt.get("CDPred_score") : -1; //cdPred
-        compHetFields[4] = dataTypeAt.get("type"); //variant type
-
-        resetOutput();  //Initialize outData and outSamples
-        
-        //TESTING System.out.println("File Read finished: " + (System.currentTimeMillis() - time));
-        /* TESTING
-        for (int i =0; i<dataNames.length; i++) {
-            System.out.println(i + " " + classList[i] + " " + annotMapper[i].getDataType() + " " + annotMapper[i].getLength());
-        }
-
-        for (int i=dataNames.length; i<classList.length; i++) {
-            System.out.println(i + " " + classList[i] + " " + sampleMapper[(i-dataNames.length) % S_FIELDS].getDataType() + " " + sampleMapper[(i-dataNames.length) % S_FIELDS].getLength());
-        }
-        */
-                
+   
     }
-
-    /** 
-    *   Constructor for making subsetted copies using 
-    *   the factory method returnSubVarData
-    *  
-    */
-    private VarData(int[][] dataIn,
-                    String[] dataNamesOrigIn,
-                    String[] dataNamesIn,
-                    int[][][] samplesIn,
-                    String[] sampleNamesOrigIn,
-                    String[] sampleNamesIn,
-                    BitSet dataIsEditableIn,
-                    HashMap<String, Integer> dataTypeAtIn,
-                    int[] affAtIn,
-                    int[] normAtIn,
-                    int[] caseAtIn,
-                    int[] controlAtIn,
-                    VarData parentVarDataIn,
-                    AbstractMapper[] annotMapperIn,
-                    AbstractMapper[] sampleMapperIn                    
-                    ) {
-        data = dataIn;
-        dataNamesOrig = dataNamesOrigIn;
-        dataNames = dataNamesIn;
-        samples = samplesIn;
-        sampleNamesOrig = sampleNamesOrigIn;
-        sampleNames = sampleNamesIn;
-        dataIsEditable = (BitSet)dataIsEditableIn.clone();
-        dataTypeAt = (HashMap<String, Integer>)dataTypeAtIn.clone();
-        affAt = affAtIn;
-        normAt = normAtIn;
-        caseAt = caseAtIn;
-        controlAt = controlAtIn;
-        parentVarData = parentVarDataIn;
-        annotMapper = annotMapperIn;
-        sampleMapper = sampleMapperIn;
-
-        dataIsIncluded = new BitSet(data.length);
-
-        resetOutput();
-
-    }
-
-
 
     /** 
     *   Returns 2d array of all data
