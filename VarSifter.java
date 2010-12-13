@@ -780,7 +780,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         filtPane.add(Box.createRigidArea(new Dimension(0,10)));
         filtPane.add(geneViewButton);
         //filtPane.add(Box.createRigidArea(new Dimension(0,10)));
-        //filtPane.add(check);
+        filtPane.add(check);
         JScrollPane filtScroll = new JScrollPane(filtPane, 
             ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
             ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);

@@ -32,6 +32,12 @@ public class CompileCustomQuery {
         DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<JavaFileObject>();
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
 
+        if (customQuery.equals("")) {
+            VarSifter.showError("No custom query string; did you click \"Apply\" in the Custom Query window?");
+            return false;
+        }
+
+
         StringBuilder out = new StringBuilder(64);
         //System.out.println(customQuery);
 
@@ -43,19 +49,22 @@ public class CompileCustomQuery {
         out.append( "    AbstractMapper[] annotMapper = vdat.returnAnnotMap();\n" );
         out.append( "    AbstractMapper[] sampleMapper = vdat.returnSampleMap();\n" );
         out.append( "    int typeIndex = vdat.returnDataTypeAt().get(\"type\");\n" );
+        out.append( "    int mutTypeIndex = vdat.returnDataTypeAt().get(\"muttype\");\n" );
         out.append( "    int refIndex = vdat.returnDataTypeAt().get(\"ref_allele\");\n" );
         out.append( "    int nonRefIndex = vdat.returnDataTypeAt().get(\"var_allele\");\n" );
         out.append( "    int divNC = annotMapper[typeIndex].getIndexOf(\"DIV-NC\");\n" );
         out.append( "    int divC  = annotMapper[typeIndex].getIndexOf(\"DIV-c\");\n" );
         out.append( "    int divFS  = annotMapper[typeIndex].getIndexOf(\"DIV-fs\");\n" );
+        out.append( "    int indel = annotMapper[mutTypeIndex].getIndexOf(\"INDEL\");\n" );
         out.append( "    int NA_Allele = sampleMapper[0].getIndexOf(\"NA\");\n" );
         out.append( "    for (int i=0;i<allData.length;i++) {\n");
         out.append( "        int type = allData[i][typeIndex];\n");
+        out.append( "        int muttype = allData[i][mutTypeIndex];\n" );
         out.append( "        String homRefAllele = annotMapper[refIndex].getString(allData[i][refIndex]);\n");
         out.append( "        String homNonRefAllele = annotMapper[nonRefIndex].getString(allData[i][nonRefIndex]);\n");
         out.append( "        int homRefGen;\n");
         out.append( "        int homNonRefGen;\n");
-        out.append( "        if (type == divNC || type == divC || type == divFS) {\n");
+        out.append( "        if (type == divNC || type == divC || type == divFS || muttype == indel) {\n");
         out.append( "           homRefGen = sampleMapper[0].getIndexOf(homRefAllele + \":\" + homRefAllele);\n");
         out.append( "           homNonRefGen = sampleMapper[0].getIndexOf(homNonRefAllele + \":\" + homNonRefAllele);\n");
         out.append( "        }\n");
