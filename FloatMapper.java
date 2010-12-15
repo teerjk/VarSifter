@@ -2,6 +2,7 @@ import java.util.HashMap;
 
 /**
 *   Subclass of AbstractMapper to handle Floats
+*   @author Jamie K. Teer
 */
 public class FloatMapper implements AbstractMapper {
     private HashMap<Float, Integer> dataMap;

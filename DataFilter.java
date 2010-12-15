@@ -2,6 +2,7 @@ import java.util.BitSet;
 
 /**
 *   An object to hold filtering options
+*   @author Jamie K. Teer
 */
 public class DataFilter {
 
@@ -14,6 +15,7 @@ public class DataFilter {
     
     private int minMPG;
     private float minMPGCovRatio;
+    private int genScoreThresh;
 
 
     /**
@@ -26,6 +28,7 @@ public class DataFilter {
     *   @param inGeneQuery A regular expression used to filter on gene name, or null to allow all
     *   @param inMinMPG Defined inimum MPG score
     *   @param inMinMPGCovRatio Defined minimum (MPG score / coverage)
+    *   @param inGenScoreThresh Genotype Score threshold used for certain tests
     */
     public DataFilter(BitSet inMask,
                       String inGeneFile,
@@ -33,7 +36,8 @@ public class DataFilter {
                       int[] inSpinnerData,
                       String inGeneQuery,
                       int inMinMPG,
-                      float inMinMPGCovRatio
+                      float inMinMPGCovRatio,
+                      int inGenScoreThresh
                       ) {
 
         mask = inMask;
@@ -43,6 +47,7 @@ public class DataFilter {
         geneQuery = inGeneQuery;
         minMPG = inMinMPG;
         minMPGCovRatio = inMinMPGCovRatio;
+        genScoreThresh = inGenScoreThresh;
     }
 
 
@@ -95,7 +100,7 @@ public class DataFilter {
 
 
     /**
-    *   Return minimum MPG score
+    *   Return minimum MPG score used for general filtering
     *   @return Minimum MPG score
     */
     public int getMinMPG() {
@@ -109,5 +114,14 @@ public class DataFilter {
     */
     public float getMinMPGCovRatio() {
         return minMPGCovRatio;
+    }
+
+
+    /**
+    *   Return genotype score threshold used for certain tests
+    *   @return Genotype Score threshold
+    */
+    public int getGenScoreThresh() {
+        return genScoreThresh;
     }
 }

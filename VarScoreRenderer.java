@@ -3,6 +3,7 @@ import javax.swing.table.*;
 
 /**
 *   Handles blanking of hidden cells in Variant table, sets center alignment
+*   @author Jamie K. Teer
 */
 public class VarScoreRenderer extends DefaultTableCellRenderer {
 

@@ -30,7 +30,7 @@ import edu.uci.ics.jung.visualization.control.PickingGraphMousePlugin;
 /**
 *   Creates a window to handle GUI for custom query string generation
 *     This class will generate an if-statement for sifting data
-*
+*   @author Jamie K. Teer
 */
 public class CustomQueryView extends JPanel implements ActionListener {
     String[] sampleNames;

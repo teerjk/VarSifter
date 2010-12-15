@@ -6,7 +6,8 @@ import components.TableSorter;
 
 
 /**
-*    Displays alternate view for compound het pairs
+*   Displays alternate view for compound het pairs
+*   @author Jamie K. Teer
 */
 public class CompHetView extends JFrame {
 

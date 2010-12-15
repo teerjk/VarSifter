@@ -2,6 +2,7 @@ import java.util.HashMap;
 
 /**
 *   Subclass of AbstractMapper to handle Strings
+*   @author Jamie K. Teer
 */
 public class StringMapper implements AbstractMapper {
     private HashMap<String, Integer> dataMap;

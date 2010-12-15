@@ -1,5 +1,6 @@
 /**
 *   Defines a CustomVertex for the JUNG tree structure
+*   @author Jamie K. Teer
 */
 public class CustomVertex {
     private String id;

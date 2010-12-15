@@ -4,11 +4,30 @@ import java.awt.Color;
 import java.awt.Component;
 
 /**
-*   Handle blanking of hidden cells in sample table
+*   Sample Table display
+*   Will lowlight rows with Genotype Score / Coverage ratios below a value
+*   If ratio cannot be determined from data, uses 1.0f
+*   @author Jamie K. Teer
 */
 public class SampleScoreRenderer extends DefaultTableCellRenderer {
+    private float cutoffRatio = 0.5f;
 
-    public SampleScoreRenderer() { super(); }
+    /**
+    *   Uses 0.5 as default Genotype Score / Coverage ratio cutoff
+    */
+    public SampleScoreRenderer() { 
+        super(); 
+    }
+
+    /**
+    *   Takes a float as input to use for lowlighting
+    *   
+    *   @param f Float defining Genotype Score / Coverage ratio cutoff
+    */
+    public SampleScoreRenderer(float f) {
+        super();
+        cutoffRatio = f;
+    }
 
     /**
     *   Sets text of cell to be empty if the value of the integer is the HIDDEN flag
@@ -30,7 +49,7 @@ public class SampleScoreRenderer extends DefaultTableCellRenderer {
     */
 
     /**
-    *   Sets background to be gray if mpg score/coverage ratio < 0.5
+    *   Sets background to be gray if mpg score/coverage ratio < cutoffRatio
     *
     */
     @Override
@@ -48,7 +67,7 @@ public class SampleScoreRenderer extends DefaultTableCellRenderer {
         //System.out.println( (Integer)table.getModel().getValueAt(row, 2) );
         //System.out.println( (Integer)table.getModel().getValueAt(row, 3) );
 
-        if (ratio < 0.5) {
+        if (ratio < cutoffRatio) {
             comp.setBackground(Color.darkGray);
             comp.setForeground(Color.red);
         }

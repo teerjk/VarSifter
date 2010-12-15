@@ -3,6 +3,7 @@ import java.util.HashMap;
 /**
 *   Subclass of AbstractMapper to handle ints
 *   **Only intializes dataType, as we currently are not mapping ints**
+*   @author Jamie K. Teer
 */
 public class IntMapper implements AbstractMapper {
     private HashMap<Integer, Integer> dataList;

@@ -9,6 +9,7 @@ import java.util.ArrayList;
 
 /**
 *   The VarData class handles interaction with the data.  It loads the data, filters, and returns results.
+*   @author Jamie K. Teer
 */
 public class VarData {
     
@@ -21,7 +22,7 @@ public class VarData {
     final int MIN_MPG = 3;
     final int MIN_MPG_COV = 4;
 
-    final int THRESHOLD = 10;
+    private int genScoreThresh;
     
     final String[] geneDataHeaders = {"refseq", "Var Count"};
     final String[] ALLELES = {"A", "C", "G", "T"};
@@ -212,10 +213,16 @@ public class VarData {
                         }
                 }
 
+                if (lineCount % 1000 == 0) {
+                    System.out.print(".");
+                }
+
             }
             data = new int[lineCount - header_lines][];
             samples = new int[lineCount - header_lines][][];
             dataIsIncluded = new BitSet(lineCount - header_lines);
+            System.out.println();
+            System.out.println("File Parsing completed - loading file");
 
             br.close();
             lineCount = 0;
@@ -637,6 +644,9 @@ public class VarData {
                     ArrayList<String> alleles = new ArrayList<String>();
                     
                     //Chr
+                    if ( !tempLine[0].contains("chr") ) {
+                        tempLine[0] = "chr" + tempLine[0];
+                    }
                     int index = annotMapper[0].getIndexOf(tempLine[0]);
                     if (index == -1) {
                         index = annotMapper[0].addData(tempLine[0]);
@@ -959,6 +969,7 @@ public class VarData {
         String geneQuery = df.getGeneQuery();
         int minMPG = df.getMinMPG();
         float minMPGCovRatio = df.getMinMPGCovRatio();
+        genScoreThresh = df.getGenScoreThresh();
         //System.out.println("min: " + minMPG + " mc: " + minMPGCovRatio + " minSpin:" + spinnerData[MIN_MPG] + 
         //    " minCovSpin: " + spinnerData[MIN_MPG_COV]);
 
@@ -1125,8 +1136,8 @@ public class VarData {
                     if (affTemp != normTemp &&
                         affTemp != naInt &&
                         normTemp != naInt &&
-                        samples[i][affAt[j]][1] >= THRESHOLD &&
-                        samples[i][normAt[j]][1] >= THRESHOLD) {
+                        samples[i][affAt[j]][1] >= genScoreThresh &&
+                        samples[i][normAt[j]][1] >= genScoreThresh) {
 
                         count++;
                     }
@@ -1144,14 +1155,14 @@ public class VarData {
                 for (int j=0; j < caseAt.length; j++) {
                     String caseTemp = sampleMapper[0].getString(samples[i][caseAt[j]][0]).replaceAll(":", "");
                     if ( (caseTemp.equals(hetNonRefGen) || caseTemp.equals(homNonRefGen)) &&
-                        samples[i][caseAt[j]][1] >= THRESHOLD) {
+                        samples[i][caseAt[j]][1] >= genScoreThresh) {
                         caseCount++;
                     }
                 }
                 for (int j=0; j < controlAt.length; j++) {
                     String controlTemp = sampleMapper[0].getString(samples[i][controlAt[j]][0]).replaceAll(":","");
                     if ( (controlTemp.equals(hetNonRefGen) || controlTemp.equals(homNonRefGen)) &&
-                        samples[i][controlAt[j]][1] >= THRESHOLD) {
+                        samples[i][controlAt[j]][1] >= genScoreThresh) {
                         controlCount++;
                     }
                 }

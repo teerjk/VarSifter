@@ -3,6 +3,7 @@ import java.util.regex.*;
 
 /**
 *   VarTableModel describes the data in the table
+*   @author Jamie K. Teer
 */
 public class VarTableModel extends AbstractTableModel {
     protected Object[][] data;

@@ -155,7 +155,7 @@ public class CompileCustomQuery {
             VarSifter.showError("Error running custom query: check console output for details.");
             System.out.println("Error: " + e.toString());
             for (StackTraceElement st:e.getStackTrace()) {
-                System.out.println(st.getClassName());
+                System.out.println(st.toString());
             }
             return null;
         }

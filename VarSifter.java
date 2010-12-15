@@ -14,11 +14,11 @@ import components.TableSorter;
 *   VarSifter is designed to read a flat file where a row contains a variant, and all sample info
 *    and allow sorting, and filtering of the data. This class is a wrapper that handles the GUI
 *    via Swing.
-*  
+*   @author Jamie K. Teer
 */
 public class VarSifter extends JFrame implements ListSelectionListener, ActionListener, TableModelListener {
     
-    final String version = "0.8d";
+    final String version = "0.9_BETA";
     final String id = "$Id$";
 
     final String govWork = "PUBLIC DOMAIN NOTICE\n" +
@@ -76,7 +76,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     final int BED_FILTER_FILE = 2;
     final int MAX_COLUMN_SIZE = 150;
 
-    final String[] sampleTableLabels = {"Sample", "Genotype", "MPG score", "coverage"};
+    final String[] sampleTableLabels = {"Sample", "Genotype", "Genotype score", "coverage"};
 
 
     final Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
@@ -155,6 +155,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     private JButton filterFileButton = new JButton("Choose Gene File Filter");
     private JButton bedFilterFileButton = new JButton("Choose Bed File Filter");
     private JButton geneViewButton = new JButton("View Variants for Selected Gene");
+    private JButton prefApply = new JButton("Apply Preferences");
 
     private JCheckBox compHetSamples = new JCheckBox("Show Sample Details");
     private JButton compHetGeneViewButton = new JButton("View by Gene");
@@ -162,7 +163,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     private JButton compHetAllButton = new JButton("View All Compound Hets");
 
     private JFrame compHetParent = new JFrame("Compound Het Views");
-    private JFrame customQueryParent = new JFrame("Custom Query");
+    private JFrame customQueryParent;
     private CustomQueryView cqPane;
     private JFrame preferViewParent = new JFrame("Preferences");
 
@@ -176,6 +177,8 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     private JTextField geneRegexField = new JTextField("");
     private JTextField minMPGField = new JTextField(10);
     private JTextField minMPGCovRatioField = new JTextField(10);
+    private JTextField genScoreThreshField = new JTextField(10);
+    private JTextField genScoreCovRatioThreshField = new JTextField(10);
 
     private JSpinner caseSpinner = new JSpinner();
     private JLabel caseSpinnerLabel = new JLabel("Var in cases (at least):");
@@ -197,6 +200,8 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
 
     private int minMPG = 0;
     private float minMPGCovRatio = 0f;
+    private int genScoreThresh = 10;
+    private float genScoreCovRatioThresh = 0.5f;
 
     private AbstractMapper[] annotMapper;
     private AbstractMapper[] sampleMapper;
@@ -272,7 +277,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             spinnerData[vdat.MIN_MPG] = ((Integer)minMPGSpinner.getValue()).intValue();
             spinnerData[vdat.MIN_MPG_COV] = ((Integer)minMPGCovRatioSpinner.getValue()).intValue();
            
-            df = new DataFilter(mask, geneFile, bedFile, spinnerData, getRegex(), getMinMPG(), getMinMPGCovRatio());
+            df = new DataFilter(mask, geneFile, bedFile, spinnerData, getRegex(), minMPG, minMPGCovRatio, genScoreThresh);
             vdat.filterData(df);
             redrawOutTable(null);
             
@@ -328,7 +333,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
                 }
             }
 
-            vdat.filterData(new DataFilter(new BitSet(), null, null, spinnerData, geneRegex, getMinMPG(), getMinMPGCovRatio()));
+            vdat.filterData(new DataFilter(new BitSet(), null, null, spinnerData, geneRegex, minMPG, minMPGCovRatio, genScoreThresh));
             VarData tempVdat = vdat.returnSubVarData(vdat, null);
             VarSifter vs = new VarSifter(tempVdat);
             
@@ -342,6 +347,8 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
 
             if (fName != null) {
                 redrawOutTable(fName);
+                customQueryParent.dispose();
+                initCustomQueryParent();
             }
         }
 
@@ -356,6 +363,28 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
 
         else if (es == preferViewItem) {
             preferViewParent.setVisible(true);
+        }
+
+        else if (es == prefApply) {
+            try {
+                int mM = Integer.parseInt(minMPGField.getText());
+                float mMCR = Float.parseFloat(minMPGCovRatioField.getText());
+                int gST = Integer.parseInt(genScoreThreshField.getText());
+                float gSCRT = Float.parseFloat(genScoreCovRatioThreshField.getText());
+
+                minMPG = mM;
+                minMPGCovRatio = mMCR;
+                genScoreThresh = gST;
+                genScoreCovRatioThresh = gSCRT;
+                sampleTable.setDefaultRenderer(Object.class, new SampleScoreRenderer(genScoreCovRatioThresh));
+                sampleTable.setDefaultRenderer(Number.class, new SampleScoreRenderer(genScoreCovRatioThresh));
+
+            }
+            catch (NumberFormatException nfe) {
+                showError("<html>You have entered an inappropriate number!<p>Please use an integer for Genotype Score " 
+                          + "and a floating point number for Score / Coverage Ratio.</html>");
+                System.out.println(nfe);
+            }
         }
 
         else if (es == exitItem) {
@@ -393,7 +422,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             }
             BitSet tempBS = new BitSet();
             tempBS.set(MENDHETREC);
-            vdat.filterData(new DataFilter(tempBS, null, null, spinnerData, geneRegex, getMinMPG(), getMinMPGCovRatio()));
+            vdat.filterData(new DataFilter(tempBS, null, null, spinnerData, geneRegex, minMPG, minMPGCovRatio, genScoreThresh));
             int temp[][] = vdat.returnData();
 
             //Must return the filtered state to what it was, to avoid data mapping errors!
@@ -433,7 +462,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             String geneRegex = ".";
             BitSet tempBS = new BitSet();
             tempBS.set(MENDHETREC);
-            vdat.filterData(new DataFilter(tempBS, null, null, spinnerData, geneRegex, getMinMPG(), getMinMPGCovRatio()));
+            vdat.filterData(new DataFilter(tempBS, null, null, spinnerData, geneRegex, minMPG, minMPGCovRatio, genScoreThresh));
             int temp[][] = vdat.returnData();
 
             //Must return the filtered state to what it was, to avoid data mapping errors!
@@ -650,8 +679,8 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
         sampleScroller.setPreferredSize(new Dimension((w/2), 80));
         sampleScroller.setAlignmentY(Component.TOP_ALIGNMENT);
-        sampleTable.setDefaultRenderer(Object.class, new SampleScoreRenderer());
-        sampleTable.setDefaultRenderer(Number.class, new SampleScoreRenderer());
+        sampleTable.setDefaultRenderer(Object.class, new SampleScoreRenderer(genScoreCovRatioThresh));
+        sampleTable.setDefaultRenderer(Number.class, new SampleScoreRenderer(genScoreCovRatioThresh));
         //sampleTable.setDefaultRenderer(Number.class, new VarScoreRenderer());
         initColSizes(sampleTable, (SampleTableModel)((TableSorter)sampleTable.getModel()).getTableModel() );
         
@@ -780,7 +809,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         filtPane.add(Box.createRigidArea(new Dimension(0,10)));
         filtPane.add(geneViewButton);
         //filtPane.add(Box.createRigidArea(new Dimension(0,10)));
-        filtPane.add(check);
+        //filtPane.add(check);
         JScrollPane filtScroll = new JScrollPane(filtPane, 
             ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
             ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
@@ -811,6 +840,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         saveAsItem.addActionListener(this);
         saveViewItem.addActionListener(this);
         preferViewItem.addActionListener(this);
+        prefApply.addActionListener(this);
         compHetViewItem.addActionListener(this);
         customQueryViewItem.addActionListener(this);
         exitItem.addActionListener(this);
@@ -872,18 +902,22 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         preferViewPane.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
         setJComponentSize(minMPGField);
         setJComponentSize(minMPGCovRatioField);
+        setJComponentSize(genScoreThreshField);
+        setJComponentSize(genScoreCovRatioThreshField);
         minMPGField.setText(Integer.toString(minMPG));
         minMPGCovRatioField.setText(Float.toString(minMPGCovRatio));
+        genScoreThreshField.setText(Integer.toString(genScoreThresh));
+        genScoreCovRatioThreshField.setText(Float.toString(genScoreCovRatioThresh));
         JPanel minMPGPane = new JPanel();
         minMPGPane.setLayout(new BoxLayout(minMPGPane, BoxLayout.X_AXIS));
-        minMPGPane.add(new JLabel("Minimum MPG Score: "));
+        minMPGPane.add(new JLabel("Minimum Genotype Score: "));
         minMPGPane.add(minMPGField);
         minMPGPane.add(new JLabel(" in at least "));
         minMPGPane.add(minMPGSpinner);
         minMPGPane.add(new JLabel(" samples."));
         JPanel minMPGCovRatioPane = new JPanel();
         minMPGCovRatioPane.setLayout(new BoxLayout(minMPGCovRatioPane, BoxLayout.X_AXIS));
-        minMPGCovRatioPane.add(new JLabel("Minimum (MPG score / coverage) ratio: "));
+        minMPGCovRatioPane.add(new JLabel("Minimum (Genotype Score / coverage) ratio: "));
         minMPGCovRatioPane.add(minMPGCovRatioField);
         minMPGCovRatioPane.add(new JLabel(" in at least "));
         minMPGCovRatioPane.add(minMPGCovRatioSpinner);
@@ -891,43 +925,39 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
 
         JPanel preferFilterPane = new JPanel();
         preferFilterPane.setLayout(new BoxLayout(preferFilterPane, BoxLayout.Y_AXIS));
-        preferFilterPane.add(new JLabel("Choose minimum scores for filtering"));
+        preferFilterPane.setBorder(BorderFactory.createLineBorder(Color.black));
+        preferFilterPane.setAlignmentX(Component.LEFT_ALIGNMENT);
         preferFilterPane.add(Box.createRigidArea(new Dimension(0,15)));
         preferFilterPane.add(minMPGPane);
         preferFilterPane.add(Box.createRigidArea(new Dimension(0,10)));
         preferFilterPane.add(minMPGCovRatioPane);
+        preferFilterPane.add(Box.createRigidArea(new Dimension(0,10)));
+
+        JPanel preferSettingsPane = new JPanel();
+        preferSettingsPane.setLayout(new BoxLayout(preferSettingsPane, BoxLayout.Y_AXIS));
+        preferSettingsPane.setBorder(BorderFactory.createLineBorder(Color.black));
+        preferSettingsPane.setAlignmentX(Component.LEFT_ALIGNMENT);
+        preferSettingsPane.add(Box.createRigidArea(new Dimension(0,15)));
+        preferSettingsPane.add(new JLabel("Genotype Score Threshold for certain filters:"));
+        preferSettingsPane.add(genScoreThreshField);
+        preferSettingsPane.add(Box.createRigidArea(new Dimension(0,10)));
+        preferSettingsPane.add(new JLabel("Genotype Score / Coverage Ratio Threshold for low-lighting:"));
+        preferSettingsPane.add(genScoreCovRatioThreshField);
+        preferSettingsPane.add(Box.createRigidArea(new Dimension(0,10)));
+
+        preferViewPane.add(new JLabel("Choose minimum scores for general filtering:"));
         preferViewPane.add(preferFilterPane);
+        preferViewPane.add(Box.createRigidArea(new Dimension(0,15)));
+        preferViewPane.add(new JLabel("Choose minimum scores for certain filters and for lowlighting:"));
+        preferViewPane.add(preferSettingsPane);
+        preferViewPane.add(Box.createRigidArea(new Dimension(0,15)));
+        preferViewPane.add(prefApply);
+
         preferViewParent.add(preferViewPane);
         preferViewParent.pack();
+        //preferViewParent.setVisible(true);
                 
-
-        //Initialize (but don't display) customQueryParent
-        try {
-            cqPane = new CustomQueryView(vdat);
-            JPanel customQueryPane = new JPanel();
-            customQueryPane.setPreferredSize(new Dimension(w/3 + 10, h/3+5));
-            customQueryPane.setLayout(new BoxLayout(customQueryPane, BoxLayout.Y_AXIS));
-            customQueryPane.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
-            //JScrollPane customViewScroll = new JScrollPane(cqPane, JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,
-            //                                                       JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-            //customViewScroll.setBorder(null);
-            //customQueryPane.add(customViewScroll);
-            customQueryPane.add(cqPane);
-            customQueryPane.add(Box.createRigidArea(new Dimension(0,10)));
-            customQueryPane.add(customQuery);
-            customQueryParent.add(customQueryPane);
-            customQueryParent.pack();
-            //customQueryParent.setVisible(true);
-        }
-        catch (NoClassDefFoundError e) {
-            showError("<html>Required JUNG files are not in the same directory as the VarSifter.jar file."
-                + "<p>Disabling custom querying.");
-            customQueryViewItem.setEnabled(false);
-            customQuery.setEnabled(false);
-        }
-
-        df = new DataFilter(mask, geneFile, bedFile, spinnerData, getRegex(), getMinMPG(), getMinMPGCovRatio());
-
+        initCustomQueryParent();
 
     }
 
@@ -941,6 +971,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     private void redrawOutTable(String newData) {
         if (newData != null) {
             vdat = new VarData(newData);
+            df = new DataFilter(mask, geneFile, bedFile, spinnerData, getRegex(), minMPG, minMPGCovRatio, genScoreThresh);
             maskCBox();
             clear.doClick();
             drawMinAffSpinner();
@@ -974,6 +1005,38 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         lines.setText(Integer.toString(outTable.getRowCount()));
         outTable.requestFocusInWindow();
 
+    }
+
+
+    /**
+    *   Initialize the Custom Query Window
+    */
+    private void initCustomQueryParent() {
+        //Initialize (but don't display) customQueryParent
+        try {
+            customQueryParent = new JFrame("Custom Query");
+            cqPane = new CustomQueryView(vdat);
+            JPanel customQueryPane = new JPanel();
+            customQueryPane.setPreferredSize(new Dimension(w/3 + 10, h/3+5));
+            customQueryPane.setLayout(new BoxLayout(customQueryPane, BoxLayout.Y_AXIS));
+            customQueryPane.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
+            //JScrollPane customViewScroll = new JScrollPane(cqPane, JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,
+            //                                                       JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+            //customViewScroll.setBorder(null);
+            //customQueryPane.add(customViewScroll);
+            customQueryPane.add(cqPane);
+            customQueryPane.add(Box.createRigidArea(new Dimension(0,10)));
+            customQueryPane.add(customQuery);
+            customQueryParent.add(customQueryPane);
+            customQueryParent.pack();
+            //customQueryParent.setVisible(true);
+        }
+        catch (NoClassDefFoundError e) {
+            showError("<html>Required JUNG files are not in the same directory as the VarSifter.jar file."
+                + "<p>Disabling custom querying.");
+            customQueryViewItem.setEnabled(false);
+            customQuery.setEnabled(false);
+        }
     }
 
 
@@ -1058,54 +1121,6 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         }
         else {
             return geneRegexField.getText();
-        }
-    }
-
-
-    /**
-    *   Get minMPG Score
-    *   @return minMPG
-    */
-    private int getMinMPG() {
-        if (VarTableModel.digits.matcher(minMPGField.getText()).find()) {
-            int m = Integer.parseInt(minMPGField.getText());
-            if (m >= 0 && m<= 500) {
-                return m;
-            }
-            else {
-                showError("Please use an MPG score value between 0 and 500");
-                minMPGField.setText(Integer.toString(minMPG));
-                return minMPG;
-            }
-        }
-        else {
-            showError("Please use an MPG score value between 0 and 500");
-            minMPGField.setText(Integer.toString(minMPG));
-            return minMPG;
-        }
-    }
-
-
-    /**
-    *   Get minMPGCovRatio score
-    *   @return minMPGCovRatio
-    */
-    private float getMinMPGCovRatio() {
-        if (fDigits.matcher(minMPGCovRatioField.getText()).find()) {
-            float f = Float.parseFloat(minMPGCovRatioField.getText());
-            if (f >= 0f && f <= 5f) {
-                return f;
-            }
-            else {
-                showError("Please use an (MPG score / coverage) value between 0 and 5");
-                minMPGCovRatioField.setText(Float.toString(minMPGCovRatio));
-                return minMPGCovRatio;
-            }
-        }
-        else {
-            showError("Please use an (MPG score / coverage) value between 0 and 5");
-            minMPGCovRatioField.setText(Float.toString(minMPGCovRatio));
-            return minMPGCovRatio;
         }
     }
 

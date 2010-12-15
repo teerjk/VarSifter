@@ -2,6 +2,7 @@ import java.util.HashMap;
 
 /**
 *   Interface defining the common methods for different Mapper objects
+*   @author Jamie K. Teer
 */
 public interface AbstractMapper {
 

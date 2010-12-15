@@ -4,6 +4,7 @@ import javax.swing.table.*;
 
 /**
 *   Sets a larger precision for Float values, sets center alignment
+*   @author Jamie K. Teer
 */
 public class FloatScoreRenderer extends DefaultTableCellRenderer {
     

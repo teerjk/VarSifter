@@ -4,6 +4,7 @@ import java.util.regex.*;
 
 /**
 *   CompHetTableModel sets up data for comp het view
+*   @author Jamie K. Teer
 */
 public class CompHetTableModel extends AbstractTableModel {
     private Object data[][];

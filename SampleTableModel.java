@@ -1,5 +1,6 @@
 /**
 *   SampleTableModel describes samples in the table
+*   @author Jamie K. Teer
 */
 public class SampleTableModel extends VarTableModel {
 
