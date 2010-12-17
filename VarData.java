@@ -176,6 +176,7 @@ public class VarData {
         int lineCount = 0;
         long time = System.currentTimeMillis();
         boolean first = true;
+        boolean noSamples = false;
         
         try {
             BufferedReader br = new BufferedReader(new FileReader(inFile));
@@ -295,6 +296,7 @@ public class VarData {
                             sampleCount++;
                             sampleTempOrig += (temp[i] + "\t");
                         }
+
                         //Is column an annotation?
                         else {
                             dataTemp += (temp[i] + "\t");
@@ -326,13 +328,26 @@ public class VarData {
                             dataCount++;
                         }
                     }
+
+                    if (sampleCount == 0) {
+                        noSamples = true;
+                    }
+
                     
                     sampleMapper[0] = new StringMapper();
                     sampleMapper[1] = new IntMapper();
                     sampleMapper[2] = new IntMapper();
 
-                    sampleNames = sampleTemp.split("\t");
-                    sampleNamesOrig = sampleTempOrig.split("\t");
+                    if (noSamples) {
+                        sampleNames = new String[] {"NA"};
+                        sampleNamesOrig = new String[] {"NA","NA","NA"};
+                        sampleMapper[0].addData("NA");
+                    }
+                    else {
+                        sampleNames = sampleTemp.split("\t");
+                        sampleNamesOrig = sampleTempOrig.split("\t");
+                    }
+                    
                     dataNames = dataTemp.split("\t");
                     dataNamesOrig = dataNames; //Will have to change this when not all data included
                     annotMapper = annotMapperBuilder.toArray(annotMapper);
@@ -430,32 +445,38 @@ public class VarData {
                 //Fill samples array (genotypes)
                 samples[lineCount] = new int[sampleNames.length][S_FIELDS];
                 
-                //System.out.println(temp.length);
-                for (int i = 0; i < sampleNames.length; i++) {
-                    //System.arraycopy(temp, (dataNames.length + (i * S_FIELDS)), samples[lineCount][i], 0, S_FIELDS);
-                    for (int j=0; j<S_FIELDS; j++) {
-                        int dataIndex = dataNames.length + (i * S_FIELDS) + j;
-                        int index;
-                        switch(classList[dataIndex]) {
-                            case INTEGER:
-                                samples[lineCount][i][j] = Integer.parseInt(temp[dataIndex]);
-                                break;
-                            case FLOAT:
-                                float f = Float.parseFloat(temp[dataIndex]);
-                                index = sampleMapper[j].getIndexOf(f);
-                                if (index == -1) {
-                                    index = sampleMapper[j].addData(f);
-                                }
-                                samples[lineCount][i][j] = index;
-                                break;
-                            case STRING:
-                                //System.out.println("sampleMappers: " + sampleMapper.length + "   " +temp[dataIndex]);
-                                index = sampleMapper[j].getIndexOf(temp[dataIndex]);
-                                if (index == -1) {
-                                    index = sampleMapper[j].addData(temp[dataIndex]);
-                                }
-                                samples[lineCount][i][j] = index;
-                                break;
+                if (noSamples) {
+                    samples[lineCount][0][0] = sampleMapper[0].getIndexOf("NA");
+                    samples[lineCount][0][1] = -1;
+                    samples[lineCount][0][2] = -1;
+                }
+                else {
+                    for (int i = 0; i < sampleNames.length; i++) {
+                        //System.arraycopy(temp, (dataNames.length + (i * S_FIELDS)), samples[lineCount][i], 0, S_FIELDS);
+                        for (int j=0; j<S_FIELDS; j++) {
+                            int dataIndex = dataNames.length + (i * S_FIELDS) + j;
+                            int index;
+                            switch(classList[dataIndex]) {
+                                case INTEGER:
+                                    samples[lineCount][i][j] = Integer.parseInt(temp[dataIndex]);
+                                    break;
+                                case FLOAT:
+                                    float f = Float.parseFloat(temp[dataIndex]);
+                                    index = sampleMapper[j].getIndexOf(f);
+                                    if (index == -1) {
+                                        index = sampleMapper[j].addData(f);
+                                    }
+                                    samples[lineCount][i][j] = index;
+                                    break;
+                                case STRING:
+                                    //System.out.println("sampleMappers: " + sampleMapper.length + "   " +temp[dataIndex]);
+                                    index = sampleMapper[j].getIndexOf(temp[dataIndex]);
+                                    if (index == -1) {
+                                        index = sampleMapper[j].addData(temp[dataIndex]);
+                                    }
+                                    samples[lineCount][i][j] = index;
+                                    break;
+                            }
                         }
                     }
                 }
@@ -528,6 +549,7 @@ public class VarData {
 
         String line = new String();
         boolean indel;
+        boolean noSamples = false;
         int lineCount = 0;
         int infoCount = 0;
         int headCount = 0;
@@ -554,9 +576,23 @@ public class VarData {
                 else if (head_pat.matcher(line).find()) {
                     String tempLine[] = line.split("\t", 0);
                     sampleCount = tempLine.length - (annotCount + 1);
-                    sampleNames = new String[sampleCount];
-                    sampleNamesOrig = new String[sampleCount*3];
+                    sampleMapper[0] = new StringMapper();
+                    sampleMapper[1] = new IntMapper();
+                    sampleMapper[2] = new IntMapper();
                     classList = new int[ fixedNames.length + tempNames.size() ];
+                    dataNames = new String[fixedNames.length + tempNames.size()];
+
+                    if (sampleCount <= 0) {
+                        noSamples = true;
+                        sampleCount = 0;
+                        sampleNames = new String[] {"NA"};
+                        sampleNamesOrig = new String[] {"NA","NA","NA"};
+                        sampleMapper[0].addData("NA");
+                    }
+                    else {
+                        sampleNames = new String[sampleCount];
+                        sampleNamesOrig = new String[sampleCount*3];
+                    }
 
                     for (int i=0; i < sampleCount; i++) {
                         sampleNames[i] = tempLine[i + annotCount + 1];
@@ -566,8 +602,6 @@ public class VarData {
                     }
 
                     //Fill dataNames, dataTypeAt
-                    dataNames = new String[fixedNames.length + tempNames.size()];
-
                     System.arraycopy(fixedNames, 0, dataNames, 0, fixedNames.length);
                     System.arraycopy(fixedClassList, 0, classList, 0, fixedClassList.length);
                     for (int i=0; i<fixedNames.length; i++) {
@@ -607,10 +641,6 @@ public class VarData {
                                 break;
                         }
                     }
-
-                    sampleMapper[0] = new StringMapper();
-                    sampleMapper[1] = new IntMapper();
-                    sampleMapper[2] = new IntMapper();
 
                 }
                 else if (! comment.matcher(line).find()) {
@@ -789,71 +819,78 @@ public class VarData {
 
 
                     // Handle Samples
-                    String[] sampTemp = tempLine[8].split(":");
-                    HashMap<String, Integer> sampHash = new HashMap<String,Integer>(7);
-                    for (int i=0; i < sampTemp.length; i++) {
-                        sampHash.put(sampTemp[i], i);
-                    }
-
-                    if ( (tempLine.length - (annotCount+1)) != sampleNames.length) {
-                        System.out.println("INTERNAL ERROR: inconsistent sample counting");
-                        System.exit(1);
-                    }
-
                     samples[lineCount] = new int[sampleNames.length][3];
 
-                    for (int i = annotCount + 1; i < tempLine.length; i++) {
-                        sampTemp = tempLine[i].split(":");
-                        String geno = sampTemp[sampHash.get("GT")];
-                        Matcher m = genoSep_pat.matcher(geno);
-                        
-                        // Genotype
-                        if (geno.contains(".")) {
-                            geno = "NA";
+                    if (noSamples) {
+                        samples[lineCount][0][0] = sampleMapper[0].getIndexOf("NA");
+                        samples[lineCount][0][1] = -1;
+                        samples[lineCount][0][2] = -1;
+                    }
+                    else {
+                        String[] sampTemp = tempLine[8].split(":");
+                        HashMap<String, Integer> sampHash = new HashMap<String,Integer>(7);
+                        for (int i=0; i < sampTemp.length; i++) {
+                            sampHash.put(sampTemp[i], i);
                         }
-                        else if (m.find()) {
-                            String[] genoTemp = { alleles.get(Integer.parseInt(m.group(1))), 
-                                                  alleles.get(Integer.parseInt(m.group(2))) 
-                                                };
-                            java.util.Arrays.sort(genoTemp);
 
-                            // DIV handling
-                            if (indel) {
-                                geno = genoTemp[0] + ":" + genoTemp[1];
+                        if ( (tempLine.length - (annotCount+1)) != sampleNames.length) {
+                            System.out.println("INTERNAL ERROR: inconsistent sample counting");
+                            System.exit(1);
+                        }
+
+                        for (int i = annotCount + 1; i < tempLine.length; i++) {
+                            sampTemp = tempLine[i].split(":");
+                            String geno = sampTemp[sampHash.get("GT")];
+                            Matcher m = genoSep_pat.matcher(geno);
+                            
+                            // Genotype
+                            if (geno.contains(".")) {
+                                geno = "NA";
+                            }
+                            else if (m.find()) {
+                                String[] genoTemp = { alleles.get(Integer.parseInt(m.group(1))), 
+                                                      alleles.get(Integer.parseInt(m.group(2))) 
+                                                    };
+                                java.util.Arrays.sort(genoTemp);
+
+                                // DIV handling
+                                if (indel) {
+                                    geno = genoTemp[0] + ":" + genoTemp[1];
+                                }
+                                else {
+                                    geno = genoTemp[0] + genoTemp[1];
+                                }
                             }
                             else {
-                                geno = genoTemp[0] + genoTemp[1];
+                                try {
+                                    geno = alleles.get(Integer.parseInt(geno));
+                                }
+                                catch (NumberFormatException nfe) {
+                                    System.out.println("Malformed genotype on line " + (lineCount + 1) + ": " + geno );
+                                }
                             }
-                        }
-                        else {
-                            try {
-                                geno = alleles.get(Integer.parseInt(geno));
+
+                            index = sampleMapper[0].getIndexOf(geno);
+                            if (index == -1) {
+                                index = sampleMapper[0].addData(geno);
                             }
-                            catch (NumberFormatException nfe) {
-                                System.out.println("Malformed genotype on line " + (lineCount + 1) + ": " + geno );
+                            samples[lineCount][i - (annotCount + 1)][0] = index;
+
+                            // Qual score
+                            if (sampHash.get("GQ") == null) {
+                                samples[lineCount][i - (annotCount + 1)][1] = 0;
                             }
-                        }
+                            else {
+                                samples[lineCount][i - (annotCount + 1)][1] = Integer.parseInt(sampTemp[sampHash.get("GQ")]);
+                            }
 
-                        index = sampleMapper[0].getIndexOf(geno);
-                        if (index == -1) {
-                            index = sampleMapper[0].addData(geno);
-                        }
-                        samples[lineCount][i - (annotCount + 1)][0] = index;
-
-                        // Qual score
-                        if (sampHash.get("GQ") == null) {
-                            samples[lineCount][i - (annotCount + 1)][1] = 0;
-                        }
-                        else {
-                            samples[lineCount][i - (annotCount + 1)][1] = Integer.parseInt(sampTemp[sampHash.get("GQ")]);
-                        }
-
-                        // Read depth
-                        if (sampHash.get("DP") == null) {
-                            samples[lineCount][i - (annotCount + 1)][2] = 0;
-                        }
-                        else {
-                            samples[lineCount][i - (annotCount + 1)][2] = Integer.parseInt(sampTemp[sampHash.get("DP")]);
+                            // Read depth
+                            if (sampHash.get("DP") == null) {
+                                samples[lineCount][i - (annotCount + 1)][2] = 0;
+                            }
+                            else {
+                                samples[lineCount][i - (annotCount + 1)][2] = Integer.parseInt(sampTemp[sampHash.get("DP")]);
+                            }
                         }
                     }
                     
