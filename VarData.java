@@ -30,6 +30,7 @@ public class VarData {
     final static int INTEGER = 0;
     final static int FLOAT = 1;
     final static int STRING = 2;
+    final static int MULTISTRING = 3;
 
     //private String[][] data;            // Fields: [line][var_annotations]
     //private String[][] outData;         // Gets returned (can be filtered)
@@ -195,15 +196,15 @@ public class VarData {
                     
                 if (temp.length != numCols) {
                     VarSifter.showError("*** Input file appears to be malformed - column number not same as header! " +
-                        "Line: " + (lineCount+2) + " ***");
+                        "Line: " + (lineCount) + " ***");
                     System.out.println("*** Input file appears to be malformed - column number not same as header! " +
-                        "Line: " + (lineCount+2) + " ***");
+                        "Line: " + (lineCount) + " ***");
                     System.exit(1);
                 }
                 
-                //Determine class of each column, change if not int
+                //Determine class of each column, change if not int; for now, do NOT set MULTISTRING here
                 for (int i=0; i<temp.length; i++) {
-                    if (classList[i] == STRING) {
+                    if (classList[i] == STRING || classList[i] == MULTISTRING) {
                         continue;
                     }
                         if (fDigits.matcher(temp[i]).matches()) {
@@ -312,6 +313,11 @@ public class VarData {
                             if ((edPat.matcher(temp[i])).find()) {
                                 dataIsEditable.set(i);
                             }
+
+                            //For now, only "type" field can be MULTISTRING
+                            if (temp[i].equals("type")) {
+                                classList[i] = VarData.MULTISTRING;
+                            }
                             
                             switch (classList[i]) {
                                 case INTEGER:
@@ -322,6 +328,9 @@ public class VarData {
                                     break;
                                 case STRING:
                                     annotMapperBuilder.add(new StringMapper());
+                                    break;
+                                case MULTISTRING:
+                                    annotMapperBuilder.add(new MultiStringMapper(";"));
                                     break;
                             }
 
@@ -416,25 +425,19 @@ public class VarData {
                 data[lineCount] = new int[dataNames.length];
                 //System.arraycopy(temp, 0, data[lineCount], 0, dataNames.length);
                 for (int i=0; i < dataNames.length; i++) {
-                    int index;
                     switch (classList[i]) {
                         case INTEGER:
                             data[lineCount][i] = Integer.parseInt(temp[i]);
                             break;
                         case FLOAT:
                             float f = Float.parseFloat(temp[i]);
-                            index = annotMapper[i].getIndexOf(f);
-                            if (index == -1) {
-                                index = annotMapper[i].addData(f);
-                            }
-                            data[lineCount][i] = index;
+                            data[lineCount][i] = annotMapper[i].addData(f); 
                             break;
                         case STRING:
-                            index = annotMapper[i].getIndexOf(temp[i]);
-                            if (index == -1) {
-                                index = annotMapper[i].addData(temp[i]);
-                            }
-                            data[lineCount][i] = index;
+                            data[lineCount][i] = annotMapper[i].addData(temp[i]);
+                            break;
+                        case MULTISTRING:
+                            data[lineCount][i] = annotMapper[i].addData(temp[i]);
                             break;
                     }
                 }
@@ -455,26 +458,17 @@ public class VarData {
                         //System.arraycopy(temp, (dataNames.length + (i * S_FIELDS)), samples[lineCount][i], 0, S_FIELDS);
                         for (int j=0; j<S_FIELDS; j++) {
                             int dataIndex = dataNames.length + (i * S_FIELDS) + j;
-                            int index;
                             switch(classList[dataIndex]) {
                                 case INTEGER:
                                     samples[lineCount][i][j] = Integer.parseInt(temp[dataIndex]);
                                     break;
                                 case FLOAT:
                                     float f = Float.parseFloat(temp[dataIndex]);
-                                    index = sampleMapper[j].getIndexOf(f);
-                                    if (index == -1) {
-                                        index = sampleMapper[j].addData(f);
-                                    }
-                                    samples[lineCount][i][j] = index;
+                                    samples[lineCount][i][j] = sampleMapper[j].addData(f);
                                     break;
                                 case STRING:
                                     //System.out.println("sampleMappers: " + sampleMapper.length + "   " +temp[dataIndex]);
-                                    index = sampleMapper[j].getIndexOf(temp[dataIndex]);
-                                    if (index == -1) {
-                                        index = sampleMapper[j].addData(temp[dataIndex]);
-                                    }
-                                    samples[lineCount][i][j] = index;
+                                    samples[lineCount][i][j] = sampleMapper[j].addData(temp[dataIndex]);
                                     break;
                             }
                         }
@@ -533,7 +527,7 @@ public class VarData {
                                        INTEGER,
                                        INTEGER,
                                        STRING,
-                                       STRING,
+                                       MULTISTRING,
                                        STRING,
                                        STRING,
                                        STRING,
@@ -639,6 +633,9 @@ public class VarData {
                             case STRING:
                                 annotMapper[i] = new StringMapper();
                                 break;
+                            case MULTISTRING:
+                                annotMapper[i] = new MultiStringMapper("/");
+                                break;
                         }
                     }
 
@@ -677,54 +674,30 @@ public class VarData {
                     if ( !tempLine[0].contains("chr") ) {
                         tempLine[0] = "chr" + tempLine[0];
                     }
-                    int index = annotMapper[0].getIndexOf(tempLine[0]);
-                    if (index == -1) {
-                        index = annotMapper[0].addData(tempLine[0]);
-                    }
-                    data[lineCount][0] = index;
+                    data[lineCount][0] = annotMapper[0].addData(tempLine[0]);
 
                     //LeftFlank / RightFlank
                     data[lineCount][1] = Integer.parseInt(tempLine[1]) - 1;
                     data[lineCount][2] = Integer.parseInt(tempLine[1]) + tempLine[3].length();
 
                     //refseq   !!! Dummy for now !!!
-                    index = annotMapper[3].getIndexOf("-");
-                    if (index == -1) {
-                        index = annotMapper[3].addData("-");
-                    }
-                    data[lineCount][3] = index;
+                    data[lineCount][3] = annotMapper[3].addData("-");
 
                     //type    !!! Dummy for now !!!
-                    index = annotMapper[4].getIndexOf("-");
-                    if (index == -1) {
-                        index = annotMapper[4].addData("-");
-                    }
-                    data[lineCount][4] = index;
+                    data[lineCount][4] = annotMapper[4].addData("-");
 
                     //RS#
                     if (tempLine[2].equals(".")) {
                         tempLine[2] = "-";
                     }
-                    index = annotMapper[6].getIndexOf(tempLine[2]);
-                    if (index == -1) {
-                        index = annotMapper[6].addData(tempLine[2]);
-                    }
-                    data[lineCount][6] = index;
+                    data[lineCount][6] = annotMapper[6].addData(tempLine[2]);
 
                     //ref_allele
-                    index = annotMapper[7].getIndexOf(tempLine[3]);
-                    if (index == -1) {
-                        index = annotMapper[7].addData(tempLine[3]);
-                    }
-                    data[lineCount][7] = index;
+                    data[lineCount][7] = annotMapper[7].addData(tempLine[3]);
                     alleles.add(tempLine[3]);
 
                     //var_allele
-                    index = annotMapper[8].getIndexOf(tempLine[4]);
-                    if (index == -1) {
-                        index = annotMapper[8].addData(tempLine[4]);
-                    }
-                    data[lineCount][8] = index;
+                    data[lineCount][8] = annotMapper[8].addData(tempLine[4]);
 
                     //muttype and assingment of INDEL (and further parsing of var_allele)
                     String[] varTemp = tempLine[4].split(",", 0);
@@ -735,17 +708,12 @@ public class VarData {
                             indel = true;
                         }
                     }
+                    int index;
                     if (indel) {
-                        index = annotMapper[5].getIndexOf("INDEL");
-                        if (index == -1) {
-                            index = annotMapper[5].addData("INDEL");
-                        }
+                        index = annotMapper[5].addData("INDEL");
                     }
                     else {
-                        index = annotMapper[5].getIndexOf("SNP");
-                        if (index == -1) {
-                            index = annotMapper[5].addData("SNP");
-                        }
+                        index = annotMapper[5].addData("SNP");
                     }
                     data[lineCount][5] = index;
                     
@@ -754,18 +722,10 @@ public class VarData {
                     if (tempLine[5].equals(".")) {
                         tempLine[5] = "NaN";
                     }
-                    index = annotMapper[9].getIndexOf(tempLine[5]);
-                    if (index == -1) {
-                        index = annotMapper[9].addData(Float.parseFloat(tempLine[5]));
-                    }
-                    data[lineCount][9] = index;
+                    data[lineCount][9] = annotMapper[9].addData(Float.parseFloat(tempLine[5]));
 
                     //FILTER
-                    index = annotMapper[10].getIndexOf(tempLine[6]);
-                    if (index == -1) {
-                        index = annotMapper[10].addData(tempLine[6]);
-                    }
-                    data[lineCount][10] = index;
+                    data[lineCount][10] = annotMapper[10].addData(tempLine[6]);
 
 
                     //INFO field
@@ -797,22 +757,14 @@ public class VarData {
                                 if (infoHash.containsKey(key)) {
                                     f = Float.parseFloat(infoHash.get(key));
                                 }
-                                index = annotMapper[pos].getIndexOf(f);
-                                if (index == -1) {
-                                    index = annotMapper[pos].addData(f);
-                                }
-                                data[lineCount][pos] = index;
+                                data[lineCount][pos] = annotMapper[pos].addData(f);
                                 break;
                             case STRING:
                                 String s = "-";
                                 if (infoHash.containsKey(key)) {
                                     s = infoHash.get(key);
                                 }
-                                index = annotMapper[pos].getIndexOf(s);
-                                if (index == -1) {
-                                    index = annotMapper[pos].addData(s);
-                                }
-                                data[lineCount][pos] = index;
+                                data[lineCount][pos] = annotMapper[pos].addData(s);
                                 break;
                         }
                     }
@@ -870,11 +822,7 @@ public class VarData {
                                 }
                             }
 
-                            index = sampleMapper[0].getIndexOf(geno);
-                            if (index == -1) {
-                                index = sampleMapper[0].addData(geno);
-                            }
-                            samples[lineCount][i - (annotCount + 1)][0] = index;
+                            samples[lineCount][i - (annotCount + 1)][0] = sampleMapper[0].addData(geno);
 
                             // Qual score
                             if (sampHash.get("GQ") == null) {
@@ -1124,15 +1072,15 @@ public class VarData {
             }
             //System.out.println(hetNonRefGen);
            
-            if ( (mask.get(0) && data[i][typeIndex] == types[0] ) ||
-                 (mask.get(1) && data[i][typeIndex] == types[1] ) ||
-                 (mask.get(2) && data[i][typeIndex] == types[2] ) ||
-                 (mask.get(3) && data[i][typeIndex] == types[3] ) ||
-                 (mask.get(4) && data[i][typeIndex] == types[4] ) ||
-                 (mask.get(5) && data[i][typeIndex] == types[5] ) ||
-                 (mask.get(6) && data[i][typeIndex] == types[6] ) ||
-                 (mask.get(7) && data[i][typeIndex] == types[7] ) ||
-                 (mask.get(7) && data[i][typeIndex] == types[8] )       
+            if ( (mask.get(0) && (data[i][typeIndex] & (int)Math.pow(2,types[0])) > 0 ) ||
+                 (mask.get(1) && (data[i][typeIndex] & (int)Math.pow(2,types[1])) > 0 ) ||
+                 (mask.get(2) && (data[i][typeIndex] & (int)Math.pow(2,types[2])) > 0 ) ||
+                 (mask.get(3) && (data[i][typeIndex] & (int)Math.pow(2,types[3])) > 0 ) ||
+                 (mask.get(4) && (data[i][typeIndex] & (int)Math.pow(2,types[4])) > 0 ) ||
+                 (mask.get(5) && (data[i][typeIndex] & (int)Math.pow(2,types[5])) > 0 ) ||
+                 (mask.get(6) && (data[i][typeIndex] & (int)Math.pow(2,types[6])) > 0 ) ||
+                 (mask.get(7) && (data[i][typeIndex] & (int)Math.pow(2,types[7])) > 0 ) ||
+                 (mask.get(7) && (data[i][typeIndex] & (int)Math.pow(2,types[8])) > 0 )       
                 ) {
 
                 filterSet[0].set(i);
@@ -1781,11 +1729,7 @@ public class VarData {
         for (int i = 0; i <= row; i++) {
             lastIndex = ( dataIsIncluded.nextSetBit(lastIndex) + 1 );
         }
-        int index = annotMapper[col].getIndexOf(newData);
-        if (index == -1) {
-            index = annotMapper[col].addData(newData);
-        }
-        data[lastIndex - 1][col] = index;
+        data[lastIndex - 1][col] = annotMapper[col].addData(newData);
     }
 
 

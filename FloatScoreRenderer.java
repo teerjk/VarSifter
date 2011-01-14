@@ -32,6 +32,6 @@ public class FloatScoreRenderer extends DefaultTableCellRenderer {
     public void setValue(Object val) {
         float nv = ((Float)val).floatValue();
         setText(f.format(nv));
-        setHorizontalAlignment(SwingConstants.CENTER);
+        setHorizontalAlignment(SwingConstants.RIGHT);
     }
 }

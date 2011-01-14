@@ -41,10 +41,16 @@ public class StringMapper implements AbstractMapper {
     */
     public int addData(Object obj) {
         String inS = (String)obj;
-        dataMap.put(inS, Integer.valueOf(lastIndex));
-        indexMap.put(Integer.valueOf(lastIndex), inS);
-        lastIndex++;
-        return lastIndex - 1; //remove 1 to get index
+        int index = getIndexOf(inS);
+        if (index == -1) {
+            dataMap.put(inS, Integer.valueOf(lastIndex));
+            indexMap.put(Integer.valueOf(lastIndex), inS);
+            lastIndex++;
+            return lastIndex - 1; //remove 1 to get index
+        }
+        else {
+            return index;
+        }
     }
 
 

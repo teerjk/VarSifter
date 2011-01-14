@@ -31,6 +31,12 @@ public class CompileCustomQuery {
     public boolean compileCustom(String customQuery) {
         DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<JavaFileObject>();
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
+        if (compiler == null) {
+            VarSifter.showError("Error compiling custom query!  It is possible you are not using the full Java "
+                + "Developement Kit (JDK).  Please ensure you have installed the JDK, not just the JRE.");
+            return false;
+        }
+            
 
         if (customQuery.equals("")) {
             VarSifter.showError("No custom query string; did you click \"Apply\" in the Custom Query window?");
@@ -93,8 +99,14 @@ public class CompileCustomQuery {
         JavaFileObject file = new JavaSourceFromString(className, out.toString());
         //System.out.println(out.toString());
 
-        CompilationTask task = compiler.getTask(null,null,diagnostics,null,null,Arrays.asList(file));
-        boolean success = task.call();
+        boolean success = false;
+        try {
+            CompilationTask task = compiler.getTask(null,null,diagnostics,null,null,Arrays.asList(file));
+            success = task.call();
+        }
+        catch (NullPointerException npe) {
+            System.err.println(npe.toString());
+        }
 
         for (Diagnostic diagnostic : diagnostics.getDiagnostics()) {
           System.out.println(diagnostic.getCode());

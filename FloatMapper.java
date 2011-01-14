@@ -43,10 +43,16 @@ public class FloatMapper implements AbstractMapper {
     */
     public int addData(Object obj) {
         Float inF = (Float)obj;
-        dataMap.put(inF, Integer.valueOf(lastIndex));
-        indexMap.put(Integer.valueOf(lastIndex), inF);
-        lastIndex++;
-        return lastIndex - 1; //remove 1 to get index;
+        int index = getIndexOf(inF);
+        if (index == -1) {
+            dataMap.put(inF, Integer.valueOf(lastIndex));
+            indexMap.put(Integer.valueOf(lastIndex), inF);
+            lastIndex++;
+            return lastIndex - 1; //remove 1 to get index;
+        }
+        else {
+            return index;
+        }
     }
 
 

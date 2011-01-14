@@ -60,6 +60,7 @@ public class CompHetTableModel extends AbstractTableModel {
                             data[i][j] = new Float(aM.getFloat(inData[i][j]));
                             break;
                         case VarData.STRING:
+                        case VarData.MULTISTRING:
                             data[i][j] = new String(aM.getString(inData[i][j]));
                             break;
                     }
@@ -94,6 +95,7 @@ public class CompHetTableModel extends AbstractTableModel {
                             data[i][correctedIndex] = new Float(aM.getFloat(inData[i][correctedIndex]));
                             break;
                         case VarData.STRING:
+                        case VarData.MULTISTRING:
                             data[i][correctedIndex] = new String(aM.getString(inData[i][correctedIndex]));
                             break;
                     }

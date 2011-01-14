@@ -18,7 +18,7 @@ import components.TableSorter;
 */
 public class VarSifter extends JFrame implements ListSelectionListener, ActionListener, TableModelListener {
     
-    final String version = "0.9";
+    final String version = "0.9b_BETA";
     final String id = "$Id$";
 
     final String govWork = "PUBLIC DOMAIN NOTICE\n" +
@@ -193,7 +193,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     private String geneFile = null;
     private String bedFile = null;
 
-    private BitSet mask; //store selected filters on "Apply Filter" press
+    private BitSet mask = getFilterMask(); //store selected filters on "Apply Filter" press
     private boolean isShowVar = true;
     private DataFilter df = null;
     public final static Pattern fDigits = Pattern.compile("^-?[0-9]+\\.[0-9]+$");
@@ -429,25 +429,32 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             vdat.filterData(df);
             //vdat.filterData(mask, geneFile, bedFile, spinnerData, getRegex());
 
-            String[] index = new String[temp.length];
-            for (int i=0; i<temp.length; i++) {
-                index[i] = annotMapper[indexIndex].getString(temp[i][indexIndex]) + "," 
-                    + annotMapper[mendHetRecIndex].getString(temp[i][mendHetRecIndex]);
+            if (temp.length > 0) {
+                String[] index = new String[temp.length];
+                for (int i=0; i<temp.length; i++) {
+                    index[i] = annotMapper[indexIndex].getString(temp[i][indexIndex]) + "," 
+                        + annotMapper[mendHetRecIndex].getString(temp[i][mendHetRecIndex]);
+                }
+                CompHetView c = new CompHetView(index, vdat, compHetSamples.isSelected());
             }
-            CompHetView c = new CompHetView(index, vdat, compHetSamples.isSelected());
+            else {
+                showError("Gene does not have any compound heterozygous positions.");
+            }
         }
 
         else if (es == compHetPairViewButton) {
             if (isShowVar) {
                 //HashMap<String, Integer> typeMap = vdat.returnDataTypeAt();
                 int dataRowIndex = sorter.modelIndex(outTable.getSelectedRow());
-                String index = vdat.returnDataValueAt(dataRowIndex, "Index");
-                index += ("," + vdat.returnDataValueAt(dataRowIndex, "MendHetRec"));
-
-                //String index = outTable.getValueAt(row, ((Integer)typeMap.get("Index")).intValue()).toString();
-                //index += ("," + outTable.getValueAt(row, ((Integer)typeMap.get("MendHetRec")).intValue()).toString());
-                //System.out.println(index);
-                CompHetView c = new CompHetView(index, vdat, compHetSamples.isSelected());
+                String mhrString = vdat.returnDataValueAt(dataRowIndex, "MendHetRec");
+                if (mhrString.equals("0,")) {
+                    showError("This variant is not in a compound heterozygous pair.");
+                }
+                else {
+                    String index = vdat.returnDataValueAt(dataRowIndex, "Index");
+                    index += ("," + mhrString);
+                    CompHetView c = new CompHetView(index, vdat, compHetSamples.isSelected());
+                }
             }
             else {
                 showError("Not available for \"Show Gene\" view - please re-filter with \"Show Variants\"");
@@ -659,7 +666,10 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         outTable.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
         outTable.setRowSelectionInterval(0,0);
         outTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
-        outTable.setDefaultRenderer(Integer.class, new VarScoreRenderer());
+        DefaultTableCellRenderer tcr = new DefaultTableCellRenderer();
+        tcr.setHorizontalAlignment(SwingConstants.CENTER);
+        outTable.setDefaultRenderer(String.class, tcr);
+        //outTable.setDefaultRenderer(Integer.class, new VarScoreRenderer());
         outTable.setDefaultRenderer(Float.class, new FloatScoreRenderer(6));
         lsm = outTable.getSelectionModel();
         lsm.addListSelectionListener(this);
@@ -681,7 +691,6 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         sampleScroller.setAlignmentY(Component.TOP_ALIGNMENT);
         sampleTable.setDefaultRenderer(Object.class, new SampleScoreRenderer(genScoreCovRatioThresh));
         sampleTable.setDefaultRenderer(Number.class, new SampleScoreRenderer(genScoreCovRatioThresh));
-        //sampleTable.setDefaultRenderer(Number.class, new VarScoreRenderer());
         initColSizes(sampleTable, (SampleTableModel)((TableSorter)sampleTable.getModel()).getTableModel() );
         
         //Sample display
@@ -809,7 +818,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         filtPane.add(Box.createRigidArea(new Dimension(0,10)));
         filtPane.add(geneViewButton);
         //filtPane.add(Box.createRigidArea(new Dimension(0,10)));
-        //filtPane.add(check);
+        filtPane.add(check);
         JScrollPane filtScroll = new JScrollPane(filtPane, 
             ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
             ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
@@ -1036,6 +1045,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
                 + "<p>Disabling custom querying.");
             customQueryViewItem.setEnabled(false);
             customQuery.setEnabled(false);
+            e.printStackTrace();
         }
     }
 
@@ -1329,6 +1339,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
                                 break;
                             case VarData.FLOAT:
                             case VarData.STRING:
+                            case VarData.MULTISTRING:
                                 outString.append(annotMapper[j].getString(outData[i][j]) + "\t"); 
                                 break;
                         }

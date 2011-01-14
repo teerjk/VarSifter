@@ -1,5 +1,6 @@
 import java.awt.*;
 import javax.swing.*;
+import javax.swing.table.*;
 import java.util.HashSet;
 import java.awt.event.*;
 import components.TableSorter;
@@ -145,7 +146,10 @@ public class CompHetView extends JFrame {
         sPane.setPreferredSize(new Dimension(610,400));
         //outTable.setPreferredSize(new Dimension(610,400));
         outTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
-        outTable.setDefaultRenderer(Number.class, new VarScoreRenderer());
+        DefaultTableCellRenderer tcr = new DefaultTableCellRenderer();
+        tcr.setHorizontalAlignment(SwingConstants.CENTER);
+        outTable.setDefaultRenderer(String.class, tcr);
+        //outTable.setDefaultRenderer(Number.class, new VarScoreRenderer());
 
         JLabel linesl = new JLabel("Number of positions (Every pair is seen twice): ");
         JLabel lines = new JLabel( (Integer.toString(outTable.getRowCount())));

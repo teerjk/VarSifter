@@ -97,6 +97,7 @@ public class VarTableModel extends AbstractTableModel {
                             }
                             break;
                         case VarData.STRING:
+                        case VarData.MULTISTRING:
                             data[i][j] = mapper[mapIndex].getString(inData[i][j]);
                             if (first || ((String)data[i][j]).length() > largestInColumn[j].toString().length()) {
                                 largestInColumn[j] = data[i][j];
