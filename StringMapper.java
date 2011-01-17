@@ -1,4 +1,6 @@
 import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.Collections;
 
 /**
 *   Subclass of AbstractMapper to handle Strings
@@ -77,6 +79,14 @@ public class StringMapper implements AbstractMapper {
 
     public int getLength() {
         return lastIndex;
+    }
+
+    public String[] getSortedEntries() {
+        ArrayList<String> list = new ArrayList<String>(dataMap.keySet());
+        Collections.sort(list);
+        String[] s = new String[list.size()];
+        s = (list.toArray(s));
+        return s;
     }
 
 }

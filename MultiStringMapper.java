@@ -1,4 +1,6 @@
 import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.Collections;
 
 /**
 *   Subclass of AbstractMapper to handle Multiple Strings using bitmasking
@@ -99,6 +101,18 @@ public class MultiStringMapper implements AbstractMapper {
 
     public int getLength() {
         return lastIndex;
+    }
+
+    /**
+    *   Return an array of sorted data entries being stored in this object
+    *   @return An array of type String with the elements stored in this object
+    */
+    public String[] getSortedEntries() {
+        ArrayList<String> list = new ArrayList<String>(dataMap.keySet());
+        Collections.sort(list);
+        String[] s = new String[list.size()];
+        s = (list.toArray(s));
+        return s;
     }
 
 }

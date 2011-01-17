@@ -18,7 +18,7 @@ import components.TableSorter;
 */
 public class VarSifter extends JFrame implements ListSelectionListener, ActionListener, TableModelListener {
     
-    final String version = "0.9b_BETA";
+    final String version = "0.10";
     final String id = "$Id$";
 
     final String govWork = "PUBLIC DOMAIN NOTICE\n" +
@@ -94,36 +94,21 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     private ListSelectionModel lsm;
     private JLabel lines = new JLabel();
 
-    private JCheckBox stop = new JCheckBox("Stop");
-    private JCheckBox divFS = new JCheckBox("DIV coding frameshift");
-    private JCheckBox divC = new JCheckBox("DIV coding (no frameshift)");
-    private JCheckBox splice = new JCheckBox("Splice-Site");
-    private JCheckBox nonsyn = new JCheckBox("Non-synonymous");
-    private JCheckBox syn = new JCheckBox("Synonymous");
-    private JCheckBox noncod = new JCheckBox("Non-Coding");
-    private JCheckBox utr = new JCheckBox("UTR");
     private JCheckBox dbsnp = new JCheckBox("dbSNP130");
-
     private JCheckBox mendRec = new JCheckBox("Hom. Recessive");
     private JCheckBox mendDom = new JCheckBox("Dominant");
     private JCheckBox mendBad = new JCheckBox("Inconsistent");
     private JCheckBox mendCompHet = new JCheckBox("Mend. Compound Het");
-    private JCheckBox uniqInAff = new JCheckBox("Tumor different from Norm");
+    private JCheckBox uniqInAff = new JCheckBox("Affected different from Norm");
     private JCheckBox caseControl = new JCheckBox("Case / Control");
     private JCheckBox filterFile = new JCheckBox("Include Gene File");
     private JCheckBox notFilterFile = new JCheckBox("Exclude Gene File");
     private JCheckBox bedFilterFile = new JCheckBox("Include Bed File Regions");
     private JCheckBox customQuery = new JCheckBox("Custom Query");
 
-    private JCheckBox[] cBox = { stop,
-                                 divFS, 
-                                 divC,
-                                 splice, 
-                                 nonsyn, 
-                                 syn,
-                                 noncod,
-                                 utr,
-                                 dbsnp, 
+    private JCheckBox[] typeCBox;
+
+    private JCheckBox[] cBox = { dbsnp,
                                  mendRec,
                                  mendDom,
                                  mendBad,
@@ -135,7 +120,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
                                  bedFilterFile,
                                  customQuery
                                };
-    public final int MENDHETREC = 12; //index of mendCompHet
+    public final static int MENDHETREC = 4; //index of mendCompHet
 
     private JMenuItem openItem;
     private JMenuItem saveAsItem;
@@ -162,10 +147,10 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     private JButton compHetPairViewButton = new JButton("View Pairs of Selected Position");
     private JButton compHetAllButton = new JButton("View All Compound Hets");
 
-    private JFrame compHetParent = new JFrame("Compound Het Views");
+    private JFrame compHetParent;
     private JFrame customQueryParent;
     private CustomQueryView cqPane;
-    private JFrame preferViewParent = new JFrame("Preferences");
+    private JFrame preferViewParent;
 
     private int[] spinnerData = new int[5]; //Hold data for Spinner values (use int values from VarData)
     
@@ -193,7 +178,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     private String geneFile = null;
     private String bedFile = null;
 
-    private BitSet mask = getFilterMask(); //store selected filters on "Apply Filter" press
+    private BitSet[] mask = new BitSet[2]; // holds { type filter mask (typeCBox), preset (cBox) }
     private boolean isShowVar = true;
     private DataFilter df = null;
     public final static Pattern fDigits = Pattern.compile("^-?[0-9]+\\.[0-9]+$");
@@ -203,10 +188,10 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     private int genScoreThresh = 10;
     private float genScoreCovRatioThresh = 0.5f;
 
+    private HashMap<String, Integer> typeMap;
     private AbstractMapper[] annotMapper;
     private AbstractMapper[] sampleMapper;
 
-    //int lastRow = 0;    //Last row selected
 
     /** 
     *   Initiate GUI, instantiate VarData
@@ -292,6 +277,9 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         }
 
         else if (es == clear) {
+            for (JCheckBox cb : typeCBox) {
+                cb.setSelected(false);
+            }
             for (JCheckBox cb : cBox) {
                 cb.setSelected(false);
             }
@@ -316,7 +304,6 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         else if (es == geneViewButton) {
 
             //Use this button to return a VarSifter view of one gene
-            //int l = vdat.dataDump().length - 1;
             String geneRegex = new String("");
             if (isShowVar) {
                 int dataRowIndex = sorter.modelIndex(outTable.getSelectedRow());
@@ -333,22 +320,24 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
                 }
             }
 
-            vdat.filterData(new DataFilter(new BitSet(), null, null, spinnerData, geneRegex, minMPG, minMPGCovRatio, genScoreThresh));
+            BitSet[] emptyBS = { new BitSet(), new BitSet() };
+            vdat.filterData(new DataFilter(emptyBS, null, null, spinnerData, geneRegex, minMPG, minMPGCovRatio, genScoreThresh));
             VarData tempVdat = vdat.returnSubVarData(vdat, null);
             VarSifter vs = new VarSifter(tempVdat);
             
             //Must return the filtered state to what it was, to avoid data mapping errors!
             vdat.filterData(df);
-            //vdat.filterData(mask, geneFile, bedFile, spinnerData, getRegex());
         }
 
         else if (es == openItem) {
             String fName = openData(VARIANT_FILE);
 
             if (fName != null) {
-                redrawOutTable(fName);
                 customQueryParent.dispose();
-                initCustomQueryParent();
+                dispose();
+                frameInit();
+                redrawOutTable(fName);
+                initTable();
             }
         }
 
@@ -392,7 +381,6 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         }
 
         else if (es == compHetViewItem) {
-            //CompHetPane c = new CompHetPane();
             compHetParent.setVisible(true);
         }
 
@@ -402,7 +390,6 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
 
         else if (es == compHetGeneViewButton) {
             String geneRegex = new String("");
-            HashMap<String, Integer> typeMap = vdat.returnDataTypeAt();
             int indexIndex = ((Integer)typeMap.get("Index")).intValue();
             int mendHetRecIndex = ((Integer)typeMap.get("MendHetRec")).intValue();
             
@@ -420,14 +407,13 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
                     return;
                 }
             }
-            BitSet tempBS = new BitSet();
-            tempBS.set(MENDHETREC);
+            BitSet[] tempBS = { new BitSet(), new BitSet() };
+            tempBS[1].set(MENDHETREC);
             vdat.filterData(new DataFilter(tempBS, null, null, spinnerData, geneRegex, minMPG, minMPGCovRatio, genScoreThresh));
             int temp[][] = vdat.returnData();
 
             //Must return the filtered state to what it was, to avoid data mapping errors!
             vdat.filterData(df);
-            //vdat.filterData(mask, geneFile, bedFile, spinnerData, getRegex());
 
             if (temp.length > 0) {
                 String[] index = new String[temp.length];
@@ -444,7 +430,6 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
 
         else if (es == compHetPairViewButton) {
             if (isShowVar) {
-                //HashMap<String, Integer> typeMap = vdat.returnDataTypeAt();
                 int dataRowIndex = sorter.modelIndex(outTable.getSelectedRow());
                 String mhrString = vdat.returnDataValueAt(dataRowIndex, "MendHetRec");
                 if (mhrString.equals("0,")) {
@@ -463,18 +448,16 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         }
 
         else if (es == compHetAllButton) {
-            HashMap<String, Integer> typeMap = vdat.returnDataTypeAt();
             int indexIndex = ((Integer)typeMap.get("Index")).intValue();
             int mendHetRecIndex = ((Integer)typeMap.get("MendHetRec")).intValue();
             String geneRegex = ".";
-            BitSet tempBS = new BitSet();
-            tempBS.set(MENDHETREC);
+            BitSet[] tempBS = { new BitSet(), new BitSet()};
+            tempBS[1].set(MENDHETREC);
             vdat.filterData(new DataFilter(tempBS, null, null, spinnerData, geneRegex, minMPG, minMPGCovRatio, genScoreThresh));
             int temp[][] = vdat.returnData();
 
             //Must return the filtered state to what it was, to avoid data mapping errors!
             vdat.filterData(df);
-            //vdat.filterData(mask, geneFile, bedFile, spinnerData, getRegex());
 
             String[] index = new String[temp.length];
             for (int i=0; i<temp.length; i++) {
@@ -536,7 +519,6 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             }
             
             outTable.setRowSelectionInterval(rowIndex,rowIndex);
-            //lastRow = rowIndex;
             initColSizes(sampleTable, (SampleTableModel)((TableSorter)sampleTable.getModel()).getTableModel() );
             
             //System.out.println(outTable.getSelectedRow() + "\t" + rowIndex + "\t" + dataIndex);
@@ -570,14 +552,21 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     /** 
     *   Determine which boxes are checked
     *  
-    *   @return BitSet describing which boxes are checked
+    *   @return Array of BitSets describing which boxes are checked
     */
-    private BitSet getFilterMask() {
-        BitSet m = new BitSet(cBox.length);
+    private BitSet[] getFilterMask() {
+        BitSet[] m = new BitSet[2];
+        m[0] = new BitSet(typeCBox.length); 
+        for (int i=0; i < typeCBox.length; i++) {
+            if (typeCBox[i].isSelected()) {
+                m[0].set(i);
+            }
+        }
+        
+        m[1] = new BitSet(cBox.length);
         for (int i=0; i < cBox.length; i++) {
             if (cBox[i].isSelected()) {
-                //System.out.println(cBox[i].getText());
-                m.set(i);
+                m[1].set(i);
             }
         }
         return m;
@@ -662,7 +651,6 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         drawMinMPGSampleSpinner();
         drawMinMPGCovRatioSampleSpinner();
         
-        //outTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         outTable.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
         outTable.setRowSelectionInterval(0,0);
         outTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
@@ -696,11 +684,6 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         //Sample display
         JPanel samplePane = new JPanel();
         samplePane.setLayout(new BoxLayout(samplePane, BoxLayout.X_AXIS));
-        //JLabel sL = new JLabel("<html>Genotype<p>MPG Score<p>Coverage</html>");
-        //sL.setAlignmentY(Component.TOP_ALIGNMENT);
-        //sL.setPreferredSize(new Dimension(80,80));
-        //sL.setMaximumSize(new Dimension(80,80));
-        //samplePane.add(sL);
         samplePane.add(sampleScroller);
         
         //Filters
@@ -709,14 +692,10 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         JPanel includePane = new JPanel();
         includePane.setLayout(new BoxLayout(includePane, BoxLayout.Y_AXIS));
         includePane.setBorder(BorderFactory.createLineBorder(Color.black));
-        includePane.add(stop);
-        includePane.add(divFS);
-        includePane.add(divC);
-        includePane.add(splice);
-        includePane.add(utr);
-        includePane.add(nonsyn);
-        includePane.add(syn);
-        includePane.add(noncod);
+
+        for (JCheckBox cb : typeCBox) {
+            includePane.add(cb);
+        }
         JPanel excludePane = new JPanel();
         excludePane.setLayout(new BoxLayout(excludePane, BoxLayout.Y_AXIS));
         excludePane.setBorder(BorderFactory.createLineBorder(Color.black));
@@ -735,9 +714,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         JPanel affSpinnerPane = new JPanel();
         affSpinnerPane.setLayout(new BoxLayout(affSpinnerPane, BoxLayout.X_AXIS));
         affSpinnerPane.setAlignmentX(Component.LEFT_ALIGNMENT);
-        //affSpinnerPane.add(Box.createHorizontalGlue());
         affSpinnerPane.add(Box.createRigidArea(new Dimension(15,0)));
-        //affSpinnerPane.add(new JLabel("Diff. in at least:"));
         affSpinnerPane.add(affSpinnerLabel);
         affSpinnerPane.add(minAffSpinner);
         sampleFiltPane.add(affSpinnerPane);
@@ -773,7 +750,6 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         selClearPane.add(clear);
         JPanel fFiltPane = new JPanel();
         fFiltPane.setLayout(new BoxLayout(fFiltPane, BoxLayout.Y_AXIS));
-        //fFiltPane.setAlignmentX(Component.LEFT_ALIGNMENT);
         fFiltPane.add(filterFileLabel);
         fFiltPane.add(filterFileButton);
 
@@ -818,7 +794,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         filtPane.add(Box.createRigidArea(new Dimension(0,10)));
         filtPane.add(geneViewButton);
         //filtPane.add(Box.createRigidArea(new Dimension(0,10)));
-        filtPane.add(check);
+        //filtPane.add(check);
         JScrollPane filtScroll = new JScrollPane(filtPane, 
             ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
             ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
@@ -833,7 +809,6 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         JPanel tablePanel = new JPanel();
         tablePanel.setLayout(new BoxLayout(tablePanel, BoxLayout.Y_AXIS));
         tablePanel.setPreferredSize(new Dimension((w/2), (h/3)));
-        //tablePanel.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
         tablePanel.setBorder(BorderFactory.createEmptyBorder(0,0,0,10));
         tablePanel.add(dataScroller);
         tablePanel.add(Box.createRigidArea(new Dimension(0,15)));
@@ -863,17 +838,14 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         filterFile.setEnabled(false);
         notFilterFile.setEnabled(false);
         bedFilterFile.setEnabled(false);
-        //geneViewButton.setEnabled(false);
         if (vdat.returnParent() != null) {
             geneViewButton.setVisible(false);
         }
         compHetGeneViewButton.setEnabled(false);
         maskCBox();
-        mask = getFilterMask();
                 
         pane.add(tablePanel, BorderLayout.CENTER);
         pane.add(filtScroll, BorderLayout.LINE_END);
-        //pane.add(filtPane, BorderLayout.LINE_END);
         add(pane);
         pack();
         setVisible(true);
@@ -901,12 +873,14 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         compHetAllButton.addActionListener(this);
 
         compHetPane.add(buttonPane);
+        compHetParent = new JFrame("Compound Het View");
         compHetParent.add(compHetPane);
         compHetParent.pack();
         //compHetParent.setVisible(true);
 
         //Initialize (but don't display) preferViewPane
         JPanel preferViewPane = new JPanel();
+        preferViewParent = new JFrame("Preferences");
         preferViewPane.setLayout(new BoxLayout(preferViewPane, BoxLayout.Y_AXIS));
         preferViewPane.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
         setJComponentSize(minMPGField);
@@ -947,7 +921,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         preferSettingsPane.setBorder(BorderFactory.createLineBorder(Color.black));
         preferSettingsPane.setAlignmentX(Component.LEFT_ALIGNMENT);
         preferSettingsPane.add(Box.createRigidArea(new Dimension(0,15)));
-        preferSettingsPane.add(new JLabel("Genotype Score Threshold for certain filters:"));
+        preferSettingsPane.add(new JLabel("Genotype Score Threshold for Aff/Norm, Case/Control filters:"));
         preferSettingsPane.add(genScoreThreshField);
         preferSettingsPane.add(Box.createRigidArea(new Dimension(0,10)));
         preferSettingsPane.add(new JLabel("Genotype Score / Coverage Ratio Threshold for low-lighting:"));
@@ -978,21 +952,37 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     *   @param newData VS file
     */
     private void redrawOutTable(String newData) {
+        
         if (newData != null) {
             vdat = new VarData(newData);
-            df = new DataFilter(mask, geneFile, bedFile, spinnerData, getRegex(), minMPG, minMPGCovRatio, genScoreThresh);
+            typeMap = null;
+        }
+
+        if (typeMap == null) {
+            typeMap = vdat.returnDataTypeAt();
+            annotMapper = vdat.returnAnnotMap();
+            sampleMapper = vdat.returnSampleMap();
+
+            String[] types = annotMapper[typeMap.get("type")].getSortedEntries();
+            typeCBox = new JCheckBox[types.length];
+            for (int i=0; i<types.length; i++) {
+                typeCBox[i] = new JCheckBox(types[i]);
+            }
+
             maskCBox();
+            mask = getFilterMask();
             clear.doClick();
             drawMinAffSpinner();
             drawCaseControlSpinner();
             drawMinMPGSampleSpinner();
             drawMinMPGCovRatioSampleSpinner();
-
+            df = new DataFilter(mask, geneFile, bedFile, spinnerData, getRegex(), minMPG, minMPGCovRatio, genScoreThresh);
         }
-        HashMap<String, Integer> typeMap = vdat.returnDataTypeAt();
+
+        if (sorter != null) {
+            sorter.setTableHeader(null);  //Must do this to avoid memory leak
+        }
         int refseqIndex = ((Integer)typeMap.get("refseq")).intValue();
-        annotMapper = vdat.returnAnnotMap();
-        sampleMapper = vdat.returnSampleMap();
         if (isShowVar) {
             sorter = new TableSorter( new VarTableModel(vdat.returnData(),
                                           vdat.returnDataNames(), 
@@ -1006,7 +996,6 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
                                           geneMap,
                                           vdat ));
         }
-        //sorter.addTableModelListener(this); //Probably wrong...
         ((VarTableModel)sorter.getTableModel()).addTableModelListener(this);
         outTable.setModel(sorter);
         sorter.setTableHeader(outTable.getTableHeader());
@@ -1055,7 +1044,6 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     *  
     */
     private void maskCBox() {
-        HashMap<String, Integer> typeMap = vdat.returnDataTypeAt();
         if (typeMap.containsKey("MendHomRec")) {
             mendRec.setEnabled(true);
         }
@@ -1143,10 +1131,6 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         if (vdat.countSampleType(vdat.AFF_NORM_PAIR) > 0) {
             minAffSpinner.setModel(new SpinnerNumberModel(1, 1, vdat.countSampleType(vdat.AFF_NORM_PAIR), 1));
         }
-        //Dimension d = minAffSpinner.getPreferredSize();
-        //d.width = 60;
-        //minAffSpinner.setPreferredSize(d);
-        //minAffSpinner.setMaximumSize(minAffSpinner.getPreferredSize());
         setJComponentSize(minAffSpinner);
         spinnerData[vdat.AFF_NORM_PAIR] = ((Integer)minAffSpinner.getValue()).intValue();
     }
@@ -1165,12 +1149,6 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         if (controlCount > 0) {
             controlSpinner.setModel(new SpinnerNumberModel(0, 0, controlCount, 1));
         }
-        //Dimension d = caseSpinner.getPreferredSize();
-        //d.width = 60;
-        //caseSpinner.setPreferredSize(d);
-        //caseSpinner.setMaximumSize(caseSpinner.getPreferredSize());
-        //controlSpinner.setPreferredSize(d);
-        //controlSpinner.setMaximumSize(controlSpinner.getPreferredSize());
         setJComponentSize(caseSpinner);
         setJComponentSize(controlSpinner);
         spinnerData[vdat.CASE] = ((Integer)caseSpinner.getValue()).intValue();
@@ -1357,7 +1335,6 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
                         }
                     }
                     outString.deleteCharAt(outString.length() - 1);
-                    //outString.append(newLine);
 
                     pw.println(outString.toString());
                 }
@@ -1389,8 +1366,6 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
                 VarSifter v;
                 if (args.length > 0) {
                     v = new VarSifter(args[0]);
-                    //VarData vd = new VarData(args[0]);
-                    //v = new VarSifter(vd);
                 }
                 else {
                     v = new VarSifter((String)null);

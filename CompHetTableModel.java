@@ -51,6 +51,11 @@ public class CompHetTableModel extends AbstractTableModel {
                     }
                     */
 
+                    if (compHetFields[j] == -1) {
+                        data[i][j] = new String("-");
+                        continue;
+                    }
+
                     AbstractMapper aM = annotMapper[compHetFields[j]];
                     switch (aM.getDataType()) {
                         case VarData.INTEGER:
@@ -85,7 +90,13 @@ public class CompHetTableModel extends AbstractTableModel {
 
                 //Annotations, 2nd member of pair - fields 0,1 omitted
                 for (int j = 2; j < chl; j++) {
+
                     int correctedIndex = j + chl + sampleFieldsLength - 2; //Subtract 2 for the fields we omit
+                    if (compHetFields[j] == -1) {
+                        data[i][correctedIndex] = new String("-");
+                        continue;
+                    }
+
                     AbstractMapper aM = annotMapper[compHetFields[j]];
                     switch (aM.getDataType()) {
                         case VarData.INTEGER:

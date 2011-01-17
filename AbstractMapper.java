@@ -1,4 +1,6 @@
 import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.Collections;
 
 /**
 *   Interface defining the common methods for different Mapper objects
@@ -56,5 +58,12 @@ public interface AbstractMapper {
     *   @return Length of data
     */
     public int getLength();
+
+    /**
+    *   Return a sorted array of entries in this Object
+    *
+    *   @return An array of type String with the elements stored in this object
+    */
+    public String[] getSortedEntries();
 
 }

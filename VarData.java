@@ -32,16 +32,12 @@ public class VarData {
     final static int STRING = 2;
     final static int MULTISTRING = 3;
 
-    //private String[][] data;            // Fields: [line][var_annotations]
-    //private String[][] outData;         // Gets returned (can be filtered)
     private String[] dataNamesOrig;     // All data names, for writing purposes
     private String[] dataNames;
-    //private String[][][] samples;       // Fields: [line][sampleName][genotype:MPGscore:coverage]
-    //private String[][][] outSamples;    // Gets returned (can be filtered)
     private String[] sampleNamesOrig;   // All sample names, for writing purposes
     private String[] sampleNames;
 
-    //New fields
+    //data fields
     private int[][] data;           // Fields: [line][var_annotation col]
     private int[][] outData;        // Gets returned (can be filtered)
     private int[][][] samples;      // Fields: [line][sampleName][genotype:MPGscore:coverage]
@@ -275,7 +271,6 @@ public class VarData {
                         // Is column a sample?
                         if ((samPat.matcher(temp[i])).find()) {
 
-                            //System.out.println(title + "\t");
                             if (sampleCount % S_FIELDS == 0) {  //Sample name, not score, cov, etc
                                 sampleTemp += (temp[i] + "\t");
                                 int samPos = (i - dataCount)/S_FIELDS;
@@ -423,7 +418,6 @@ public class VarData {
                 
                 //Fill data array (annotations)
                 data[lineCount] = new int[dataNames.length];
-                //System.arraycopy(temp, 0, data[lineCount], 0, dataNames.length);
                 for (int i=0; i < dataNames.length; i++) {
                     switch (classList[i]) {
                         case INTEGER:
@@ -455,7 +449,6 @@ public class VarData {
                 }
                 else {
                     for (int i = 0; i < sampleNames.length; i++) {
-                        //System.arraycopy(temp, (dataNames.length + (i * S_FIELDS)), samples[lineCount][i], 0, S_FIELDS);
                         for (int j=0; j<S_FIELDS; j++) {
                             int dataIndex = dataNames.length + (i * S_FIELDS) + j;
                             switch(classList[dataIndex]) {
@@ -467,7 +460,6 @@ public class VarData {
                                     samples[lineCount][i][j] = sampleMapper[j].addData(f);
                                     break;
                                 case STRING:
-                                    //System.out.println("sampleMappers: " + sampleMapper.length + "   " +temp[dataIndex]);
                                     samples[lineCount][i][j] = sampleMapper[j].addData(temp[dataIndex]);
                                     break;
                             }
@@ -507,7 +499,6 @@ public class VarData {
         final Pattern format_pat = Pattern.compile("^##FORMAT");
         final Pattern head_pat = Pattern.compile("^#CHROM");
         final Pattern comment = Pattern.compile("^#");
-        //final Pattern genoSep_pat = Pattern.compile("(\\d)[/\\|](\\d)");
         final Pattern genoSep_pat = Pattern.compile("([0-9])[/\\|]([0-9])");
 
         final String[] fixedNames = { "Chr",
@@ -925,13 +916,6 @@ public class VarData {
     *
     *   @param df DataFilter object with the filtering options
     */
-    /*
-    *   @param mask A BitSet describing which filters should be applied.  The filter number should be synchronized with the JCheckBox number in VarSifter.class!
-    *   @param geneFile Absolute path to a file containing a list of genes to filter on.
-    *   @param bedFile Absolute path to a file containing regions with which to filter in BED format.
-    *   @param spinnerData An array of ints representing the values in the VarSifter spinners: Indices defined by AFF_NORM_PAIR, CASE, CONTROL. 
-    *   @param geneQuery A regular expression used to filter on geneName
-    */
     /* 
     *   Filter mutation type
     *
@@ -941,13 +925,12 @@ public class VarData {
     *   -Display new JCheckBox
     *   -change this.mask indices (so that correct bit is being read - same order as cbox)
     *   -change this.filterSet indices (so that correct bitset is being used)
-    *   -increment TOTAL_FILTERS (or TOTAL_TYPE_FILTERS)
+    *   -increment TOTAL_FILTERS
     *   -add a test block with correct this.mask index
     *  
     */
-    //public void filterData(BitSet mask, String geneFile, String bedFile, int[] spinnerData, String geneQuery) {
     public void filterData(DataFilter df) {
-        BitSet mask = df.getMask();
+        BitSet[] mask = df.getMask();
         String geneFile = df.getGeneFile();
         String bedFile = df.getBedFile();
         int[] spinnerData = df.getSpinnerData();
@@ -960,9 +943,7 @@ public class VarData {
 
 
         dataIsIncluded.set(0,data.length);
-        //dataIsIncluded.clear();
         final int TOTAL_FILTERS = 11 + 1; //Number of non-type filters plus 1 (all type filters)
-        final int TOTAL_TYPE_FILTERS = 8;
         BitSet[] filterSet = new BitSet[TOTAL_FILTERS];
         BitSet geneFilter = new BitSet(data.length);
         geneFilter.set(0, data.length);
@@ -987,8 +968,8 @@ public class VarData {
 
         //Set up type filters (filterSet[0], as all types are folded into one filter)
         filterSet[0] = new BitSet(data.length + 1);
-        for (int i=0; i < TOTAL_TYPE_FILTERS; i++) {
-            if (mask.get(i)) {
+        for (int i=0; i < mask[0].size(); i++) {
+            if (mask[0].get(i)) {
                 filterSet[0].set(data.length + 1);
                 break;
             }
@@ -997,7 +978,7 @@ public class VarData {
         //Set up remaining filters (filterSet[x>0])
         for (int i=1; i < TOTAL_FILTERS; i++) {
             filterSet[i] = new BitSet(data.length + 1);
-            if (mask.get(i + TOTAL_TYPE_FILTERS - 1)) {  //must have -1 since mask is 0-based
+            if (mask[1].get(i - 1)) {  //must have -1 since mask is 0-based
                 filterSet[i].set(data.length + 1);
             }
         }
@@ -1005,22 +986,17 @@ public class VarData {
         //Prepare certain tests
 
         // Type filters
-        int[] types = new int[TOTAL_TYPE_FILTERS+1];
-        types[0] = annotMapper[typeIndex].getIndexOf("Stop");
-        types[1] = annotMapper[typeIndex].getIndexOf("DIV-fs");
-        types[2] = annotMapper[typeIndex].getIndexOf("DIV-c");
-        types[3] = annotMapper[typeIndex].getIndexOf("Splice-site");
-        types[4] = annotMapper[typeIndex].getIndexOf("Non-synonymous");
-        types[5] = annotMapper[typeIndex].getIndexOf("Synonymous");
-        types[6] = annotMapper[typeIndex].getIndexOf("NC");
-        types[7] = annotMapper[typeIndex].getIndexOf("3'UTR");
-        types[8] = annotMapper[typeIndex].getIndexOf("5'UTR");
+        String[] typeNames = annotMapper[typeIndex].getSortedEntries();
+        int[] types = new int[typeNames.length];
+        for (int i=0; i < typeNames.length; i++) {
+            types[i] = annotMapper[typeIndex].getIndexOf(typeNames[i]);
+        }
 
         //dbSNP
         int nodbSNP = annotMapper[dbSNPIndex].getIndexOf("-");
 
         //menHetRec
-        if (mask.get(12)) {
+        if (mask[1].get(VarSifter.MENDHETREC)) {
             notMendHetRec = annotMapper[mendHetRecIndex].getIndexOf("0,");
         }
 
@@ -1029,7 +1005,7 @@ public class VarData {
 
 
         //filterFile
-        if (mask.get(15) || mask.get(16)) {
+        if (mask[1].get(7) || mask[1].get(8)) {
             if (geneFile != null) {
                 geneSet = returnGeneSet(geneFile);
             }
@@ -1040,7 +1016,7 @@ public class VarData {
         }
 
         //bedFilterFile
-        if (mask.get(17)) {
+        if (mask[1].get(9)) {
             if (bedFile != null) {
                 bedHash = returnBedHash(bedFile);
             }
@@ -1059,7 +1035,6 @@ public class VarData {
 
         //Start filtering!
         
-        // variant type
         for (int i = 0; i < data.length; i++) {
             String[] tempGeno = { annotMapper[refAlleleIndex].getString(data[i][refAlleleIndex]), 
                                   annotMapper[varAlleleIndex].getString(data[i][varAlleleIndex]) 
@@ -1070,50 +1045,45 @@ public class VarData {
             for (String s : tempGeno) {
                 hetNonRefGen += s;
             }
-            //System.out.println(hetNonRefGen);
            
-            if ( (mask.get(0) && (data[i][typeIndex] & (int)Math.pow(2,types[0])) > 0 ) ||
-                 (mask.get(1) && (data[i][typeIndex] & (int)Math.pow(2,types[1])) > 0 ) ||
-                 (mask.get(2) && (data[i][typeIndex] & (int)Math.pow(2,types[2])) > 0 ) ||
-                 (mask.get(3) && (data[i][typeIndex] & (int)Math.pow(2,types[3])) > 0 ) ||
-                 (mask.get(4) && (data[i][typeIndex] & (int)Math.pow(2,types[4])) > 0 ) ||
-                 (mask.get(5) && (data[i][typeIndex] & (int)Math.pow(2,types[5])) > 0 ) ||
-                 (mask.get(6) && (data[i][typeIndex] & (int)Math.pow(2,types[6])) > 0 ) ||
-                 (mask.get(7) && (data[i][typeIndex] & (int)Math.pow(2,types[7])) > 0 ) ||
-                 (mask.get(7) && (data[i][typeIndex] & (int)Math.pow(2,types[8])) > 0 )       
-                ) {
+           
+            // variant type
+            for (int j=0; j < types.length; j++) {
+                if (mask[0].get(j) && (data[i][typeIndex] & (int)Math.pow(2, types[j])) > 0 ) {
 
-                filterSet[0].set(i);
+                    filterSet[0].set(i);
+                    break;
+                }
             }
 
             //dbSNP
-            if ( mask.get(8) && ( annotMapper[dbSNPIndex].getString(data[i][dbSNPIndex]).matches("^0|-$") )
+            if ( mask[1].get(0) && ( annotMapper[dbSNPIndex].getString(data[i][dbSNPIndex]).matches("^0|-$") )
                 ) {
                 filterSet[1].set(i);
             }
             
             //Mendelian recessive (Hom recessive)
-            if (mask.get(9) && data[i][mendRecIndex] == 1) {
+            if (mask[1].get(1) && data[i][mendRecIndex] == 1) {
                 filterSet[2].set(i);
             }
             
             //Mendelian Dominant
-            if (mask.get(10) && data[i][mendDomIndex] == 1) {
+            if (mask[1].get(2) && data[i][mendDomIndex] == 1) {
                 filterSet[3].set(i);
             }
 
             //Mendelian Inconsistant
-            if (mask.get(11) && data[i][mendBadIndex] == 1) {
+            if (mask[1].get(3) && data[i][mendBadIndex] == 1) {
                 filterSet[4].set(i);
             }
                 
             //Mendelian Compound Het (Het Recessive)
-            if (mask.get(12) && data[i][mendHetRecIndex] != notMendHetRec) {
+            if (mask[1].get(VarSifter.MENDHETREC) && data[i][mendHetRecIndex] != notMendHetRec) {
                 filterSet[5].set(i);
             }
 
             //Affected different from Normal
-            if (mask.get(13)) {
+            if (mask[1].get(5)) {
                 int count = 0;
                 for (int j=0; j < affAt.length; j++) {
                     int affTemp = samples[i][affAt[j]][0];
@@ -1127,14 +1097,13 @@ public class VarData {
                         count++;
                     }
                 }
-                //if (count == affAt.length) {
                 if (count >= spinnerData[AFF_NORM_PAIR]) {
                     filterSet[6].set(i);
                 }
             }
 
             // Variant allele in >=x cases, <=y controls
-            if (mask.get(14)) {
+            if (mask[1].get(6)) {
                 int caseCount = 0;
                 int controlCount = 0;
                 for (int j=0; j < caseAt.length; j++) {
@@ -1157,17 +1126,17 @@ public class VarData {
             }
 
             //Gene Filter File (include)                        
-            if (mask.get(15) && geneSet.contains(annotMapper[geneIndex].getString(data[i][geneIndex]).toLowerCase())) {
+            if (mask[1].get(7) && geneSet.contains(annotMapper[geneIndex].getString(data[i][geneIndex]).toLowerCase())) {
                 filterSet[8].set(i);
             }
             
             //Gene Filter File (exclude)
-            if (mask.get(16) && !geneSet.contains(annotMapper[geneIndex].getString(data[i][geneIndex]).toLowerCase())) {
+            if (mask[1].get(8) && !geneSet.contains(annotMapper[geneIndex].getString(data[i][geneIndex]).toLowerCase())) {
                 filterSet[9].set(i);
             }
             
             //Bed Filter File (include)
-            if (mask.get(17)) {
+            if (mask[1].get(9)) {
                 String chrString = annotMapper[chrIndex].getString(data[i][chrIndex]);
                 if (bedHash[0].get(chrString) != null) {
 
@@ -1191,7 +1160,6 @@ public class VarData {
             // Gene name Filter (TextArea)
             if (geneQuery != null) {
                 if ((geneQueryPat.matcher(annotMapper[geneIndex].getString(data[i][geneIndex]))).find()) {
-                    //System.out.println(i + "\t" + data[i][geneIndex]);
                     geneFilter.set(i);
                 }
             }
@@ -1219,7 +1187,7 @@ public class VarData {
 
         //Custom Query - outside data loop (it will loop by itself
 
-        if (mask.get(18)) {
+        if (mask[1].get(10)) {
             try {
                 CompileCustomQuery c = new CompileCustomQuery();
                 if ( c.compileCustom(customQuery) ) {
@@ -1287,24 +1255,6 @@ public class VarData {
 
 
     /** 
-    *   Returns number of normal affected pairs or null
-    *  
-    *   @deprecated Deprecated in favor of {@link #countSampleType(int)}
-    *   @return The number of affected/normal pairs
-    *   
-    */
-    public int countAffNorm() {
-        //return (affAt != null && normAt != null);
-        if (affAt != null && normAt != null) {
-            return affAt.length;
-        }
-        else {
-            return 0;
-        }
-    }
-
-
-    /** 
     *   Returns number of requested sample type
     *  
     *   @param sType AFF_NORM_PAIR, CASE, or CONTROL
@@ -1312,28 +1262,18 @@ public class VarData {
     */
     public int countSampleType(int sType) {
         switch (sType) {
-            case 0: // Aff/normal pairs
+            case AFF_NORM_PAIR: 
                 return (affAt != null && normAt != null) ? affAt.length : 0;
-            case 1: // Case
+            case CASE: 
                 return (caseAt != null) ? caseAt.length : 0;
-            case 2: // Control
+            case CONTROL: 
                 return (controlAt != null) ? controlAt.length : 0;
-            case 3: // minMPG
-            case 4: // minMPGCovRatio
+            case MIN_MPG:
+            case MIN_MPG_COV:
                 return (sampleNames != null) ? sampleNames.length : 0;
             default:
                 return 0;
         }
-    }
-
-
-    /** 
-    *   Returns true if we have mendelian filter columns
-    *   @deprecated Deprecated Really only checks for "MendHomRec", which isn't right. Use {@link #returnDataTypeAt()} instead, and interrogate the hash for the desired filters.
-    *  
-    */
-    public boolean isMendFilt() {
-        return (dataTypeAt.containsKey("MendHomRec"));
     }
 
 
@@ -1546,45 +1486,19 @@ public class VarData {
     */
     public int[][] returnIndexPairs(String[] inPair, boolean isSamples) {
         
-        //HashMap<String, String> inSet = new HashMap<String, String>();
         ArrayList<Integer> inSet = new ArrayList<Integer>();
         int[][] out = new int[inPair.length-1][];
         int[][] eachPair = new int[inPair.length][];
         int indexIndex = (dataTypeAt.containsKey("Index")) ? dataTypeAt.get("Index") : -1;
-        //int cdPredIndex = (dataTypeAt.containsKey("CDPred_score")) ? dataTypeAt.get("CDPred_score") : -1;
-        //int lfIndex = (dataTypeAt.containsKey("LeftFlank")) ? dataTypeAt.get("LeftFlank") : -1;
-        //int geneIndex = (dataTypeAt.containsKey("refseq")) ? dataTypeAt.get("refseq") : -1;
-        //int chromIndex = dataTypeAt.get("Chr");
-        //int typeIndex = dataTypeAt.get("type");
 
         for (int i=0; i<inPair.length; i++) {
             inSet.add(new Integer(inPair[i]));
         }
 
         for (int i=0; i<data.length; i++) {
-            //StringBuilder sb = new StringBuilder(64);
            
             if (inSet.contains(data[i][indexIndex])) {
                 int p = inSet.indexOf(data[i][indexIndex]);
-
-                /*
-                sb.append ((data[i][geneIndex] + ";" +
-                           data[i][chromIndex] + ";" + 
-                           data[i][lfIndex] + ";" +
-                           data[i][cdPredIndex] + ";" + 
-                           data[i][typeIndex]) );
-                
-                if (isSamples) {
-                    sb.append(";");
-                    for (int j=0; j<sampleNames.length; j++) {
-                        for (int k=0; k<S_FIELDS; k++) {
-                            sb.append(samples[i][j][k] + ";");
-                        }
-                    }
-                    sb.deleteCharAt(sb.length() - 1);
-                }
-                inSet.put(data[i][indexIndex], sb.toString());
-                */
                 
                 if (isSamples) {
                     eachPair[p] = new int[compHetFields.length + (sampleNames.length * S_FIELDS)];
@@ -1599,24 +1513,19 @@ public class VarData {
                     eachPair[p] = new int[5];
                 }
                 for (int j=0; j<compHetFields.length; j++) {
-                    eachPair[p][j] = data[i][compHetFields[j]];
+                    if (compHetFields[j] == -1) { //Field isn't in file
+                        eachPair[p][j] = -1; //Hold place, show "-" in CompHetTableModel
+                    }
+                    else {
+                        eachPair[p][j] = data[i][compHetFields[j]];
+                    }
                 }
-                //eachPair[p][0] = data[i][geneIndex];
-                //eachPair[p][1] = data[i][chromIndex];
-                //eachPair[p][2] = data[i][lfIndex];
-                //eachPair[p][3] = data[i][cdPredIndex];
-                //eachPair[p][4] = data[i][typeIndex];
 
             }
         }
 
-        //String[] firstTemp = inSet.get(inPair[0]).split(";", 0);
         for (int i=0; i<out.length; i++) {
-            //System.arraycopy( inSet.get(inPair[0]).split(";", 0), 0, out[i], 0, 5);
-            //System.arraycopy( inSet.get(inPair[i+1]).split(";", 0), 2, out[i], 5, 3);
             out[i] = new int[ ((eachPair[0].length * 2) - 2) ];
-            //String[] nextTemp = inSet.get(inPair[i+1]).split(";",0);
-
             System.arraycopy( eachPair[0], 0, out[i], 0, eachPair[0].length );
             System.arraycopy( eachPair[i+1], 2, out[i], eachPair[0].length, (eachPair[i+1].length - 2) );
         }

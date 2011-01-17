@@ -6,7 +6,7 @@ import java.util.BitSet;
 */
 public class DataFilter {
 
-    private BitSet mask;
+    private BitSet[] mask;
     
     private String geneFile;
     private String bedFile;
@@ -21,7 +21,7 @@ public class DataFilter {
     /**
     *   Constructor to create object
     *
-    *   @param inMask Represents the filters to apply
+    *   @param inMask Represents the filters to apply { mutation type, fixed }
     *   @param inGeneFile The name of a file of genes, one per line
     *   @param inBedFile The name of a bedfile
     *   @param inSpinnerData An array of values from the spinners.  Indicies defined by constants in VarData.
@@ -30,7 +30,7 @@ public class DataFilter {
     *   @param inMinMPGCovRatio Defined minimum (MPG score / coverage)
     *   @param inGenScoreThresh Genotype Score threshold used for certain tests
     */
-    public DataFilter(BitSet inMask,
+    public DataFilter(BitSet[] inMask,
                       String inGeneFile,
                       String inBedFile,
                       int[] inSpinnerData,
@@ -56,8 +56,12 @@ public class DataFilter {
     *
     *   @return The filter mask BitSet
     */
-    public BitSet getMask() {
-        return (BitSet)mask.clone();
+    public BitSet[] getMask() {
+        BitSet[] m = new BitSet[mask.length];
+        for (int i=0; i < mask.length; i++) {
+            m[i] = (BitSet)mask[i].clone();
+        }
+        return m;
     }
 
 

@@ -51,4 +51,11 @@ public class IntMapper implements AbstractMapper {
     public int getLength() {
         return 0;
     }
+
+    /**
+    *   Not used (no data stored in IntMapper), returns null
+    */
+    public String[] getSortedEntries() {
+        return null;
+    }
 }

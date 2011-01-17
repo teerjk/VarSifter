@@ -81,4 +81,11 @@ public class FloatMapper implements AbstractMapper {
         return lastIndex;
     }
 
+    /**
+    *   Not currently used
+    */
+    public String[] getSortedEntries() {
+        return null;
+    }
+
 }
