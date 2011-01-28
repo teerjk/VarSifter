@@ -14,7 +14,7 @@ public class CompHetView extends JFrame {
 
     private JTable outTable;
     private TableSorter sorter;
-    private final String[] columnDefaultName = new String[]{"refseq", "Chr", 
+    private final String[] columnDefaultName = new String[]{"Gene_name", "Chr", 
                                                             "A_left flank", "A_score", "A_type",  
                                                             "B_left flank", "B_score", "B_type"};
     private final int COLUMN_NUMBER = 3;

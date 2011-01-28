@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1995 - 2008 Sun Microsystems, Inc.  All rights reserved.
+ * Copyright (c) 1995, 2008, Oracle and/or its affiliates. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -12,7 +12,7 @@
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
  *
- *   - Neither the name of Sun Microsystems nor the names of its
+ *   - Neither the name of Oracle or the names of its
  *     contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -29,7 +29,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */ 
 
-package components;		
+package components;
 
 import java.awt.*;
 import java.awt.event.*;
@@ -408,7 +408,7 @@ public class TableSorter extends AbstractTableModel {
         public void mouseClicked(MouseEvent e) {
             JTableHeader h = (JTableHeader) e.getSource();
             TableColumnModel columnModel = h.getColumnModel();
-            int viewColumn = columnModel.getColumnIndexAtX(e.getX());
+            int viewColumn = h.columnAtPoint(e.getPoint());
             int column = columnModel.getColumn(viewColumn).getModelIndex();
             if (column != -1) {
                 int status = getSortingStatus(column);

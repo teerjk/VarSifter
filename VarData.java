@@ -24,7 +24,7 @@ public class VarData {
 
     private int genScoreThresh;
     
-    final String[] geneDataHeaders = {"refseq", "Var Count"};
+    final String[] geneDataHeaders = {"Gene_name", "Var Count"};
     final String[] ALLELES = {"A", "C", "G", "T"};
 
     final static int INTEGER = 0;
@@ -98,7 +98,7 @@ public class VarData {
 
         //indices for CompHet view
         compHetFields = new int[5];
-        compHetFields[0] = (dataTypeAt.containsKey("refseq")) ? dataTypeAt.get("refseq") : -1;  //Gene name
+        compHetFields[0] = (dataTypeAt.containsKey("Gene_name")) ? dataTypeAt.get("Gene_name") : -1;  //Gene name
         compHetFields[1] = dataTypeAt.get("Chr");    //chrom
         compHetFields[2] = dataTypeAt.get("LeftFlank"); //left flank
         compHetFields[3] = (dataTypeAt.containsKey("CDPred_score")) ? dataTypeAt.get("CDPred_score") : -1; //cdPred
@@ -257,7 +257,6 @@ public class VarData {
                     final Pattern edPat = Pattern.compile("Comments");
                     final Pattern samAff = Pattern.compile("aff");
                     final Pattern samNorm = Pattern.compile("norm");
-                    final Pattern genePat = Pattern.compile("refseq");
                     final Pattern casePat = Pattern.compile("case");
                     final Pattern controlPat = Pattern.compile("control");
                     String[] affPosArr;
@@ -295,6 +294,12 @@ public class VarData {
 
                         //Is column an annotation?
                         else {
+                            
+                            //Handle legacy files: refseq -> Gene_name
+                            if (temp[i].equals("refseq")) {
+                                temp[i] = "Gene_name";
+                            }
+
                             dataTemp += (temp[i] + "\t");
 
                             // May want to read a flag from header - then can make checkboxes from this.
@@ -504,7 +509,7 @@ public class VarData {
         final String[] fixedNames = { "Chr",
                                       "LeftFlank",
                                       "RightFlank",
-                                      "refseq",
+                                      "Gene_name",
                                       "type",
                                       "muttype",
                                       "RS#",
@@ -671,7 +676,7 @@ public class VarData {
                     data[lineCount][1] = Integer.parseInt(tempLine[1]) - 1;
                     data[lineCount][2] = Integer.parseInt(tempLine[1]) + tempLine[3].length();
 
-                    //refseq   !!! Dummy for now !!!
+                    //Gene_name   !!! Dummy for now !!!
                     data[lineCount][3] = annotMapper[3].addData("-");
 
                     //type    !!! Dummy for now !!!
@@ -959,7 +964,7 @@ public class VarData {
         int mendHetRecIndex = (dataTypeAt.containsKey("MendHetRec")) ? dataTypeAt.get("MendHetRec") : -1;
         int mendDomIndex = (dataTypeAt.containsKey("MendDom")) ? dataTypeAt.get("MendDom") : -1;
         int mendBadIndex = (dataTypeAt.containsKey("MendInconsis")) ? dataTypeAt.get("MendInconsis") : -1;
-        int geneIndex = dataTypeAt.get("refseq");
+        int geneIndex = dataTypeAt.get("Gene_name");
         int chrIndex = dataTypeAt.get("Chr");
         int lfIndex = dataTypeAt.get("LeftFlank");
         int notMendHetRec = -1;
@@ -1423,7 +1428,7 @@ public class VarData {
         HashMap<Integer, Integer> tempGeneHash = new HashMap<Integer, Integer>();
 
         for (int i=0; i<outData.length; i++) {
-            int geneName = outData[i][dataTypeAt.get("refseq")];
+            int geneName = outData[i][dataTypeAt.get("Gene_name")];
             if (tempGeneHash.containsKey(geneName)) {
                 tempGeneHash.put(geneName, tempGeneHash.get(geneName) + 1);
             }

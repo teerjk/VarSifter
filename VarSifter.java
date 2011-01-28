@@ -69,7 +69,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     "SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.";
 
     final String geneNotFoundError  = new String("It looks like you may have switched columns! "
-        + "Switch them so the refseq names are in the first column!");
+        + "Switch them so the gene names are in the first column!");
 
     final int VARIANT_FILE = 0;
     final int GENE_FILTER_FILE = 1;
@@ -94,7 +94,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     private ListSelectionModel lsm;
     private JLabel lines = new JLabel();
 
-    private JCheckBox dbsnp = new JCheckBox("dbSNP130");
+    private JCheckBox dbsnp = new JCheckBox("dbSNP");
     private JCheckBox mendRec = new JCheckBox("Hom. Recessive");
     private JCheckBox mendDom = new JCheckBox("Dominant");
     private JCheckBox mendBad = new JCheckBox("Inconsistent");
@@ -307,7 +307,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             String geneRegex = new String("");
             if (isShowVar) {
                 int dataRowIndex = sorter.modelIndex(outTable.getSelectedRow());
-                String geneName = vdat.returnDataValueAt(dataRowIndex, "refseq");
+                String geneName = vdat.returnDataValueAt(dataRowIndex, "Gene_name");
                 geneRegex = "^" + geneName + "$";
             }
             else {
@@ -394,7 +394,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             int mendHetRecIndex = ((Integer)typeMap.get("MendHetRec")).intValue();
             
             int dataRowIndex = sorter.modelIndex(outTable.getSelectedRow());
-            String geneName = vdat.returnDataValueAt(dataRowIndex, "refseq");
+            String geneName = vdat.returnDataValueAt(dataRowIndex, "Gene_name");
             if (isShowVar) {
                 geneRegex = "^" + geneName + "$";
             }
@@ -982,7 +982,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         if (sorter != null) {
             sorter.setTableHeader(null);  //Must do this to avoid memory leak
         }
-        int refseqIndex = ((Integer)typeMap.get("refseq")).intValue();
+        int geneNameIndex = ((Integer)typeMap.get("Gene_name")).intValue();
         if (isShowVar) {
             sorter = new TableSorter( new VarTableModel(vdat.returnData(),
                                           vdat.returnDataNames(), 
@@ -990,7 +990,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
                                           vdat ));
         }
         else {
-            AbstractMapper[] geneMap = { annotMapper[refseqIndex], new IntMapper() };
+            AbstractMapper[] geneMap = { annotMapper[geneNameIndex], new IntMapper() };
             sorter = new TableSorter( new VarTableModel(vdat.returnGeneData(),
                                           vdat.returnGeneNames(), 
                                           geneMap,
