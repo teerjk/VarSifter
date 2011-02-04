@@ -165,7 +165,7 @@ public class VarData {
     /**
     *   Load data structures by parsing a VarSifter file
     *
-    *   @param file Absolute path to VarSifter file
+    *   @param inFile Absolute path to VarSifter file
     */
     private void loadVSFile(String inFile) {
         final int header_lines = 1;

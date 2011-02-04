@@ -18,7 +18,7 @@ import components.TableSorter;
 */
 public class VarSifter extends JFrame implements ListSelectionListener, ActionListener, TableModelListener {
     
-    final String version = "0.10b";
+    final String version = "0.11";
     final String id = "$Id$";
 
     final String govWork = "PUBLIC DOMAIN NOTICE\n" +
@@ -1015,9 +1015,9 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             customQueryParent = new JFrame("Custom Query");
             cqPane = new CustomQueryView(vdat);
             JPanel customQueryPane = new JPanel();
-            customQueryPane.setPreferredSize(new Dimension(w/3 + 10, h/3+5));
+            customQueryPane.setPreferredSize(new Dimension(w/2, h/2));
             customQueryPane.setLayout(new BoxLayout(customQueryPane, BoxLayout.Y_AXIS));
-            customQueryPane.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
+            customQueryPane.setBorder(BorderFactory.createEmptyBorder(6,6,6,6));
             //JScrollPane customViewScroll = new JScrollPane(cqPane, JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,
             //                                                       JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
             //customViewScroll.setBorder(null);
