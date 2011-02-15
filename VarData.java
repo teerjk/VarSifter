@@ -1491,42 +1491,67 @@ public class VarData {
     */
     public int[][] returnIndexPairs(String[] inPair, boolean isSamples) {
         
-        ArrayList<Integer> inSet = new ArrayList<Integer>();
-        int[][] out = new int[inPair.length-1][];
-        int[][] eachPair = new int[inPair.length][];
+        //SHould make inSet HashSet
+        HashSet<Integer> inSet = new HashSet<Integer>();    //List of indices from MendHetRec columns
+        int[][] out;
+        int[][] eachPair;
         int indexIndex = (dataTypeAt.containsKey("Index")) ? dataTypeAt.get("Index") : -1;
+        int pairCount = 0;
+        int firstInPair; 
+        ArrayList<Integer> rowSet = new ArrayList<Integer>();   //List of outData row indices.
 
-        for (int i=0; i<inPair.length; i++) {
-            inSet.add(new Integer(inPair[i]));
+        try {
+            firstInPair = Integer.parseInt(inPair[0]);
+            for (int i=0; i<inPair.length; i++) {
+                inSet.add(new Integer(inPair[i]));
+            }
+        }
+        catch (NumberFormatException nfe) {
+            VarSifter.showError("MendHetRec field formatting is incorrect - must be comma-separated integers!");
+            return null;
         }
 
-        for (int i=0; i<data.length; i++) {
-           
-            if (inSet.contains(data[i][indexIndex])) {
-                int p = inSet.indexOf(data[i][indexIndex]);
-                
-                if (isSamples) {
-                    eachPair[p] = new int[compHetFields.length + (sampleNames.length * S_FIELDS)];
-                    for (int j = compHetFields.length; j < eachPair[p].length; j+=S_FIELDS) {
-                        int sampleIndex = (j - compHetFields.length) / S_FIELDS;
-                        eachPair[p][j]   = samples[i][sampleIndex][0];
-                        eachPair[p][j+1] = samples[i][sampleIndex][1];
-                        eachPair[p][j+2] = samples[i][sampleIndex][2];
-                    }
+        // store matches in outData (not necessarily inPair.length!)
+        // ensure inPair[0] is in rowSet[0]!! Later, will return 0 1, 0 2, 0 3 etc pairs
+        for (int i=0; i<outData.length; i++) {
+            if (inSet.contains(outData[i][indexIndex])) {
+                if (outData[i][indexIndex] == firstInPair) {
+                    rowSet.add(0, i);   //Add rowIndex for line with mendhetrec Index inPair[0]
                 }
                 else {
-                    eachPair[p] = new int[5];
+                    rowSet.add(i);
                 }
-                for (int j=0; j<compHetFields.length; j++) {
-                    if (compHetFields[j] == -1) { //Field isn't in file
-                        eachPair[p][j] = -1; //Hold place, show "-" in CompHetTableModel
-                    }
-                    else {
-                        eachPair[p][j] = data[i][compHetFields[j]];
-                    }
-                }
-
             }
+        }
+
+        eachPair = new int[rowSet.size()][];
+        out = new int[rowSet.size() - 1][];
+
+        for (Integer it: rowSet) {
+            int i = it.intValue();
+           
+            if (isSamples) {
+                eachPair[pairCount] = new int[compHetFields.length + (sampleNames.length * S_FIELDS)];
+                for (int j = compHetFields.length; j < eachPair[pairCount].length; j+=S_FIELDS) {
+                    int sampleIndex = (j - compHetFields.length) / S_FIELDS;
+                    eachPair[pairCount][j]   = outSamples[i][sampleIndex][0];
+                    eachPair[pairCount][j+1] = outSamples[i][sampleIndex][1];
+                    eachPair[pairCount][j+2] = outSamples[i][sampleIndex][2];
+                }
+            }
+            else {
+                eachPair[pairCount] = new int[5];
+            }
+            for (int j=0; j<compHetFields.length; j++) {
+                if (compHetFields[j] == -1) { //Field isn't in file
+                    eachPair[pairCount][j] = -1; //Hold place, show "-" in CompHetTableModel
+                }
+                else {
+                    eachPair[pairCount][j] = outData[i][compHetFields[j]];
+                }
+            }
+
+            pairCount++;
         }
 
         for (int i=0; i<out.length; i++) {

@@ -407,9 +407,9 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
                     return;
                 }
             }
-            BitSet[] tempBS = { new BitSet(), new BitSet() };
+            BitSet[] tempBS = { mask[0], (BitSet)(mask[1].clone()) };
             tempBS[1].set(MENDHETREC);
-            vdat.filterData(new DataFilter(tempBS, null, null, spinnerData, geneRegex, minMPG, minMPGCovRatio, genScoreThresh));
+            vdat.filterData(new DataFilter(tempBS, geneFile, bedFile, spinnerData, geneRegex, minMPG, minMPGCovRatio, genScoreThresh));
             int temp[][] = vdat.returnData();
 
             //Must return the filtered state to what it was, to avoid data mapping errors!
@@ -450,21 +450,26 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         else if (es == compHetAllButton) {
             int indexIndex = ((Integer)typeMap.get("Index")).intValue();
             int mendHetRecIndex = ((Integer)typeMap.get("MendHetRec")).intValue();
-            String geneRegex = ".";
-            BitSet[] tempBS = { new BitSet(), new BitSet()};
+            String geneRegex = (getRegex() == null) ? "." : getRegex();
+            BitSet[] tempBS = { mask[0], (BitSet)(mask[1].clone()) };
             tempBS[1].set(MENDHETREC);
-            vdat.filterData(new DataFilter(tempBS, null, null, spinnerData, geneRegex, minMPG, minMPGCovRatio, genScoreThresh));
+            vdat.filterData(new DataFilter(tempBS, geneFile, bedFile, spinnerData, geneRegex, minMPG, minMPGCovRatio, genScoreThresh));
             int temp[][] = vdat.returnData();
 
             //Must return the filtered state to what it was, to avoid data mapping errors!
             vdat.filterData(df);
 
-            String[] index = new String[temp.length];
-            for (int i=0; i<temp.length; i++) {
-                index[i] = annotMapper[indexIndex].getString(temp[i][indexIndex]) + "," 
-                    + annotMapper[mendHetRecIndex].getString(temp[i][mendHetRecIndex]);
+            if (temp.length > 0) {
+                String[] index = new String[temp.length];
+                for (int i=0; i<temp.length; i++) {
+                    index[i] = annotMapper[indexIndex].getString(temp[i][indexIndex]) + "," 
+                        + annotMapper[mendHetRecIndex].getString(temp[i][mendHetRecIndex]);
+                }
+                CompHetView c = new CompHetView(index, vdat, compHetSamples.isSelected());
             }
-            CompHetView c = new CompHetView(index, vdat, compHetSamples.isSelected());
+            else {
+                showError("No compound heterozygous positions. Check your filters!");
+            }
         }
         
         else if (es == aboutItem) {

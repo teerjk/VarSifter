@@ -2,6 +2,7 @@ import java.awt.*;
 import javax.swing.*;
 import javax.swing.table.*;
 import java.util.HashSet;
+import java.util.ArrayList;
 import java.awt.event.*;
 import components.TableSorter;
 
@@ -77,8 +78,9 @@ public class CompHetView extends JFrame {
     */
     public CompHetView(String[] indices, VarData vdat, boolean isSamples) {
 
-        super("Compound Het Gene View");
+        super("Compound Het Multi View");
         int pairs = 0;
+        ArrayList<int[][]> tData = new ArrayList<int[][]>();
         
         if (indices.length == 0) {
             data = new int[][]{ { } };
@@ -88,20 +90,25 @@ public class CompHetView extends JFrame {
             String[][] temp = new String[indices.length][];
             for (int i=0; i<indices.length;i++) {
                 temp[i] = indices[i].split(",", 0);
-                pairs += (temp[i].length - 1);
             }
-            data = new int[pairs][];
-            pairs = 0;
 
             for (int i=0; i<temp.length; i++) {
                 int[][] outTemp = vdat.returnIndexPairs(temp[i], isSamples);
-                for (int j=0; j<outTemp.length; j++) {
-                    data[pairs+j] = new int[outTemp[j].length];
-                    //System.out.println(outTemp[j][0] + " " + outTemp[j].length);
-                    System.arraycopy(outTemp[j], 0, data[pairs+j], 0, outTemp[j].length);
+                if (outTemp != null) {
+                    pairs += outTemp.length;
+                    tData.add(outTemp);
                 }
-                pairs += outTemp.length;
             }
+            data = new int[pairs][];
+            pairs = 0;
+            for ( int[][] t: tData ) {
+                for (int i=0; i< t.length; i++) {
+                    data[pairs+i] = new int[ t[i].length ];
+                    System.arraycopy( t[i], 0, data[pairs+i], 0, t[i].length );
+                }
+                pairs += t.length;
+            }
+
             if (isSamples) {
                 String[] sampleNames = vdat.returnSampleNamesOrig();
                 int defaultNameLength = columnDefaultName.length;
