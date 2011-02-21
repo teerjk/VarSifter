@@ -1,4 +1,6 @@
+import java.util.BitSet;
 import java.util.HashMap;
+import java.util.regex.*;
 
 /**
 *   Subclass of AbstractMapper to handle Floats
@@ -17,6 +19,17 @@ public class FloatMapper implements AbstractMapper {
     public FloatMapper() {
         dataMap = new HashMap<Float, Integer>(5000, 0.75f);
         indexMap = new HashMap<Integer, Float>(5000, 0.75f);
+    }
+
+
+    public BitSet filterWithPattern(Pattern pat) {
+        BitSet bs = new BitSet(dataMap.size());
+        for (Float f: dataMap.keySet()) {
+            if (pat.matcher(f.toString()).find()) {
+                bs.set(dataMap.get(f));
+            }
+        }
+        return bs;
     }
 
 

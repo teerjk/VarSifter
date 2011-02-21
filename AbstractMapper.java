@@ -1,6 +1,8 @@
 import java.util.HashMap;
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.Collections;
+import java.util.regex.*;
 
 /**
 *   Interface defining the common methods for different Mapper objects
@@ -32,6 +34,15 @@ public interface AbstractMapper {
     *   @return Index of newly added element
     */
     public int addData(Object obj);
+
+
+    /**
+    *   Return BitSet of indices matching a Pattern
+    *
+    *   @param pat A Pattern representing the search to apply
+    *   @return A BitSet in which the data indices are set if pattern matched
+    */
+    public BitSet filterWithPattern(Pattern pat);
 
 
     /**

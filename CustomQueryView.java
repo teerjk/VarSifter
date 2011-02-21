@@ -2,7 +2,9 @@ import java.awt.*;
 import javax.swing.*;
 import javax.swing.event.*;
 import javax.swing.border.*;
+import java.util.BitSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -53,7 +55,7 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
     final int ANNOT_COMP = 3;
     final int LOGICAL = 4;
 
-    private final static Pattern compPat = Pattern.compile("[<>=&]");
+    private final static Pattern compPat = Pattern.compile("[<>=&]|get");
 
     private boolean isAnnotQuery = false;
 
@@ -98,6 +100,7 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
     private StringBuilder vertexLabel;
     private int vertexLabelCount = 1;   //Use this to know where we are in the query assembly process
     private String outGroup;
+    private ArrayList<BitSet> bitSetList = new ArrayList<BitSet>();
     
     private TreeLayout<CustomVertex,Integer> layout;
     private VisualizationViewer<CustomVertex,Integer> vv;
@@ -220,6 +223,8 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
                                 BorderFactory.createLineBorder(Color.black),
                                 BorderFactory.createEmptyBorder(7,7,7,7)
                                 ));
+        inStringPattern.setMaximumSize(new Dimension( inStringPattern.getMaximumSize().width, 
+                                              inStringPattern.getMinimumSize().height));
         annotActionPane.add(annotExactMatch);
         annotActionPane.add(Box.createRigidArea(new Dimension(0,5)));
         annotActionPane.add(annotNoMatch);
@@ -310,6 +315,7 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
         // Mask buttons
         enableButtons(new int[] {ACTION,ANNOT_ACTION,ANNOT_COMP,LOGICAL}, false);
         applyAnnotComp.setEnabled(false);
+        applyStringPattern.setEnabled(false);
         stringAnnotList.setEnabled(false);
         inAnnotNumber.setEnabled(false);
 
@@ -393,6 +399,7 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
             deletePicked();
         }
         else if (es == clear) {
+            bitSetList = new ArrayList<BitSet>();
             initQuery();
             graph = new DelegateForest<CustomVertex,Integer>();
         }
@@ -436,7 +443,9 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
         }
         else if (es == applyStringPattern) {
             String in = inStringPattern.getText();
-            //get indices matching this regex
+            if (buildQueryFromRegex(in)) {
+                buildQueryVertex(in, "");
+            }
         }
         else if (es == andButton) {
             linkVertices("And", " && ");
@@ -588,6 +597,7 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
                             queryString += "(int)Math.pow(2,";
                             query.insert(0, "(");
                         case VarData.STRING:
+                            applyStringPattern.setEnabled(true);
                             stringAnnotList.setEnabled(true);
                             break;
                         case VarData.FLOAT:
@@ -610,7 +620,17 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
                 if (isAnnotQuery) {
                     switch (currentMap.getDataType()) {
                         case VarData.MULTISTRING:
-                            query.append(")) > 0");
+                            if (!query.toString().contains("~")) {
+                                query.append(")) > 0");
+                            }
+                            else {
+                                int aI = query.lastIndexOf("&");
+                                String maskNum = query.substring(aI+2);
+                                query.append("))==" + maskNum);
+                                if (query.toString().contains("Math.pow")) {
+                                    query.append(")");
+                                }
+                            }
                         case VarData.STRING:
                             stringAnnotList.setListData(new String[]{""});
                             break;
@@ -631,6 +651,7 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
                 annotList.setEnabled(true);
                 stringAnnotList.setEnabled(false);
                 applyAnnotComp.setEnabled(false);
+                applyStringPattern.setEnabled(false);
                 vertexLabelCount = 1;
                 redrawGraph();
                 initQuery();
@@ -639,13 +660,57 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
     }
 
     /**
-    *   Use regex to get indices of matching entries, return final StringBuilder
+    *   Use regex to get indices of matching entries, append to a list.
+    *   Then, recreate query to interrogate BitSet in list.
     *   @param regex The regex to search with
-    *   @param query The StringBuilder generated thus far
-    *   @return StringBuilder to use for this vertex
+    *   @return True on success.
     */
-    private StringBuilder buildQueryFromRegex(String regex, StringBuilder query) {
-        //Do stuff here
+    private boolean buildQueryFromRegex(String regex) {
+        int index = bitSetList.size();
+        Pattern pat;
+        StringBuilder tempQuery = new StringBuilder();
+        try {
+            pat = Pattern.compile(regex, Pattern.CASE_INSENSITIVE);
+        }
+        catch (PatternSyntaxException pse) {
+            VarSifter.showError("Error parsing search term. Not Applying! Please try again.");
+            System.out.println(pse.toString());
+            return false;
+        }
+
+        switch (currentMap.getDataType()) {
+            case VarData.MULTISTRING:
+                int lastIndex = -1;
+                int msBSMask = 0;
+                int thisIndex;
+                BitSet msBS = currentMap.filterWithPattern(pat);
+                while ( (thisIndex = msBS.nextSetBit(lastIndex+1)) >= 0 ) {
+                    msBSMask += (int)Math.pow(2,thisIndex);
+                    lastIndex = thisIndex;
+                }
+                tempQuery.append("(");
+                tempQuery.append(query.toString());
+                tempQuery.delete(tempQuery.length() - 16, tempQuery.length());  //remove "(int)Math.pow(2,"
+                tempQuery.append(msBSMask);
+                break;
+            case VarData.STRING:
+                bitSetList.add(currentMap.filterWithPattern(pat));
+                //System.out.println(query.substring( query.length()-2 ));
+                if (query.substring( query.length()-2 ).equals("!=")) {
+                    tempQuery.append("!");
+                }
+                tempQuery.append("bitSets[" + index + "].get(");
+                tempQuery.append(query.toString());
+                tempQuery.delete(tempQuery.length()-2, tempQuery.length());
+                tempQuery.append(")");
+                break;
+        }
+        //System.out.println(tempQuery.toString());
+        //System.out.println(bitSetList.get(index).cardinality());
+        query = tempQuery;
+
+        index++;
+        return true;
     }
 
 
@@ -747,6 +812,7 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
             }
             outText.setText(outGroup);
             vdat.setCustomQuery(outGroup);
+            vdat.setCustomBitSet(bitSetList.toArray(new BitSet[0]));
         }
         else {
             VarSifter.showError("The query is disconnected!  Please make sure all the parts are connected as one unit!");

@@ -67,6 +67,7 @@ public class VarData {
     private VarData parentVarData = null;
     private int numCols = 0;         // Number of columns.  Set from first line, used to check subseq. lines
     private String customQuery = "";
+    private BitSet[] bitSets;
 
     /**    
     *    Constructor reads in the file specified by full path in String inFile.
@@ -1653,6 +1654,31 @@ public class VarData {
                            sampleMapper
                            );
     }
+
+    /**
+    *   Set the array of BitSets to use for a custom query
+    *
+    *   @param inBS An array of BitSets to be used in custom querying
+    */
+    public void setCustomBitSet(BitSet[] inBS) {
+        if (inBS == null) {
+            bitSets = new BitSet[0];
+        }
+        else {
+            bitSets = inBS;
+        }
+    }
+
+
+    /**
+    *   returns the array of BitSets to use for a custom query
+    *
+    *   @return An array of BitSets to interrogate for custom querying
+    */
+    public BitSet[] getCustomBitSet() {
+        return bitSets;
+    }
+
 
     /** 
     *   Set the customized part of a custom query

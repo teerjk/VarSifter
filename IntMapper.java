@@ -1,4 +1,6 @@
+import java.util.BitSet;
 import java.util.HashMap;
+import java.util.regex.*;
 
 /**
 *   Subclass of AbstractMapper to handle ints
@@ -14,6 +16,11 @@ public class IntMapper implements AbstractMapper {
     */
     public IntMapper() {
         dataList = null;
+    }
+
+    public BitSet filterWithPattern(Pattern pat) {
+        //for now, as no data is being stored here, return null
+        return null;
     }
 
     public int getDataType() {

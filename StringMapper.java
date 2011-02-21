@@ -1,6 +1,8 @@
 import java.util.HashMap;
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.Collections;
+import java.util.regex.*;
 
 /**
 *   Subclass of AbstractMapper to handle Strings
@@ -19,6 +21,16 @@ public class StringMapper implements AbstractMapper {
     public StringMapper() {
         dataMap = new HashMap<String, Integer>(30000, 0.75f);
         indexMap = new HashMap<Integer, String>(30000, 0.75f);
+    }
+
+    public BitSet filterWithPattern(Pattern pat) {
+        BitSet bs = new BitSet(dataMap.size());
+        for (String s: dataMap.keySet()) {
+            if (pat.matcher(s).find()) {
+                bs.set(dataMap.get(s));
+            }
+        }
+        return bs;
     }
 
     public int getDataType() {

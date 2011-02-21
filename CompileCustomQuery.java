@@ -52,16 +52,15 @@ public class CompileCustomQuery {
         out.append( "  public BitSet executeCustomQuery(VarData vdat) {\n" );
         out.append( "    int[][] allData = vdat.dataDump();\n" );
         out.append( "    BitSet bs = new BitSet(allData.length);\n" );
+        out.append( "    BitSet[] bitSets = vdat.getCustomBitSet();\n" );
         out.append( "    AbstractMapper[] annotMapper = vdat.returnAnnotMap();\n" );
         out.append( "    AbstractMapper[] sampleMapper = vdat.returnSampleMap();\n" );
-        //out.append( "    int typeIndex = vdat.returnDataTypeAt().get(\"type\");\n" );
         out.append( "    int mutTypeIndex = vdat.returnDataTypeAt().get(\"muttype\");\n" );
         out.append( "    int refIndex = vdat.returnDataTypeAt().get(\"ref_allele\");\n" );
         out.append( "    int nonRefIndex = vdat.returnDataTypeAt().get(\"var_allele\");\n" );
         out.append( "    int indel = annotMapper[mutTypeIndex].getIndexOf(\"INDEL\");\n" );
         out.append( "    int NA_Allele = sampleMapper[0].getIndexOf(\"NA\");\n" );
         out.append( "    for (int i=0;i<allData.length;i++) {\n");
-        //out.append( "        int type = allData[i][typeIndex];\n");
         out.append( "        int muttype = allData[i][mutTypeIndex];\n" );
         out.append( "        String homRefAllele = annotMapper[refIndex].getString(allData[i][refIndex]);\n");
         out.append( "        String homNonRefAllele = annotMapper[nonRefIndex].getString(allData[i][nonRefIndex]);\n");
