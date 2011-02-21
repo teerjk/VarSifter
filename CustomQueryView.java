@@ -80,6 +80,7 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
     private JButton[] annotCompButtons = {eqButton, gtButton, ltButton};
 
     private JButton applyAnnotComp = new JButton("Apply Number");
+    private JButton applyStringPattern = new JButton("Apply Search Text");
 
     private JButton andButton = new JButton("And");
     private JButton orButton = new JButton("Or");
@@ -92,6 +93,7 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
     
     private JTextField outText = new JTextField();
     private JTextField inAnnotNumber = new JTextField();
+    private JTextField inStringPattern = new JTextField();
     private StringBuilder query;
     private StringBuilder vertexLabel;
     private int vertexLabelCount = 1;   //Use this to know where we are in the query assembly process
@@ -221,6 +223,10 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
         annotActionPane.add(annotExactMatch);
         annotActionPane.add(Box.createRigidArea(new Dimension(0,5)));
         annotActionPane.add(annotNoMatch);
+        annotActionPane.add(Box.createRigidArea(new Dimension(0,5)));
+        annotActionPane.add(inStringPattern);
+        annotActionPane.add(Box.createRigidArea(new Dimension(0,5)));
+        annotActionPane.add(applyStringPattern);
 
 
         JPanel annotCompPane = new JPanel();
@@ -289,6 +295,7 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
         gtButton.addActionListener(this);
         ltButton.addActionListener(this);
         applyAnnotComp.addActionListener(this);
+        applyStringPattern.addActionListener(this);
         apply.addActionListener(this);
         delete.addActionListener(this);
         clear.addActionListener(this);
@@ -426,6 +433,10 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
                     VarSifter.showError("Entry not a number! Please enter a number and try again!");
                 }
             }
+        }
+        else if (es == applyStringPattern) {
+            String in = inStringPattern.getText();
+            //get indices matching this regex
         }
         else if (es == andButton) {
             linkVertices("And", " && ");
@@ -627,6 +638,15 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
         }
     }
 
+    /**
+    *   Use regex to get indices of matching entries, return final StringBuilder
+    *   @param regex The regex to search with
+    *   @param query The StringBuilder generated thus far
+    *   @return StringBuilder to use for this vertex
+    */
+    private StringBuilder buildQueryFromRegex(String regex, StringBuilder query) {
+        //Do stuff here
+    }
 
 
     /**

@@ -12,6 +12,7 @@ public class MultiStringMapper implements AbstractMapper {
     private final int dataType = VarData.MULTISTRING;
     private int lastIndex = 0;
     private String stringSepChar = ";";
+    private final int MAX = 31; //As I store flags in an int, can only have 31.
 
     /**
     *   Constructor
@@ -53,6 +54,16 @@ public class MultiStringMapper implements AbstractMapper {
         for (String s: inS_Ar) {
             int ind = getIndexOf(s);
             if (ind == -1) {
+                // Check int bit bounds                
+                if (lastIndex == MAX) {
+                    VarSifter.showError("The number of entries in this MultiStringMapper Object has exceeded " + MAX
+                        + "\nThe program cannot handle this number of entries.");
+                    for (String key : dataMap.keySet()) {
+                        System.out.println(key);
+                    }
+                    System.out.println("Failed to add: " + s);
+                    System.exit(1);
+                }
                 dataMap.put(s, Integer.valueOf(lastIndex));
                 indexMap.put(Integer.valueOf(lastIndex), s);
                 bitMask |= (int)Math.pow(2, lastIndex); 

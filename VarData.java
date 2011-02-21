@@ -551,6 +551,8 @@ public class VarData {
         try {
             BufferedReader br = new BufferedReader(new FileReader(inFile));
             while ((line = br.readLine()) != null) {
+                
+                String tempLine[] = line.split("\t", 0);
 
                 if (info_pat.matcher(line).find()) {
                     int pos = fixedNames.length + infoCount;
@@ -564,7 +566,6 @@ public class VarData {
                     String key = updateVCFMetaHash(line, formatMetaVCF);
                 }
                 else if (head_pat.matcher(line).find()) {
-                    String tempLine[] = line.split("\t", 0);
                     sampleCount = tempLine.length - (annotCount + 1);
                     sampleMapper[0] = new StringMapper();
                     sampleMapper[1] = new IntMapper();
@@ -637,8 +638,17 @@ public class VarData {
 
                 }
                 else if (! comment.matcher(line).find()) {
+                    //String varAllele = tempLine[3];
+                    //if (varAllele.contains(",")) {
+                    //    for (int i=0; i<varAllele.length(); i++) {
+                    //        if (varAllele.charAt(i) == ',') {
+                    //            lineCount++;
+                    //        }
+                    //    }
+                    //}
                     lineCount++;
                 }
+
                 if (lineCount % 1000 == 0) {
                     System.out.print(".");
                 }
@@ -821,7 +831,7 @@ public class VarData {
                             samples[lineCount][i - (annotCount + 1)][0] = sampleMapper[0].addData(geno);
 
                             // Qual score
-                            if (sampHash.get("GQ") == null) {
+                            if (sampHash.get("GQ") == null || sampTemp.length == 1) {
                                 samples[lineCount][i - (annotCount + 1)][1] = 0;
                             }
                             else {
@@ -829,7 +839,7 @@ public class VarData {
                             }
 
                             // Read depth
-                            if (sampHash.get("DP") == null) {
+                            if (sampHash.get("DP") == null || sampTemp.length == 1) {
                                 samples[lineCount][i - (annotCount + 1)][2] = 0;
                             }
                             else {
@@ -840,11 +850,10 @@ public class VarData {
                     
                     lineCount ++;
 
-                    if (lineCount % 1000 == 0) {
-                        System.out.print(".");
-                    }
                 }
-
+                if (lineCount % 1000 == 0) {
+                    System.out.print(".");
+                }
             }
             br.close();
             System.out.println();
@@ -1491,7 +1500,6 @@ public class VarData {
     */
     public int[][] returnIndexPairs(String[] inPair, boolean isSamples) {
         
-        //SHould make inSet HashSet
         HashSet<Integer> inSet = new HashSet<Integer>();    //List of indices from MendHetRec columns
         int[][] out;
         int[][] eachPair;
