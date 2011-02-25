@@ -182,6 +182,8 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     private boolean isShowVar = true;
     private DataFilter df = null;
     public final static Pattern fDigits = Pattern.compile("^-?[0-9]+\\.[0-9]+$");
+    private final Pattern vcfPat = Pattern.compile("\\.vcf$");
+    private final Pattern gzPat = Pattern.compile("\\.gz$");
 
     private int minMPG = 0;
     private float minMPGCovRatio = 0f;
@@ -959,7 +961,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     private void redrawOutTable(String newData) {
         
         if (newData != null) {
-            vdat = new VarData(newData);
+            vdat = getNewVarData(newData);
             typeMap = null;
         }
 
@@ -1125,6 +1127,25 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         else {
             return geneRegexField.getText();
         }
+    }
+
+
+    /**
+    *   Determine what type of file to interpret, call the correct VarData object
+    */
+    private VarData getNewVarData(String in) {
+        VarData v = null;
+        if (vcfPat.matcher(in).find()) {
+            v = new VCFVarData(in);
+        }
+        else if (gzPat.matcher(in).find()) {
+            VarSifter.showError("Cannot read .gz files.  Please uncompress and load the uncompressed file.");
+            System.exit(1);
+        }
+        else {
+            v = new VarData(in);
+        }
+        return v;
     }
 
 
