@@ -153,6 +153,7 @@ public class VarTableModel extends AbstractTableModel {
     *
     *   @param row The row of the desired cell
     *   @param col The column of the desired cell
+    *   @return The Object stored in this cell
     */
     public Object getValueAt(int row, int col) {
         return data[row][col];
@@ -166,6 +167,7 @@ public class VarTableModel extends AbstractTableModel {
     *   @param c The column number
     *   @return The class of the data in the column
     */
+    @Override
     public Class getColumnClass(int c) {
         return getValueAt(0,c).getClass();
     }

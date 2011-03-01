@@ -117,6 +117,12 @@ public class VCFVarData extends VarData {
                     String key = updateVCFMetaHash(line, formatMetaVCF);
                 }
                 else if (head_pat.matcher(line).find()) {
+
+                    //Ask User to give more info about data
+                    InputTableDialog itd = new InputTableDialog(infoMetaVCF);
+                    infoMetaVCF = itd.runDialog();
+                    itd = null;
+
                     sampleCount = tempLine.length - (annotCount + 1);
                     sampleMapper[0] = new StringMapper();
                     sampleMapper[1] = new IntMapper();
@@ -153,12 +159,28 @@ public class VCFVarData extends VarData {
                     for (int i=0; i<tempNames.size(); i++) {
                         dataNames[i + fixedNames.length] = infoMetaVCF.get(tempNames.get(i)).get("Description");
 
+                        //TESTING
+                        //if (infoMetaVCF.get(tempNames.get(i)).get("MultiAllele").equals("true")) {;
+                        //    System.out.println(infoMetaVCF.get(tempNames.get(i)).get("ID") 
+                        //        + " " + infoMetaVCF.get(tempNames.get(i)).get("Type") + " is multi-allelic.");
+                        //}
+
                         String tempType = infoMetaVCF.get(tempNames.get(i)).get("Type");
                         String tempNum = infoMetaVCF.get(tempNames.get(i)).get("Number");
-                        if ( (tempType.equals("Integer") && tempNum.equals("1")) || tempType.equals("Flag")) {
+                        boolean multiAllelic = Boolean.parseBoolean(infoMetaVCF.get(tempNames.get(i)).get("MultiAllele"));
+                        String subdelim = infoMetaVCF.get(tempNames.get(i)).get("Sub-delimiter");
+
+                        //assign class
+                        if ( !subdelim.equals("") ) {
+                            classList[i + fixedClassList.length] = STRING;
+                        }
+                        else if ( (tempType.equals("Integer") 
+                                  && (tempNum.equals("1") || multiAllelic)) 
+                                  || tempType.equals("Flag")) {
                             classList[i + fixedClassList.length] = INTEGER;
                         }
-                        else if (tempType.equals("Float") && tempNum.equals("1")) {
+                        else if (tempType.equals("Float") 
+                                 && (tempNum.equals("1") || multiAllelic)) {
                             classList[i + fixedClassList.length] = FLOAT;
                         }
                         else {
@@ -167,6 +189,20 @@ public class VCFVarData extends VarData {
                         
                     }
                     dataNamesOrig = dataNames;
+
+
+                    //TESTING
+                    //for (int i=0; i<dataNames.length; i++) {
+                    //    String in = "_";
+                    //    String type = "_";
+                    //    if (i >= fixedClassList.length) {
+                    //        in = tempNames.get(i-fixedClassList.length);
+                    //        type = infoMetaVCF.get(in).get("Type");
+                    //    }
+                    //    System.out.println(dataNames[i] + " " + in + " " 
+                    //        + type + " "
+                    //        + classList[i]);
+                    //}
 
                     //Fill annotMapper, sampleMapper
                     annotMapper = new AbstractMapper[classList.length];
@@ -189,14 +225,15 @@ public class VCFVarData extends VarData {
 
                 }
                 else if (! comment.matcher(line).find()) {
-                    //String varAllele = tempLine[3];
-                    //if (varAllele.contains(",")) {
-                    //    for (int i=0; i<varAllele.length(); i++) {
-                    //        if (varAllele.charAt(i) == ',') {
-                    //            lineCount++;
-                    //        }
-                    //    }
-                    //}
+                    //include multiple lines
+                    String varAllele = tempLine[4];
+                    if (varAllele.contains(",")) {
+                        for (int i=0; i<varAllele.length(); i++) {
+                            if (varAllele.charAt(i) == ',') {
+                                lineCount++;
+                            }
+                        }
+                    }
                     lineCount++;
                 }
 
@@ -208,6 +245,7 @@ public class VCFVarData extends VarData {
             samples = new int[lineCount][][];
             dataIsIncluded = new BitSet(lineCount);
             br.close();
+            //System.out.println(lineCount); //TESTING
             lineCount = 0;
             System.out.println();
             System.out.println("File parsing completed - loading file");
@@ -224,182 +262,247 @@ public class VCFVarData extends VarData {
             while ((line = br.readLine()) != null) {
                 if (! comment.matcher(line).find()) {
                     String tempLine[] = line.split("\t", 0);
-                    data[lineCount] = new int[dataNames.length];
                     ArrayList<String> alleles = new ArrayList<String>();
-                    
-                    //Chr
-                    if ( !tempLine[0].contains("chr") ) {
-                        tempLine[0] = "chr" + tempLine[0];
+
+                    //Check for multiallelic line
+                    String varAllele = tempLine[4];
+                    int altAlleleCount = 1;
+                    if (varAllele.contains(",")) {
+                        for (int i=0; i<varAllele.length(); i++) {
+                            if (varAllele.charAt(i) == ',') {
+                                altAlleleCount++;
+                            }
+                        }
                     }
-                    data[lineCount][0] = annotMapper[0].addData(tempLine[0]);
 
-                    //LeftFlank / RightFlank
-                    data[lineCount][1] = Integer.parseInt(tempLine[1]) - 1;
-                    data[lineCount][2] = Integer.parseInt(tempLine[1]) + tempLine[3].length();
+                    //Run loop once for each alt allele
+                    for (int altI = 0; altI < altAlleleCount; altI++) {
 
-                    //Gene_name   !!! Dummy for now !!!
-                    data[lineCount][3] = annotMapper[3].addData("-");
+                        int tempLineCount = lineCount + altI;
+                        //try {//TESTING
+                        data[tempLineCount] = new int[dataNames.length];
+                        //} catch (ArrayIndexOutOfBoundsException e) {
+                        //    System.out.println(tempLineCount + " " + dataNames.length);
+                        //    System.out.println(tempLine[1] + " " + tempLine[4] + " ");
+                        //    System.out.println(e.toString());
+                        //}
 
-                    //type    !!! Dummy for now !!!
-                    data[lineCount][4] = annotMapper[4].addData("-");
+                        //Chr
+                        if ( !tempLine[0].contains("chr") ) {
+                            tempLine[0] = "chr" + tempLine[0];
+                        }
+                        data[tempLineCount][0] = annotMapper[0].addData(tempLine[0]);
 
-                    //RS#
-                    if (tempLine[2].equals(".")) {
-                        tempLine[2] = "-";
-                    }
-                    data[lineCount][6] = annotMapper[6].addData(tempLine[2]);
+                        //LeftFlank / RightFlank
+                        data[tempLineCount][1] = Integer.parseInt(tempLine[1]) - 1;
+                        data[tempLineCount][2] = Integer.parseInt(tempLine[1]) + tempLine[3].length();
 
-                    //ref_allele
-                    data[lineCount][7] = annotMapper[7].addData(tempLine[3]);
-                    alleles.add(tempLine[3]);
+                        //Gene_name   !!! Dummy for now !!!
+                        data[tempLineCount][3] = annotMapper[3].addData("-");
 
-                    //var_allele
-                    data[lineCount][8] = annotMapper[8].addData(tempLine[4]);
+                        //type    !!! Dummy for now !!!
+                        data[tempLineCount][4] = annotMapper[4].addData("-");
 
-                    //muttype and assingment of INDEL (and further parsing of var_allele)
-                    String[] varTemp = tempLine[4].split(",", 0);
-                    indel = (tempLine[3].length() != 1) ? true : false;
-                    for (int i=0; i<varTemp.length; i++) {
-                        alleles.add(varTemp[i]);
-                        if (tempLine[3].length() != varTemp[i].length() ) {
+                        //RS#
+                        if (tempLine[2].equals(".")) {
+                            tempLine[2] = "-";
+                        }
+                        data[tempLineCount][6] = annotMapper[6].addData(tempLine[2]);
+
+                        //ref_allele
+                        data[tempLineCount][7] = annotMapper[7].addData(tempLine[3]);
+                        alleles.add(tempLine[3]);
+
+                        //var_allele
+                        String[] varTemp = tempLine[4].split(",", 0);
+                        data[tempLineCount][8] = annotMapper[8].addData(varTemp[altI]);
+
+                        //muttype and assingment of INDEL (and further parsing of var_allele)
+                        indel = (tempLine[3].length() != 1) ? true : false;
+                        if (tempLine[3].length() != varTemp[altI].length() ) {
                             indel = true;
                         }
-                    }
-                    int index;
-                    if (indel) {
-                        index = annotMapper[5].addData("INDEL");
-                    }
-                    else {
-                        index = annotMapper[5].addData("SNP");
-                    }
-                    data[lineCount][5] = index;
-                    
-
-                    //QUAL
-                    if (tempLine[5].equals(".")) {
-                        tempLine[5] = "NaN";
-                    }
-                    data[lineCount][9] = annotMapper[9].addData(Float.parseFloat(tempLine[5]));
-
-                    //FILTER
-                    data[lineCount][10] = annotMapper[10].addData(tempLine[6]);
-
-
-                    //INFO field
-                    String[] infoTemp = tempLine[7].split(";");
-                    HashMap<String, String> infoHash = new HashMap<String, String>(tempNames.size());
-                    for (String s : infoTemp) {
-                        String[] pairs = s.split("=",2);
-                        if (pairs.length == 2) {
-                            infoHash.put(pairs[0], pairs[1]);
+                        if (altI == 0) { //only load alleles once!
+                            for (int i=0; i<varTemp.length; i++) {
+                                alleles.add(varTemp[i]);
+                            }
                         }
-                        else if (pairs.length == 1) {
-                            infoHash.put(pairs[0], "1");
+                        int index;
+                        if (indel) {
+                            index = annotMapper[5].addData("INDEL");
                         }
-                    }
-                    for (int i=0; i<tempNames.size(); i++) {
-                        int pos = i + fixedNames.length;
-                        String key = tempNames.get(i);
-                        switch (classList[pos]) {
-                            case INTEGER:
-                                if (infoHash.containsKey(key)) { 
-                                    data[lineCount][pos] = Integer.parseInt(infoHash.get(key));
+                        else {
+                            index = annotMapper[5].addData("SNP");
+                        }
+                        data[tempLineCount][5] = index;
+                        
+
+                        //QUAL
+                        if (tempLine[5].equals(".")) {
+                            tempLine[5] = "NaN";
+                        }
+                        data[tempLineCount][9] = annotMapper[9].addData(Float.parseFloat(tempLine[5]));
+
+                        //FILTER
+                        data[tempLineCount][10] = annotMapper[10].addData(tempLine[6]);
+
+
+                        //INFO field
+                        String[] infoTemp = tempLine[7].split(";");
+                        HashMap<String, String> infoHash = new HashMap<String, String>(tempNames.size());
+                        for (String s : infoTemp) {
+                            String[] pairs = s.split("=",2);
+                            if (pairs.length == 2) {
+                                infoHash.put(pairs[0], pairs[1]);
+                            }
+                            else if (pairs.length == 1) {
+                                infoHash.put(pairs[0], "1");
+                            }
+                        }
+                        for (int i=0; i<tempNames.size(); i++) {
+                            int pos = i + fixedNames.length;
+                            String key = tempNames.get(i);
+
+                            if (infoMetaVCF.get(key).get("MultiAllele").equals("true")) { 
+                                //split these values, enter correct value for alt allele (or 0/- if no value)
+                                String[] multiValues = {""};
+                                if (infoHash.containsKey(key)) {
+                                    multiValues = infoHash.get(key).split(",",0);
+                                }
+                                //TESTING System.out.println(key + " " + classList[pos] + " " + " " + pos + " " + infoMetaVCF.get(key).get("Type"));
+
+                                switch (classList[pos]) {
+                                    case INTEGER:
+                                        if (infoHash.containsKey(key) && altI < multiValues.length) {
+                                            data[tempLineCount][pos] = Integer.parseInt(multiValues[altI]);
+                                        }
+                                        else {
+                                            data[tempLineCount][pos] = 0;
+                                        }
+                                        break;
+                                    case FLOAT:
+                                        float f = 0f;
+                                        if (infoHash.containsKey(key) && altI < multiValues.length) {
+                                            f = Float.parseFloat(multiValues[altI]);
+                                        }
+                                        data[tempLineCount][pos] = annotMapper[pos].addData(f);
+                                        break;
+                                    case STRING:
+                                        String s = "-";
+                                        if (infoHash.containsKey(key) && altI < multiValues.length) {
+                                            s = multiValues[altI];
+                                        }
+                                        data[tempLineCount][pos] = annotMapper[pos].addData(s);
+                                        break;
+                                }
+                            }
+                            else {
+                                //Not multiallele, so add complete value to each line
+                                switch (classList[pos]) {
+                                    case INTEGER:
+                                        if (infoHash.containsKey(key)) { 
+                                            data[tempLineCount][pos] = Integer.parseInt(infoHash.get(key));
+                                        }
+                                        else {
+                                            data[tempLineCount][pos] = 0;
+                                        }
+                                        break;
+                                    case FLOAT:
+                                        float f = 0f;
+                                        if (infoHash.containsKey(key)) {
+                                            f = Float.parseFloat(infoHash.get(key));
+                                        }
+                                        data[tempLineCount][pos] = annotMapper[pos].addData(f);
+                                        break;
+                                    case STRING:
+                                        String s = "-";
+                                        if (infoHash.containsKey(key)) {
+                                            s = infoHash.get(key);
+                                        }
+                                        data[tempLineCount][pos] = annotMapper[pos].addData(s);
+                                        break;
+                                }
+                            }
+                        }
+
+
+                        // Handle Samples
+                        samples[tempLineCount] = new int[sampleNames.length][3];
+
+                        if (noSamples) {
+                            samples[tempLineCount][0][0] = sampleMapper[0].getIndexOf("NA");
+                            samples[tempLineCount][0][1] = -1;
+                            samples[tempLineCount][0][2] = -1;
+                        }
+                        else {
+                            String[] sampTemp = tempLine[8].split(":");
+                            HashMap<String, Integer> sampHash = new HashMap<String,Integer>(7);
+                            for (int i=0; i < sampTemp.length; i++) {
+                                sampHash.put(sampTemp[i], i);
+                            }
+
+                            if ( (tempLine.length - (annotCount+1)) != sampleNames.length) {
+                                System.out.println("INTERNAL ERROR: inconsistent sample counting at dataline " 
+                                    + tempLineCount);
+                                System.exit(1);
+                            }
+
+                            for (int i = annotCount + 1; i < tempLine.length; i++) {
+                                sampTemp = tempLine[i].split(":");
+                                String geno = sampTemp[sampHash.get("GT")];
+                                Matcher m = genoSep_pat.matcher(geno);
+                                
+                                // Genotype
+                                if (geno.contains(".")) {
+                                    geno = "NA";
+                                }
+                                else if (m.find()) {
+                                    String[] genoTemp = { alleles.get(Integer.parseInt(m.group(1))), 
+                                                          alleles.get(Integer.parseInt(m.group(2))) 
+                                                        };
+                                    java.util.Arrays.sort(genoTemp);
+
+                                    // DIV handling
+                                    if (indel) {
+                                        geno = genoTemp[0] + ":" + genoTemp[1];
+                                    }
+                                    else {
+                                        geno = genoTemp[0] + genoTemp[1];
+                                    }
                                 }
                                 else {
-                                    data[lineCount][pos] = 0;
+                                    try {
+                                        geno = alleles.get(Integer.parseInt(geno));
+                                    }
+                                    catch (NumberFormatException nfe) {
+                                        System.out.println("Malformed genotype on line " + (tempLineCount + 1) + ": " + geno );
+                                    }
                                 }
-                                break;
-                            case FLOAT:
-                                float f = 0f;
-                                if (infoHash.containsKey(key)) {
-                                    f = Float.parseFloat(infoHash.get(key));
-                                }
-                                data[lineCount][pos] = annotMapper[pos].addData(f);
-                                break;
-                            case STRING:
-                                String s = "-";
-                                if (infoHash.containsKey(key)) {
-                                    s = infoHash.get(key);
-                                }
-                                data[lineCount][pos] = annotMapper[pos].addData(s);
-                                break;
-                        }
-                    }
 
+                                samples[tempLineCount][i - (annotCount + 1)][0] = sampleMapper[0].addData(geno);
 
-                    // Handle Samples
-                    samples[lineCount] = new int[sampleNames.length][3];
-
-                    if (noSamples) {
-                        samples[lineCount][0][0] = sampleMapper[0].getIndexOf("NA");
-                        samples[lineCount][0][1] = -1;
-                        samples[lineCount][0][2] = -1;
-                    }
-                    else {
-                        String[] sampTemp = tempLine[8].split(":");
-                        HashMap<String, Integer> sampHash = new HashMap<String,Integer>(7);
-                        for (int i=0; i < sampTemp.length; i++) {
-                            sampHash.put(sampTemp[i], i);
-                        }
-
-                        if ( (tempLine.length - (annotCount+1)) != sampleNames.length) {
-                            System.out.println("INTERNAL ERROR: inconsistent sample counting");
-                            System.exit(1);
-                        }
-
-                        for (int i = annotCount + 1; i < tempLine.length; i++) {
-                            sampTemp = tempLine[i].split(":");
-                            String geno = sampTemp[sampHash.get("GT")];
-                            Matcher m = genoSep_pat.matcher(geno);
-                            
-                            // Genotype
-                            if (geno.contains(".")) {
-                                geno = "NA";
-                            }
-                            else if (m.find()) {
-                                String[] genoTemp = { alleles.get(Integer.parseInt(m.group(1))), 
-                                                      alleles.get(Integer.parseInt(m.group(2))) 
-                                                    };
-                                java.util.Arrays.sort(genoTemp);
-
-                                // DIV handling
-                                if (indel) {
-                                    geno = genoTemp[0] + ":" + genoTemp[1];
+                                // Qual score
+                                if (sampHash.get("GQ") == null || sampTemp.length == 1) {
+                                    samples[tempLineCount][i - (annotCount + 1)][1] = 0;
                                 }
                                 else {
-                                    geno = genoTemp[0] + genoTemp[1];
+                                    samples[tempLineCount][i - (annotCount + 1)][1] 
+                                        = Integer.parseInt(sampTemp[sampHash.get("GQ")]);
                                 }
-                            }
-                            else {
-                                try {
-                                    geno = alleles.get(Integer.parseInt(geno));
+
+                                // Read depth
+                                if (sampHash.get("DP") == null || sampTemp.length == 1) {
+                                    samples[tempLineCount][i - (annotCount + 1)][2] = 0;
                                 }
-                                catch (NumberFormatException nfe) {
-                                    System.out.println("Malformed genotype on line " + (lineCount + 1) + ": " + geno );
+                                else {
+                                    samples[tempLineCount][i - (annotCount + 1)][2] 
+                                        = Integer.parseInt(sampTemp[sampHash.get("DP")]);
                                 }
-                            }
-
-                            samples[lineCount][i - (annotCount + 1)][0] = sampleMapper[0].addData(geno);
-
-                            // Qual score
-                            if (sampHash.get("GQ") == null || sampTemp.length == 1) {
-                                samples[lineCount][i - (annotCount + 1)][1] = 0;
-                            }
-                            else {
-                                samples[lineCount][i - (annotCount + 1)][1] = Integer.parseInt(sampTemp[sampHash.get("GQ")]);
-                            }
-
-                            // Read depth
-                            if (sampHash.get("DP") == null || sampTemp.length == 1) {
-                                samples[lineCount][i - (annotCount + 1)][2] = 0;
-                            }
-                            else {
-                                samples[lineCount][i - (annotCount + 1)][2] = Integer.parseInt(sampTemp[sampHash.get("DP")]);
                             }
                         }
+                        
                     }
-                    
-                    lineCount ++;
+                    lineCount += altAlleleCount;
 
                 }
                 if (lineCount % 1000 == 0) {
@@ -445,9 +548,7 @@ public class VCFVarData extends VarData {
             if (pairs[0].equals("ID")) {
                 key = pairs[1];
             }
-            else {
-                temp.put(pairs[0], pairs[1].replaceAll("\"", ""));
-            }
+            temp.put(pairs[0], pairs[1].replaceAll("\"", ""));
         }
         mHash.put(key, temp);
         return key;
