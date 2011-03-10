@@ -8,8 +8,6 @@ public interface AbstractQueryModule {
 
     /**
     *   Execute the QueryModule
-    *
-    *   @param vdat VarData Object holding the data
     */
-    public abstract BitSet executeCustomQuery(VarData vdat);
+    public abstract BitSet executeCustomQuery();
 }

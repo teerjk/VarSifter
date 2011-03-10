@@ -1,4 +1,5 @@
 import java.awt.*;
+import java.net.URL;
 import javax.swing.*;
 import javax.swing.event.*;
 import javax.swing.table.*;
@@ -18,7 +19,7 @@ import components.TableSorter;
 */
 public class VarSifter extends JFrame implements ListSelectionListener, ActionListener, TableModelListener {
     
-    final String version = "0.11b";
+    final String version = "0.12";
     final String id = "$Id$";
 
     final String govWork = "PUBLIC DOMAIN NOTICE\n" +
@@ -822,6 +823,10 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         tablePanel.add(samplePane);
         tablePanel.add(stats);
 
+        //Icons
+        setIconImage(createImageIcon("images/vs.png", "VarSifter").getImage());
+        apply.setIcon(createImageIcon("images/sift_a.png", "Sift variants"));
+
         //Listener Registration
         //TableListener to detect data changes added in redrawOutTable(String)
         apply.addActionListener(this);
@@ -845,6 +850,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         filterFile.setEnabled(false);
         notFilterFile.setEnabled(false);
         bedFilterFile.setEnabled(false);
+        selectAll.setVisible(false);    //Should eventually remove this
         if (vdat.returnParent() != null) {
             geneViewButton.setVisible(false);
         }
@@ -1205,6 +1211,24 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         }
         setJComponentSize(minMPGCovRatioSpinner);
         spinnerData[vdat.MIN_MPG_COV] = ((Integer)minMPGCovRatioSpinner.getValue()).intValue();
+    }
+
+
+    /** 
+    *   Create an ImageIcon from a path relative to this class.
+    *   @param path Relative path of image file.
+    *   @param desc Assistive tech description
+    *   @return ImageIcon or null if path invalid.
+    */
+    private ImageIcon createImageIcon(String path, String desc) {
+        java.net.URL url = getClass().getResource(path);
+        if (url != null) {
+            return new ImageIcon(url, desc);
+        }
+        else {
+            showError("Couldn't find icon path: " + path);
+            return null;
+        }
     }
 
 

@@ -50,17 +50,20 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
     private int lastQueryIndex = 0;
     private Integer edgeCount = 0;
     final int SAMPLE = 0;
-    final int ACTION = 1;
-    final int ANNOT_ACTION = 2;
-    final int ANNOT_COMP = 3;
-    final int LOGICAL = 4;
+    final int FIXED_SAMPLE = 1;
+    final int ACTION = 2;
+    final int ANNOT_ACTION = 3;
+    final int ANNOT_COMP = 4;
+    final int LOGICAL = 5;
 
-    private final static Pattern compPat = Pattern.compile("[<>=&]|get");
+    private final static Pattern compPat = Pattern.compile("[<>=&]|get|isH");
 
     private boolean isAnnotQuery = false;
 
     String[] fixedSamples = { "Homozygous Reference",
-                              "Homozygous Non-reference",
+                              "Homozygous Variant",
+                              "Homozygous",
+                              "Heterozygous",
                               "NA"
                             };
     private JList sampleList;
@@ -84,11 +87,13 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
     private JButton applyAnnotComp = new JButton("Apply Number");
     private JButton applyStringPattern = new JButton("Apply Search Text");
 
-    private JButton andButton = new JButton("And");
-    private JButton orButton = new JButton("Or");
-    private JButton[] logicButtons = {andButton, orButton};
+    private JButton andButton = new JButton("AND");
+    private JButton orButton = new JButton("OR");
+    private JButton xorButton = new JButton("XOR");
+    private JButton[] logicButtons = {andButton, orButton, xorButton};
 
     private JButton apply = new JButton("Apply Query");
+    private JButton reset = new JButton("Reset Current Query");
     private JButton delete = new JButton("Delete Selected");
     private JButton clear = new JButton("Clear All");
     private JComboBox modeBox;
@@ -271,11 +276,15 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
         connectPane.add(andButton);
         connectPane.add(Box.createRigidArea(new Dimension(5,0)));
         connectPane.add(orButton);
+        connectPane.add(Box.createRigidArea(new Dimension(5,0)));
+        connectPane.add(xorButton);
         
         JPanel runPane = new JPanel();
         runPane.setLayout(new BoxLayout(runPane, BoxLayout.X_AXIS));
         runPane.setBorder(BorderFactory.createEmptyBorder(7,7,7,7));
         runPane.add(apply);
+        runPane.add(Box.createRigidArea(new Dimension(5,0)));
+        runPane.add(reset);
         runPane.add(Box.createRigidArea(new Dimension(5,0)));
         runPane.add(delete);
         runPane.add(Box.createRigidArea(new Dimension(5,0)));
@@ -292,6 +301,9 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
         extraPane.add(outText);
         extraPane.add(Box.createVerticalGlue());
 
+        //Icons
+        apply.setIcon(createImageIcon("images/boxes.png", "filter tree"));
+
         exactMatch.addActionListener(this);
         noMatch.addActionListener(this);
         annotExactMatch.addActionListener(this);
@@ -302,10 +314,12 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
         applyAnnotComp.addActionListener(this);
         applyStringPattern.addActionListener(this);
         apply.addActionListener(this);
+        reset.addActionListener(this);
         delete.addActionListener(this);
         clear.addActionListener(this);
         andButton.addActionListener(this);
         orButton.addActionListener(this);
+        xorButton.addActionListener(this);
 
         sampleList.addListSelectionListener(this);
         fixedSampleList.addListSelectionListener(this);
@@ -313,7 +327,7 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
         stringAnnotList.addListSelectionListener(this);
 
         // Mask buttons
-        enableButtons(new int[] {ACTION,ANNOT_ACTION,ANNOT_COMP,LOGICAL}, false);
+        enableButtons(new int[] {ACTION,ANNOT_ACTION,ANNOT_COMP,LOGICAL, FIXED_SAMPLE}, false);
         applyAnnotComp.setEnabled(false);
         applyStringPattern.setEnabled(false);
         stringAnnotList.setEnabled(false);
@@ -395,6 +409,9 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
         if (es == apply) {
             finalizeQuery();
         }
+        else if (es == reset) {
+            resetQuery();
+        }
         else if (es == delete) {
             deletePicked();
         }
@@ -448,10 +465,13 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
             }
         }
         else if (es == andButton) {
-            linkVertices("And", " && ");
+            linkVertices("AND", " && ");
         }
         else if (es == orButton) {
-            linkVertices("Or", " || ");
+            linkVertices("OR", " || ");
+        }
+        else if (es == xorButton) {
+            linkVertices("XOR", " ^ ");
         }
         redrawGraph();
 
@@ -486,11 +506,19 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
                     case 0: //HomRef
                         buildQueryVertex(fixedSamples[0], "homRefGen");
                         break;
-                    case 1: //HomNonRef
+                    case 1: //HomVariant (HomNonref)
                         buildQueryVertex(fixedSamples[1], "homNonRefGen");
                         break;
-                    case 2: //NA
-                        buildQueryVertex(fixedSamples[2], "NA_Allele");
+                    case 2: //Homozygous
+                        buildQueryFromBitSet("isHom");
+                        buildQueryVertex(fixedSamples[2], "");
+                        break;
+                    case 3: //Heterzygous
+                        buildQueryFromBitSet("isHet");
+                        buildQueryVertex(fixedSamples[3], "");
+                        break;
+                    case 4: //NA
+                        buildQueryVertex(fixedSamples[4], "NA_Allele");
                         break;
                 }
                 fixedSampleList.clearSelection();
@@ -520,8 +548,10 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
             JButton[] group = null;
             switch (bG) {
                 case SAMPLE:
-                    fixedSampleList.setEnabled(toEnabled);
                     sampleList.setEnabled(toEnabled);
+                    break;
+                case FIXED_SAMPLE:
+                    fixedSampleList.setEnabled(toEnabled);
                     break;
                 case ACTION:
                     group = actionButtons;
@@ -610,7 +640,7 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
                 }
                 else {
                     enableButtons(new int[] {ACTION}, false);
-                    enableButtons(new int[] {SAMPLE}, true);
+                    enableButtons(new int[] {FIXED_SAMPLE, SAMPLE}, true);
                 }
                 query.append(queryString);
                 break;
@@ -644,19 +674,29 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
                 query.insert(0, "(");
                 graph.addVertex(new CustomVertex(vertexLabel.toString(), query.toString()));
                 
-                enableButtons(new int[] {LOGICAL, SAMPLE}, true);
-                annotList.clearSelection();
-                stringAnnotList.clearSelection();
-                isAnnotQuery = false;
-                annotList.setEnabled(true);
-                stringAnnotList.setEnabled(false);
-                applyAnnotComp.setEnabled(false);
-                applyStringPattern.setEnabled(false);
-                vertexLabelCount = 1;
                 redrawGraph();
-                initQuery();
+                resetQuery();
                 break;
         }
+    }
+    
+
+    /**
+    *   Reset the query state to 1 (ready for a new query)
+    */
+    private void resetQuery() {
+        enableButtons(new int[] {LOGICAL, SAMPLE}, true);
+        enableButtons(new int[] {ACTION, ANNOT_ACTION, ANNOT_COMP, FIXED_SAMPLE}, false);
+        annotList.clearSelection();
+        stringAnnotList.clearSelection();
+        stringAnnotList.setListData(new String[]{""});
+        isAnnotQuery = false;
+        annotList.setEnabled(true);
+        stringAnnotList.setEnabled(false);
+        applyAnnotComp.setEnabled(false);
+        applyStringPattern.setEnabled(false);
+        vertexLabelCount = 1;
+        initQuery();
     }
 
     /**
@@ -715,11 +755,47 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
 
 
     /**
-    * Link vertices with "and/or"
+    *   Construct the query statement against a bitset compiled into the QueryModule class
+    *    built by the CompileCustomQuery class.  Only works for Step 3 (vertexLabelCount == 3)!!
+    *   @param bs The name of the BitSet in QueryModule to interrogate. Compile error if this variable not present.
+    */
+    private void buildQueryFromBitSet(String bs) {
+        StringBuilder tempQuery = new StringBuilder();
+
+        //For now, this is designed for Genotypes, so only String types are handled
+        switch (VarData.STRING) {
+            case VarData.STRING:
+                if (query.substring( query.length()-2 ).equals("!=")) {
+                    tempQuery.append("!");
+                }
+                tempQuery.append(bs + "(");
+                tempQuery.append(query.toString());
+                tempQuery.delete(tempQuery.length()-2, tempQuery.length());
+                tempQuery.append(")");
+                break;
+            case VarData.MULTISTRING:
+            case VarData.FLOAT:
+            case VarData.INTEGER:
+                //Unhandled for now - kill query
+                VarSifter.showError("<html>Internal Error - Can only use buildQueryFromBitSet(String) with STRING data!"
+                    + "<p>Current Query will be reset.  Please Contact developer.");
+                resetQuery();
+                break;
+        }
+        query = tempQuery;
+    }
+
+
+    /**
+    * Link vertices with "and/or/xor"
     */
     private void linkVertices(String labelString, String queryString) {
         Set<CustomVertex> picked = vv.getPickedVertexState().getPicked();
-        if (picked.size() >= 2) {
+        if (picked.size() > 2 && labelString.equals("XOR") ) {
+            VarSifter.showError("<html>Linking multiple elements with XOR will probably NOT work correctly!<p>" 
+                              + "For example, \"true XOR true XOR true\" will be true, not false!<p>");
+        }
+        else if (picked.size() >= 2) {
             CustomVertex tempCV  = new CustomVertex(labelString, queryString);
             graph.addVertex(tempCV);
             for (CustomVertex cv: picked) {
@@ -784,7 +860,6 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
         }
         else {
             parentStringGroup.add(rootVertex.getQuery());
-            //if (!rootVertex.getQuery().contains("=")) {
             if (! compPat.matcher(rootVertex.getQuery()).find()) {
                 VarSifter.showError("It looks like one of the bottom elements is not a comparison: this will probably not work!");
             }
@@ -830,6 +905,23 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
         }
         vv.setGraphLayout(new TreeLayout<CustomVertex,Integer>(graph, (maxWidth + 5), 80));
         vv.repaint();
+    }
+
+    /** 
+    *   Create an ImageIcon from a path relative to this class.
+    *   @param path Relative path of image file.
+    *   @param desc Assistive tech description
+    *   @return ImageIcon or null if path invalid.
+    */
+    private ImageIcon createImageIcon(String path, String desc) {
+        java.net.URL url = getClass().getResource(path);
+        if (url != null) {
+            return new ImageIcon(url, desc);
+        }
+        else {
+            VarSifter.showError("Couldn't find icon path: " + path);
+            return null;
+        }
     }
 
 }

@@ -8,16 +8,21 @@ import java.net.*;
 *   @author Jamie K. Teer
 */
 public class CustomClassLoader extends ClassLoader {
-    private String className;
+    private String fullClassName;
+    private String baseClassName;
 
     /**
     *   Initiate a new CustomClassLoader
     *   @param parent   The ClassLoader that loaded the object that called this.
-    *   @param inClassName  The name of the class to load.
+    *   @param inClassName  The full path and name of the class to load. Eg. /home/me/Test.class
     */
     public CustomClassLoader(ClassLoader parent, String inClassName) {
         super(parent);
-        className = inClassName;
+        fullClassName = inClassName;
+        File f = new File(fullClassName);
+        baseClassName = f.getName();
+        baseClassName = baseClassName.substring(0, baseClassName.lastIndexOf('.'));
+        //System.out.println(fullClassName + " " + baseClassName);
     }
 
     /**
@@ -29,12 +34,12 @@ public class CustomClassLoader extends ClassLoader {
     */
     @Override
     public Class loadClass(String name) throws ClassNotFoundException {
-        if (!className.equals(name)) {
+        if (!baseClassName.equals(name)) {
             return super.loadClass(name);
         }
 
         try {
-            String url = "file:" + System.getProperty("user.dir") + System.getProperty("file.separator") + className + ".class";
+            String url = "file:" + fullClassName;
             URL myURL = new URL(url);
             URLConnection connection = myURL.openConnection();
             InputStream in = connection.getInputStream();
@@ -49,7 +54,7 @@ public class CustomClassLoader extends ClassLoader {
 
             byte[] classData = buffer.toByteArray();
 
-            return defineClass(className, classData, 0, classData.length);
+            return defineClass(name, classData, 0, classData.length);
 
         }
         catch (MalformedURLException e) {

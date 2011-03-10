@@ -18,7 +18,8 @@ compile6: clean
 build: $(CLASS_LIST) $(JAR_FILE)
 
 $(CLASS_LIST):
-	@find . -name '*.class' -print > $(CLASS_LIST)
+	@find . -name '*.class' -print > $(CLASS_LIST); \
+	find . -name '*.png' -print >> $(CLASS_LIST);
 
 $(JAR_FILE): 
 	@if [ ! -s "$(CLASS_LIST)" ]; then \
@@ -26,12 +27,12 @@ $(JAR_FILE):
 		rm $(CLASS_LIST); \
 		exit 1; \
 	fi
-	jar -cv0mf manifest.txt $@ @$(CLASS_LIST); \
+	jar -cv0mf manifest.txt $@ @$(CLASS_LIST) -J-Xmx500M; \
 	rm $(CLASS_LIST)
 
 docs:
 	@cd html; \
-	javadoc -private -sourcepath ../ ../*.java
+	javadoc -J-Xmx500M -private -sourcepath ../ ../*.java
 	
 
 clean:

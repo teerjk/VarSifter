@@ -279,13 +279,7 @@ public class VCFVarData extends VarData {
                     for (int altI = 0; altI < altAlleleCount; altI++) {
 
                         int tempLineCount = lineCount + altI;
-                        //try {//TESTING
                         data[tempLineCount] = new int[dataNames.length];
-                        //} catch (ArrayIndexOutOfBoundsException e) {
-                        //    System.out.println(tempLineCount + " " + dataNames.length);
-                        //    System.out.println(tempLine[1] + " " + tempLine[4] + " ");
-                        //    System.out.println(e.toString());
-                        //}
 
                         //Chr
                         if ( !tempLine[0].contains("chr") ) {
@@ -322,6 +316,10 @@ public class VCFVarData extends VarData {
                         if (tempLine[3].length() != varTemp[altI].length() ) {
                             indel = true;
                         }
+                        // Uncommenting below lines breaks things - SNVs should be 1,2 char.
+                        //else if (tempLine[3].length() == varTemp[altI].length() ) {
+                        //    indel = false;
+                        //}
                         if (altI == 0) { //only load alleles once!
                             for (int i=0; i<varTemp.length; i++) {
                                 alleles.add(varTemp[i]);
