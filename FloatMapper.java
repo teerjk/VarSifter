@@ -1,5 +1,6 @@
 import java.util.BitSet;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.regex.*;
 
 /**
@@ -7,8 +8,8 @@ import java.util.regex.*;
 *   @author Jamie K. Teer
 */
 public class FloatMapper implements AbstractMapper {
-    private HashMap<Float, Integer> dataMap;
-    private HashMap<Integer, Float> indexMap;
+    private Map<Float, Integer> dataMap;
+    private Map<Integer, Float> indexMap;
     private final int dataType = VarData.FLOAT;
     private int lastIndex = 0;
 

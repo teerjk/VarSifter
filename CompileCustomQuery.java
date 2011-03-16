@@ -135,7 +135,7 @@ public class CompileCustomQuery {
 
 
         JavaFileObject file = new JavaSourceFromString(className, out.toString());
-        //System.out.println(out.toString());  //DEBUG
+        //System.out.println(out.toString());  //DEBUG TESTING
 
         boolean success = false;
         try {
@@ -163,8 +163,7 @@ public class CompileCustomQuery {
           System.out.println(diagnostic.getMessage(null));
     
         }
-
-        //System.out.println(System.getProperty("java.class.path"));
+        //System.out.println(System.getProperty("java.class.path")); //TESTING
 
         if (success) {
             return success;
@@ -188,6 +187,7 @@ public class CompileCustomQuery {
             CustomClassLoader ccl = new CustomClassLoader(parentCL, fullClassName);
             Class myObjectClass = ccl.loadClass(className);
 
+            @SuppressWarnings("unchecked")
             AbstractQueryModule aqm = 
                 (AbstractQueryModule) myObjectClass.getConstructor(new Class[]{VarData.class}).newInstance(new Object[]{vdat});
             BitSet out = aqm.executeCustomQuery();

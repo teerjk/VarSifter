@@ -1,5 +1,7 @@
 import java.util.HashMap;
+import java.util.Map;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.BitSet;
 import java.util.Collections;
 import java.util.regex.*;
@@ -9,8 +11,8 @@ import java.util.regex.*;
 *   @author Jamie K. Teer
 */
 public class MultiStringMapper implements AbstractMapper {
-    private HashMap<String, Integer> dataMap;
-    private HashMap<Integer, String> indexMap;
+    private Map<String, Integer> dataMap;
+    private Map<Integer, String> indexMap;
     private final int dataType = VarData.MULTISTRING;
     private int lastIndex = 0;
     private String stringSepChar = ";";
@@ -131,7 +133,7 @@ public class MultiStringMapper implements AbstractMapper {
     *   @return An array of type String with the elements stored in this object
     */
     public String[] getSortedEntries() {
-        ArrayList<String> list = new ArrayList<String>(dataMap.keySet());
+        List<String> list = new ArrayList<String>(dataMap.keySet());
         Collections.sort(list);
         String[] s = new String[list.size()];
         s = (list.toArray(s));

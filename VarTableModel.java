@@ -8,7 +8,6 @@ import java.util.regex.*;
 public class VarTableModel extends AbstractTableModel {
     protected Object[][] data;
     private String[] columnNames;
-    public final static int HIDDEN = 301;   //use this flag to hide a cell
     protected Object[] largestInColumn;
     protected VarData vdat;
     protected AbstractMapper[] mapper;
@@ -65,24 +64,6 @@ public class VarTableModel extends AbstractTableModel {
                 for (int j = offset; j < inData[i].length; j++) {
                     int mapIndex = j - offset; //Must do this to ensure we get the right sampleMapper index!
                     
-                    /*
-                    if (digits.matcher(inData[i][j]).find() && !vdat.isEditable(j)) {
-                        data[i][j] = Integer.parseInt(inData[i][j]);
-                        
-                        if (first || inData[i][j].length() > largestInColumn[j].toString().length()) {
-                            largestInColumn[j] = Integer.parseInt(inData[i][j]);
-                        }
-                    }
-                    else {
-                        data[i][j] = inData[i][j];
-                        
-                        if (first || inData[i][j].length() > largestInColumn[j].toString().length()) {
-                            largestInColumn[j] = inData[i][j];
-                        }
-                    }
-                    */
-
-                    // ###new
                     switch (mapper[mapIndex].getDataType()) {
                         case VarData.INTEGER:
                             data[i][j] = new Integer(inData[i][j]);

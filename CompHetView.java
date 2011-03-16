@@ -1,8 +1,8 @@
 import java.awt.*;
 import javax.swing.*;
 import javax.swing.table.*;
-import java.util.HashSet;
 import java.util.ArrayList;
+import java.util.List;
 import java.awt.event.*;
 import components.TableSorter;
 
@@ -35,7 +35,6 @@ public class CompHetView extends JFrame {
 
         super("Compound Het Pair View");
         
-        //System.out.println(index + " " + vdat.getClass());
         String[] temp = index.split(",", 0);
 
         if (temp.length == 2 && temp[1].equals("0")) {
@@ -60,10 +59,6 @@ public class CompHetView extends JFrame {
             }
         }
 
-        //for (int i=0; i<data.length; i++) {
-        //    System.out.println(data[i][0] + " <-> " + data[i][1]);
-        //}
-
         v = vdat;
         initTable();
         
@@ -80,7 +75,7 @@ public class CompHetView extends JFrame {
 
         super("Compound Het Multi View");
         int pairs = 0;
-        ArrayList<int[][]> tData = new ArrayList<int[][]>();
+        List<int[][]> tData = new ArrayList<int[][]>();
         
         if (indices.length == 0) {
             data = new int[][]{ { } };
@@ -140,23 +135,19 @@ public class CompHetView extends JFrame {
         JPanel pane = new JPanel();
         pane.setLayout(new BoxLayout(pane, BoxLayout.Y_AXIS));
         pane.setPreferredSize(new Dimension(630, 400));
-        //pane.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
 
         outTable = new JTable();
         sorter = new TableSorter( new CompHetTableModel(data, columnName, v));
         outTable.setModel(sorter);
         sorter.setTableHeader(outTable.getTableHeader());
-        //outTable = new JTable(data, columnName);
         JScrollPane sPane = new JScrollPane(outTable,
             ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
             ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
         sPane.setPreferredSize(new Dimension(610,400));
-        //outTable.setPreferredSize(new Dimension(610,400));
         outTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
         DefaultTableCellRenderer tcr = new DefaultTableCellRenderer();
         tcr.setHorizontalAlignment(SwingConstants.CENTER);
         outTable.setDefaultRenderer(String.class, tcr);
-        //outTable.setDefaultRenderer(Number.class, new VarScoreRenderer());
 
         JLabel linesl = new JLabel("Number of positions (Every pair is seen twice): ");
         JLabel lines = new JLabel( (Integer.toString(outTable.getRowCount())));

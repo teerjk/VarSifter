@@ -2,9 +2,9 @@ import java.io.*;
 import java.util.regex.*;
 import java.util.BitSet;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Vector;
+import java.util.Map;
 import java.util.ArrayList;
+import java.util.List;
 
 /**
 *   A VarData subclass for loading VCF files
@@ -12,8 +12,8 @@ import java.util.ArrayList;
 */
 public class VCFVarData extends VarData {
 
-    private HashMap<String, HashMap<String, String>> infoMetaVCF = new HashMap<String, HashMap<String, String>>();
-    private HashMap<String, HashMap<String, String>> formatMetaVCF = new HashMap<String, HashMap<String, String>>();
+    private Map<String, Map<String, String>> infoMetaVCF = new HashMap<String, Map<String, String>>();
+    private Map<String, Map<String, String>> formatMetaVCF = new HashMap<String, Map<String, String>>();
 
     /**
     *   Interpret VCF file - load VarData data structures
@@ -97,7 +97,7 @@ public class VCFVarData extends VarData {
         int sampleCount = 0;
         final int annotCount = 8;
 
-        ArrayList<String> tempNames = new ArrayList<String>();
+        List<String> tempNames = new ArrayList<String>();
 
         try {
             BufferedReader br = new BufferedReader(new FileReader(inFile));
@@ -108,7 +108,7 @@ public class VCFVarData extends VarData {
                 if (info_pat.matcher(line).find()) {
                     int pos = fixedNames.length + infoCount;
                     String key = updateVCFMetaHash(line, infoMetaVCF);
-                    HashMap<String, String> tempMeta = infoMetaVCF.get(key);
+                    Map<String, String> tempMeta = infoMetaVCF.get(key);
                     dataTypeAt.put(tempMeta.get("Description"), pos);
                     tempNames.add(key);
                     infoCount++;
@@ -262,7 +262,7 @@ public class VCFVarData extends VarData {
             while ((line = br.readLine()) != null) {
                 if (! comment.matcher(line).find()) {
                     String tempLine[] = line.split("\t", 0);
-                    ArrayList<String> alleles = new ArrayList<String>();
+                    List<String> alleles = new ArrayList<String>();
 
                     //Check for multiallelic line
                     String varAllele = tempLine[4];
@@ -347,7 +347,7 @@ public class VCFVarData extends VarData {
 
                         //INFO field
                         String[] infoTemp = tempLine[7].split(";");
-                        HashMap<String, String> infoHash = new HashMap<String, String>(tempNames.size());
+                        Map<String, String> infoHash = new HashMap<String, String>(tempNames.size());
                         for (String s : infoTemp) {
                             String[] pairs = s.split("=",2);
                             if (pairs.length == 2) {
@@ -434,7 +434,7 @@ public class VCFVarData extends VarData {
                         }
                         else {
                             String[] sampTemp = tempLine[8].split(":");
-                            HashMap<String, Integer> sampHash = new HashMap<String,Integer>(7);
+                            Map<String, Integer> sampHash = new HashMap<String,Integer>(7);
                             for (int i=0; i < sampTemp.length; i++) {
                                 sampHash.put(sampTemp[i], i);
                             }
@@ -526,9 +526,9 @@ public class VCFVarData extends VarData {
     *   @param mHash VCF metadata hash
     *   @return Metadata key
     */
-    private String updateVCFMetaHash(String line, HashMap<String, HashMap<String, String>> mHash) {
+    private String updateVCFMetaHash(String line, Map<String, Map<String, String>> mHash) {
         String key = "";
-        HashMap<String, String> temp = new HashMap<String, String>(3);
+        Map<String, String> temp = new HashMap<String, String>(3);
         Pattern p = Pattern.compile("<(.*)>");
         Matcher m = p.matcher(line);
         String sub = "";

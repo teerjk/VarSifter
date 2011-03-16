@@ -5,10 +5,9 @@ import javax.swing.event.*;
 import javax.swing.table.*;
 import java.awt.event.*;
 import java.util.BitSet;
-import java.util.ArrayList;
 import java.util.regex.*;
 import java.io.*;
-import java.util.HashMap;
+import java.util.Map;
 import components.TableSorter;
 
 /** 
@@ -186,12 +185,13 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     private final Pattern vcfPat = Pattern.compile("\\.vcf$");
     private final Pattern gzPat = Pattern.compile("\\.gz$");
 
+    //Default score cutoff thresholds
     private int minMPG = 0;
     private float minMPGCovRatio = 0f;
     private int genScoreThresh = 10;
     private float genScoreCovRatioThresh = 0.5f;
 
-    private HashMap<String, Integer> typeMap;
+    private Map<String, Integer> typeMap;
     private AbstractMapper[] annotMapper;
     private AbstractMapper[] sampleMapper;
 
@@ -243,11 +243,9 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     public void actionPerformed(ActionEvent e) {
         Object es = e.getSource();
 
-
         if (es == apply) {
             
             sorter.setTableHeader(null);    //Must do this to avoid memory leak
-            
             mask = getFilterMask();
 
             if (showVar.isSelected()) {
@@ -290,7 +288,6 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         }
 
         else if (es == filterFileButton) {
-            
             String temp = openData(GENE_FILTER_FILE);
             if (temp != null) {
                 geneFile = temp;
@@ -528,8 +525,6 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             
             outTable.setRowSelectionInterval(rowIndex,rowIndex);
             initColSizes(sampleTable, (SampleTableModel)((TableSorter)sampleTable.getModel()).getTableModel() );
-            
-            //System.out.println(outTable.getSelectedRow() + "\t" + rowIndex + "\t" + dataIndex);
         }
     }
 
@@ -541,17 +536,12 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     */
     public void tableChanged(TableModelEvent e) {
 
-        //System.out.println(e.getSource().toString());
-            
         if (e.getSource().getClass() == VarTableModel.class) {
             int row = e.getFirstRow();
             int lastRow = e.getLastRow();
             int col = e.getColumn();
             VarTableModel model = (VarTableModel)e.getSource();
             Object data = model.getValueAt(row, col);
-            //System.out.println("Row: " + row + "/" + lastRow + " Col: " + col + " value: " + e.getType() +
-            //    " data: "+ data);
-            //System.out.println(data.getClass());
             vdat.setData(row, col, (String)data);
         }
     }
@@ -665,7 +655,6 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         DefaultTableCellRenderer tcr = new DefaultTableCellRenderer();
         tcr.setHorizontalAlignment(SwingConstants.CENTER);
         outTable.setDefaultRenderer(String.class, tcr);
-        //outTable.setDefaultRenderer(Integer.class, new VarScoreRenderer());
         outTable.setDefaultRenderer(Float.class, new FloatScoreRenderer(6));
         lsm = outTable.getSelectionModel();
         lsm.addListSelectionListener(this);
@@ -802,7 +791,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         filtPane.add(Box.createRigidArea(new Dimension(0,10)));
         filtPane.add(geneViewButton);
         //filtPane.add(Box.createRigidArea(new Dimension(0,10)));
-        //filtPane.add(check);
+        //filtPane.add(check);  //TESTING
         JScrollPane filtScroll = new JScrollPane(filtPane, 
             ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
             ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
@@ -828,7 +817,6 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         apply.setIcon(createImageIcon("images/sift_a.png", "Sift variants"));
 
         //Listener Registration
-        //TableListener to detect data changes added in redrawOutTable(String)
         apply.addActionListener(this);
         selectAll.addActionListener(this);
         clear.addActionListener(this);
@@ -1009,6 +997,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
                                           geneMap,
                                           vdat ));
         }
+        //TableListener to detect data changes added in redrawOutTable(String)
         ((VarTableModel)sorter.getTableModel()).addTableModelListener(this);
         outTable.setModel(sorter);
         sorter.setTableHeader(outTable.getTableHeader());
@@ -1031,10 +1020,6 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             customQueryPane.setPreferredSize(new Dimension(w/2, h/2));
             customQueryPane.setLayout(new BoxLayout(customQueryPane, BoxLayout.Y_AXIS));
             customQueryPane.setBorder(BorderFactory.createEmptyBorder(6,6,6,6));
-            //JScrollPane customViewScroll = new JScrollPane(cqPane, JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,
-            //                                                       JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-            //customViewScroll.setBorder(null);
-            //customQueryPane.add(customViewScroll);
             customQueryPane.add(cqPane);
             customQueryPane.add(Box.createRigidArea(new Dimension(0,10)));
             customQueryPane.add(customQuery);
@@ -1306,7 +1291,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     /** 
     *   Save data, either in place, or as new
     *  
-    *   @param fileName Name of file to save to
+    *   @param fileName Name of file to save to or null to open a FileChooser
     *   @param vdTemp The VarData object containing data to save
     */
     private void saveData(String fileName, VarData vdTemp) {
@@ -1361,28 +1346,11 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
                     outString = new StringBuilder(100);
                                     
                     for (int j=0; j < dataNames.length; j++) {
-                        switch (annotMapper[j].getDataType()) {
-                            case VarData.INTEGER:
-                                outString.append(outData[i][j] + "\t");
-                                break;
-                            case VarData.FLOAT:
-                            case VarData.STRING:
-                            case VarData.MULTISTRING:
-                                outString.append(annotMapper[j].getString(outData[i][j]) + "\t"); 
-                                break;
-                        }
+                        outString.append(annotMapper[j].getString(outData[i][j]) + "\t"); 
                     }
                     for (int j=dataNames.length; j < outData[i].length; j++) {
-                        switch (sampleMapper[(j-dataNames.length) % VarData.S_FIELDS].getDataType()) {
-                            case VarData.INTEGER:
-                                outString.append(outData[i][j] + "\t");
-                                break;
-                            case VarData.FLOAT:
-                            case VarData.STRING:
                                 outString.append(sampleMapper[(j-dataNames.length) % VarData.S_FIELDS].getString(
-                                                    outData[i][j]) + "\t"); 
-                                break;
-                        }
+                                                 outData[i][j]) + "\t"); 
                     }
                     outString.deleteCharAt(outString.length() - 1);
 
@@ -1420,7 +1388,6 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
                 else {
                     v = new VarSifter((String)null);
                 }
-                //System.out.println("Width: " + v.w + "\tHeight: " + v.h);
             }
         });
     }

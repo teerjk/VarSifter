@@ -41,16 +41,6 @@ public class CompHetTableModel extends AbstractTableModel {
                 
                 //Annotations - 1st member of pair
                 for (int j=0; j < chl; j++) {
-                                        
-                    /*
-                    if (VarTableModel.digits.matcher(inData[i][j]).find()) {
-                        data[i][j] = Integer.parseInt(inData[i][j]);
-                    }
-                    else {
-                        data[i][j] = inData[i][j];
-                    }
-                    */
-
                     if (compHetFields[j] == -1) {
                         data[i][j] = new String("-");
                         continue;

@@ -1,5 +1,6 @@
 import java.util.BitSet;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.regex.*;
 
 /**
@@ -8,7 +9,7 @@ import java.util.regex.*;
 *   @author Jamie K. Teer
 */
 public class IntMapper implements AbstractMapper {
-    private HashMap<Integer, Integer> dataList;
+    private Map<Integer, Integer> dataList;
     private final int dataType = VarData.INTEGER;
 
     /**

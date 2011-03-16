@@ -29,24 +29,6 @@ public class SampleScoreRenderer extends DefaultTableCellRenderer {
         cutoffRatio = f;
     }
 
-    /**
-    *   Sets text of cell to be empty if the value of the integer is the HIDDEN flag
-    *
-    *   @param val The stored value of the cell
-    */
-
-    /* Don't need this any more
-    @Override
-    public void setValue(Object val) {
-        if (val.toString().equals( ((Integer)VarTableModel.HIDDEN).toString() )) {
-            setText("");
-        }
-        else {
-            setText(val.toString());
-        }
-
-    }
-    */
 
     /**
     *   Sets background to be gray if mpg score/coverage ratio < cutoffRatio
@@ -63,10 +45,6 @@ public class SampleScoreRenderer extends DefaultTableCellRenderer {
                 / ((Integer)table.getModel().getValueAt(row, 3)).floatValue() ;
         }
         
-        //System.out.println(">>>" + ratio);
-        //System.out.println( (Integer)table.getModel().getValueAt(row, 2) );
-        //System.out.println( (Integer)table.getModel().getValueAt(row, 3) );
-
         if (ratio < cutoffRatio) {
             comp.setBackground(Color.darkGray);
             comp.setForeground(Color.red);

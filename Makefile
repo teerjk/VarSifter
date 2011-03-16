@@ -6,10 +6,10 @@ JAR_FILE:=VarSifter.jar
 
 all: compile6
 
-compile5:
+compile5: clean
 	${JAVAC5} VarSifter.java
 
-compile_check:
+compile_check: clean
 	${JAVAC6} -J-Xmx1G -cp jung/*:. -Xlint:unchecked VarSifter.java
 
 compile6: clean

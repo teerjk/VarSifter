@@ -2,9 +2,11 @@ import java.io.*;
 import java.util.regex.*;
 import java.util.BitSet;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.HashSet;
-import java.util.Vector;
+import java.util.Set;
 import java.util.ArrayList;
+import java.util.List;
 
 
 /**
@@ -13,7 +15,6 @@ import java.util.ArrayList;
 */
 public class VarData {
     
-    //final static int H_LINES  = 1;   //Number of header lines
     final static int S_FIELDS = 3;   //Number of columns for each sample
 
     final int AFF_NORM_PAIR = 0;
@@ -43,7 +44,7 @@ public class VarData {
     protected int[][][] samples;      // Fields: [line][sampleName][genotype:MPGscore:coverage]
     protected int[][][] outSamples;   // Gets returned (can be filtered)
     protected int[] classList = null;
-    protected ArrayList<AbstractMapper> annotMapperBuilder = new ArrayList<AbstractMapper>();  //Build an array of AbstractMappers for annotations
+    protected List<AbstractMapper> annotMapperBuilder = new ArrayList<AbstractMapper>();  //Build an array of AbstractMappers for annotations
     protected AbstractMapper[] annotMapper = new AbstractMapper[0];                  //the annotation AbstractMapper array
     protected AbstractMapper[] sampleMapper = new AbstractMapper[S_FIELDS];      //The SampleMapper array
 
@@ -56,7 +57,7 @@ public class VarData {
     protected BitSet dataIsIncluded;      // A mask used to filter data, samples
     protected BitSet dataIsEditable = new BitSet();      // Which data elements can be edited
     
-    protected HashMap<String, Integer> dataTypeAt = new HashMap<String, Integer>();
+    protected Map<String, Integer> dataTypeAt = new HashMap<String, Integer>();
 
     protected int[] affAt;
     protected int[] normAt;
@@ -131,7 +132,7 @@ public class VarData {
                     String[] sampleNamesOrigIn,
                     String[] sampleNamesIn,
                     BitSet dataIsEditableIn,
-                    HashMap<String, Integer> dataTypeAtIn,
+                    Map<String, Integer> dataTypeAtIn,
                     int[] affAtIn,
                     int[] normAtIn,
                     int[] caseAtIn,
@@ -147,7 +148,7 @@ public class VarData {
         sampleNamesOrig = sampleNamesOrigIn;
         sampleNames = sampleNamesIn;
         dataIsEditable = (BitSet)dataIsEditableIn.clone();
-        dataTypeAt = (HashMap<String, Integer>)dataTypeAtIn.clone();
+        dataTypeAt = new HashMap<String, Integer>(dataTypeAtIn);
         affAt = affAtIn;
         normAt = normAtIn;
         caseAt = caseAtIn;
@@ -400,11 +401,10 @@ public class VarData {
                     }
 
                     //Handle map file if available
-
                     File f = new File(inFile + ".map");
                     if (f.exists()) {
                         String mapLine = new String();
-                        HashMap<String, String> mapHash = new HashMap<String, String>();
+                        Map<String, String> mapHash = new HashMap<String, String>();
                         BufferedReader mapReader = new BufferedReader(new FileReader(f));
                         while ((mapLine = mapReader.readLine()) != null) {
                             if (mapLine.contains("=")) {
@@ -510,10 +510,6 @@ public class VarData {
         boolean first = true;
         int[][] out = new int[data.length][dataNamesOrig.length + sampleNamesOrig.length];
         
-        //header
-        //System.arraycopy(dataNamesOrig, 0, out[0], 0, dataNamesOrig.length);
-        //System.arraycopy(sampleNamesOrig, 0, out[0], dataNamesOrig.length, sampleNamesOrig.length);
-
         for (int i=0; i < data.length; i++) {
             System.arraycopy(data[i], 0, out[i], 0, dataNamesOrig.length);
             for (int j=0; j < sampleNames.length; j++) {
@@ -550,9 +546,6 @@ public class VarData {
         int minMPG = df.getMinMPG();
         float minMPGCovRatio = df.getMinMPGCovRatio();
         genScoreThresh = df.getGenScoreThresh();
-        //System.out.println("min: " + minMPG + " mc: " + minMPGCovRatio + " minSpin:" + spinnerData[MIN_MPG] + 
-        //    " minCovSpin: " + spinnerData[MIN_MPG_COV]);
-
 
         dataIsIncluded.set(0,data.length);
         final int TOTAL_FILTERS = 11 + 1; //Number of non-type filters plus 1 (all type filters)
@@ -575,8 +568,8 @@ public class VarData {
         int chrIndex = dataTypeAt.get("Chr");
         int lfIndex = dataTypeAt.get("LeftFlank");
         int notMendHetRec = -1;
-        HashSet<String> geneSet = new HashSet<String>();
-        HashMap[] bedHash = null;   //<String, Vector<Integer>>
+        Set<String> geneSet = new HashSet<String>();
+        Map[] bedHash = null;   //<String, List<Integer>>
 
         //Set up type filters (filterSet[0], as all types are folded into one filter)
         filterSet[0] = new BitSet(data.length + 1);
@@ -752,8 +745,10 @@ public class VarData {
                 String chrString = annotMapper[chrIndex].getString(data[i][chrIndex]);
                 if (bedHash[0].get(chrString) != null) {
 
-                    Object[] starts = ((HashMap<String, Vector<Integer>>)bedHash[0]).get(chrString).toArray();
-                    Object[] ends = ((HashMap<String, Vector<Integer>>)bedHash[1]).get(chrString).toArray();
+                    @SuppressWarnings("unchecked")
+                    Object[] starts = ((Map<String, List<Integer>>)bedHash[0]).get(chrString).toArray();
+                    @SuppressWarnings("unchecked")
+                    Object[] ends = ((Map<String, List<Integer>>)bedHash[1]).get(chrString).toArray();
                     int pos = data[i][lfIndex] + 1;
 
                     for (int j=0; j<starts.length;j++) {
@@ -901,16 +896,16 @@ public class VarData {
     
 
     /** 
-    *   Return a hash of Vectors containing start positions in a bedfile
+    *   Return a hash of Lists containing start positions in a bedfile
     *  
     *   @param inFile The Bedfile to load
     *   @return An array of hashmaps.  Element 0: key=chrom, value = vector of starts.
     *                                  Element 1: key=chrom, value = vector of ends.
     */
-    protected HashMap[] returnBedHash(String inFile) {
-        HashMap<String, Vector<Integer>> outStart = new HashMap<String, Vector<Integer>>();
-        HashMap<String, Vector<Integer>> outEnd   = new HashMap<String, Vector<Integer>>();
-        HashMap[] outHash = new HashMap[2];
+    protected Map[] returnBedHash(String inFile) {
+        Map<String, List<Integer>> outStart = new HashMap<String, List<Integer>>();
+        Map<String, List<Integer>> outEnd   = new HashMap<String, List<Integer>>();
+        Map[] outHash = new Map[2];
 
         try {
             String line = new String();
@@ -920,8 +915,8 @@ public class VarData {
                 if ( (chr.matcher(line)).find() ) {
                     String[] lineArray = line.split("\\s+");
                     if (outStart.get(lineArray[0]) == null) {
-                        outStart.put(lineArray[0], new Vector<Integer>());
-                        outEnd.put(lineArray[0], new Vector<Integer>());
+                        outStart.put(lineArray[0], new ArrayList<Integer>());
+                        outEnd.put(lineArray[0], new ArrayList<Integer>());
                     }
 
                     outStart.get(lineArray[0]).add(Integer.valueOf(lineArray[1]) + 1);
@@ -990,10 +985,10 @@ public class VarData {
     /** 
     *   Return a clone of dataTypeAt
     *  
-    *   @return A HashMap: key = Annotation column name  value: column number (0-based)
+    *   @return A Map: key = Annotation column name  value: column number (0-based)
     */
-    public HashMap<String, Integer> returnDataTypeAt() {
-        return (HashMap<String, Integer>)dataTypeAt.clone();
+    public Map<String, Integer> returnDataTypeAt() {
+        return new HashMap<String, Integer>(dataTypeAt);
     }
 
 
@@ -1032,7 +1027,7 @@ public class VarData {
     */
     public int[][] returnGeneData() {
         int[][] tempGeneData;
-        HashMap<Integer, Integer> tempGeneHash = new HashMap<Integer, Integer>();
+        Map<Integer, Integer> tempGeneHash = new HashMap<Integer, Integer>();
 
         for (int i=0; i<outData.length; i++) {
             int geneName = outData[i][dataTypeAt.get("Gene_name")];
@@ -1066,13 +1061,13 @@ public class VarData {
 
 
     /** 
-    *   Get a HashSet from a file of gene names
+    *   Get a Set from a file of gene names
     *  
     *   @param inFile The gene file to read (one gene per line)
     *   @return A Hashset of the gene names
     */
-    protected HashSet<String> returnGeneSet(String inFile) {
-        HashSet<String> outSet = new HashSet<String>();
+    protected Set<String> returnGeneSet(String inFile) {
+        Set<String> outSet = new HashSet<String>();
         try {
             String line = new String();
             BufferedReader br = new BufferedReader(new FileReader(inFile));
@@ -1098,13 +1093,13 @@ public class VarData {
     */
     public int[][] returnIndexPairs(String[] inPair, boolean isSamples) {
         
-        HashSet<Integer> inSet = new HashSet<Integer>();    //List of indices from MendHetRec columns
+        Set<Integer> inSet = new HashSet<Integer>();    //List of indices from MendHetRec columns
         int[][] out;
         int[][] eachPair;
         int indexIndex = (dataTypeAt.containsKey("Index")) ? dataTypeAt.get("Index") : -1;
         int pairCount = 0;
         int firstInPair; 
-        ArrayList<Integer> rowSet = new ArrayList<Integer>();   //List of outData row indices.
+        List<Integer> rowSet = new ArrayList<Integer>();   //List of outData row indices.
 
         try {
             firstInPair = Integer.parseInt(inPair[0]);

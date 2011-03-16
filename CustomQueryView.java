@@ -3,10 +3,10 @@ import javax.swing.*;
 import javax.swing.event.*;
 import javax.swing.border.*;
 import java.util.BitSet;
-import java.util.HashMap;
-import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Iterator;
 import java.awt.event.*;
 import java.util.regex.*;
@@ -43,7 +43,7 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
     AbstractMapper[] annotMap;
     AbstractMapper currentMap;
     private VarData vdat;
-    HashMap<String, Integer> dataTypeAt;
+    Map<String, Integer> dataTypeAt;
     int annoSize;
     DelegateForest<CustomVertex, Integer> graph;
 
@@ -105,7 +105,7 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
     private StringBuilder vertexLabel;
     private int vertexLabelCount = 1;   //Use this to know where we are in the query assembly process
     private String outGroup;
-    private ArrayList<BitSet> bitSetList = new ArrayList<BitSet>();
+    private List<BitSet> bitSetList = new ArrayList<BitSet>();
     
     private TreeLayout<CustomVertex,Integer> layout;
     private VisualizationViewer<CustomVertex,Integer> vv;
@@ -304,6 +304,7 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
         //Icons
         apply.setIcon(createImageIcon("images/boxes.png", "filter tree"));
 
+        //Listeners
         exactMatch.addActionListener(this);
         noMatch.addActionListener(this);
         annotExactMatch.addActionListener(this);
@@ -735,7 +736,6 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
                 break;
             case VarData.STRING:
                 bitSetList.add(currentMap.filterWithPattern(pat));
-                //System.out.println(query.substring( query.length()-2 ));
                 if (query.substring( query.length()-2 ).equals("!=")) {
                     tempQuery.append("!");
                 }
@@ -745,8 +745,8 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
                 tempQuery.append(")");
                 break;
         }
-        //System.out.println(tempQuery.toString());
-        //System.out.println(bitSetList.get(index).cardinality());
+        //System.out.println(tempQuery.toString()); //TESTING
+        //System.out.println(bitSetList.get(index).cardinality()); //TESTING
         query = tempQuery;
 
         index++;
@@ -843,7 +843,7 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
     */
     private void findLeavesAndWrite(CustomVertex rootVertex, Collection<String> parentStringGroup) {
         if (graph.getChildCount(rootVertex) > 0) {
-            ArrayList<String> stringGroup = new ArrayList<String>();
+            List<String> stringGroup = new ArrayList<String>();
             String outGroup = "(";
             for (CustomVertex cv : graph.getChildren(rootVertex)) {
                 findLeavesAndWrite(cv, stringGroup);
@@ -876,7 +876,7 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
         Collection<CustomVertex> roots = graph.getRoots();
 
         if (roots.size() == 1) {
-            ArrayList<String> stringGroup = new ArrayList<String>();
+            List<String> stringGroup = new ArrayList<String>();
             outGroup = "";
             findLeavesAndWrite(roots.iterator().next(), stringGroup);
             for (Iterator<String> sgi = stringGroup.iterator(); sgi.hasNext(); ) {

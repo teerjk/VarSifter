@@ -1,8 +1,5 @@
-import java.util.HashMap;
-import java.util.ArrayList;
 import java.util.BitSet;
-import java.util.Collections;
-import java.util.regex.*;
+import java.util.regex.Pattern;
 
 /**
 *   Interface defining the common methods for different Mapper objects

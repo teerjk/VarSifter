@@ -22,7 +22,6 @@ public class CustomClassLoader extends ClassLoader {
         File f = new File(fullClassName);
         baseClassName = f.getName();
         baseClassName = baseClassName.substring(0, baseClassName.lastIndexOf('.'));
-        //System.out.println(fullClassName + " " + baseClassName);
     }
 
     /**
