@@ -63,7 +63,7 @@ public class VCFVarData extends VarData {
                                       "Gene_name",
                                       "type",
                                       "muttype",
-                                      "RS#",
+                                      "dbID",
                                       "ref_allele",
                                       "var_allele",
                                       "QUAL",
@@ -297,7 +297,7 @@ public class VCFVarData extends VarData {
                         //type    !!! Dummy for now !!!
                         data[tempLineCount][4] = annotMapper[4].addData("-");
 
-                        //RS#
+                        //dbID
                         if (tempLine[2].equals(".")) {
                             tempLine[2] = "-";
                         }

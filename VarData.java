@@ -308,6 +308,9 @@ public class VarData {
                             if (temp[i].equals("refseq")) {
                                 temp[i] = "Gene_name";
                             }
+                            else if (temp[i].equals("RS#")) {
+                                temp[i] = "dbID";
+                            }
 
                             dataTemp += (temp[i] + "\t");
 
@@ -559,7 +562,7 @@ public class VarData {
         int typeIndex = dataTypeAt.get("type");
         int refAlleleIndex = dataTypeAt.get("ref_allele");
         int varAlleleIndex = dataTypeAt.get("var_allele");
-        int dbSNPIndex = dataTypeAt.get("RS#");
+        int dbSNPIndex = dataTypeAt.get("dbID");
         int mendRecIndex = (dataTypeAt.containsKey("MendHomRec")) ? dataTypeAt.get("MendHomRec") : -1;
         int mendHetRecIndex = (dataTypeAt.containsKey("MendHetRec")) ? dataTypeAt.get("MendHetRec") : -1;
         int mendDomIndex = (dataTypeAt.containsKey("MendDom")) ? dataTypeAt.get("MendDom") : -1;
