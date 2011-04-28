@@ -141,7 +141,8 @@ public class CompileCustomQuery {
         try {
             File fTest = new File(fullClassName);
             if (fTest.exists()) {
-                VarSifter.showError("File " + fullClassName + "already exists!  Will NOT overwrite, so cannot apply filter.");
+                VarSifter.showError("<html>File " + fullClassName + " already exists!<p>Will NOT overwrite, "
+                    + "so cannot apply filter.<p>You will have to manually remove the file!</html>");
             }
             else {
                 final Iterable<String> opts = Arrays.asList("-d", System.getProperty("user.home"));
@@ -150,7 +151,7 @@ public class CompileCustomQuery {
             }
         }
         catch (NullPointerException npe) {
-            System.err.println(npe.toString());
+            System.out.println(npe.toString());
         }
 
         for (Diagnostic diagnostic : diagnostics.getDiagnostics()) {
@@ -200,6 +201,7 @@ public class CompileCustomQuery {
         catch (Exception e) {
             VarSifter.showError("Error running custom query: check console output for details.");
             System.out.println("Error: " + e.toString());
+            System.out.println("Cause: " + e.getCause().toString());
             for (StackTraceElement st:e.getStackTrace()) {
                 System.out.println(st.toString());
             }

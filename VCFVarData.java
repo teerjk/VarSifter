@@ -54,7 +54,6 @@ public class VCFVarData extends VarData {
         final Pattern info_pat = Pattern.compile("^##INFO");
         final Pattern format_pat = Pattern.compile("^##FORMAT");
         final Pattern head_pat = Pattern.compile("^#CHROM");
-        final Pattern comment = Pattern.compile("^#");
         final Pattern genoSep_pat = Pattern.compile("([0-9])[/\\|]([0-9])");
 
         final String[] fixedNames = { "Chr",
@@ -245,6 +244,10 @@ public class VCFVarData extends VarData {
             samples = new int[lineCount][][];
             dataIsIncluded = new BitSet(lineCount);
             br.close();
+        
+            //Ensure required columns are present (hopefully, as they are filled in by this class).
+            checkReqHeaders();
+
             //System.out.println(lineCount); //TESTING
             lineCount = 0;
             System.out.println();

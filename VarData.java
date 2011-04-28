@@ -27,6 +27,15 @@ public class VarData {
     
     final String[] geneDataHeaders = {"Gene_name", "Var Count"};
     final String[] ALLELES = {"A", "C", "G", "T"};
+    final String[] requiredHeaders = {"Chr",
+                                      "LeftFlank",
+                                      "RightFlank",
+                                      "Gene_name",
+                                      "type",
+                                      "muttype",
+                                      "ref_allele",
+                                      "var_allele"
+                                     };
 
     final static int INTEGER = 0;
     final static int FLOAT = 1;
@@ -44,6 +53,7 @@ public class VarData {
     protected int[][][] samples;      // Fields: [line][sampleName][genotype:MPGscore:coverage]
     protected int[][][] outSamples;   // Gets returned (can be filtered)
     protected int[] classList = null;
+    protected List<String> commentList = new ArrayList<String>(); //comment stored here for printing
     protected List<AbstractMapper> annotMapperBuilder = new ArrayList<AbstractMapper>();  //Build an array of AbstractMappers for annotations
     protected AbstractMapper[] annotMapper = new AbstractMapper[0];                  //the annotation AbstractMapper array
     protected AbstractMapper[] sampleMapper = new AbstractMapper[S_FIELDS];      //The SampleMapper array
@@ -53,6 +63,7 @@ public class VarData {
     protected final static Pattern vcf = Pattern.compile("^##fileformat=VCF");
     protected final static Pattern fDigits = VarSifter.fDigits;
     protected final static Pattern digits = VarTableModel.digits;
+    protected final static Pattern comment = Pattern.compile("^#");
 
     protected BitSet dataIsIncluded;      // A mask used to filter data, samples
     protected BitSet dataIsEditable = new BitSet();      // Which data elements can be edited
@@ -96,7 +107,6 @@ public class VarData {
             System.exit(1);
         }
 
-
         //indices for CompHet view
         compHetFields = new int[5];
         compHetFields[0] = (dataTypeAt.containsKey("Gene_name")) ? dataTypeAt.get("Gene_name") : -1;  //Gene name
@@ -139,7 +149,8 @@ public class VarData {
                     int[] controlAtIn,
                     VarData parentVarDataIn,
                     AbstractMapper[] annotMapperIn,
-                    AbstractMapper[] sampleMapperIn                    
+                    AbstractMapper[] sampleMapperIn,
+                    List<String> commentListIn
                     ) {
         data = dataIn;
         dataNamesOrig = dataNamesOrigIn;
@@ -156,6 +167,7 @@ public class VarData {
         parentVarData = parentVarDataIn;
         annotMapper = annotMapperIn;
         sampleMapper = sampleMapperIn;
+        commentList = commentListIn;
 
         dataIsIncluded = new BitSet(data.length);
 
@@ -187,6 +199,11 @@ public class VarData {
         try {
             BufferedReader br = new BufferedReader(new FileReader(inFile));
             while ((line = br.readLine()) != null) {
+                if (comment.matcher(line).find()) {
+                    commentList.add(line);
+                    continue;
+                }
+
                 lineCount++;
                 String[] temp = line.split("\t", 0);
                 if (first) {
@@ -246,6 +263,11 @@ public class VarData {
             BufferedReader br = new BufferedReader(new FileReader(inFile));
             
             while ((line = br.readLine()) != null) {
+                
+                if (comment.matcher(line).find()) {
+                    continue;
+                }
+                
                 String temp[] = line.split("\t", 0);
                 String sampleTemp = "";
                 String sampleTempOrig = "";
@@ -349,6 +371,9 @@ public class VarData {
                             dataCount++;
                         }
                     }
+                    
+                    //Ensure required headers present
+                    checkReqHeaders();
 
                     if (sampleCount == 0) {
                         noSamples = true;
@@ -504,6 +529,20 @@ public class VarData {
     }
 
 
+    /**
+    *   Checks for required headers.  If any are missing, warn, close program.
+    */
+    protected void checkReqHeaders() {
+        for (String s : requiredHeaders) {
+            if ( !dataTypeAt.containsKey(s) ) {
+                VarSifter.showError("Required column \"" + s + "\" missing! This will probably break something, so "
+                    + "program closing.");
+                System.exit(1);
+            }
+        }
+    }
+
+
     /** 
     *   Returns 2d array of all data
     *  
@@ -562,7 +601,7 @@ public class VarData {
         int typeIndex = dataTypeAt.get("type");
         int refAlleleIndex = dataTypeAt.get("ref_allele");
         int varAlleleIndex = dataTypeAt.get("var_allele");
-        int dbSNPIndex = dataTypeAt.get("dbID");
+        int dbSNPIndex = (dataTypeAt.containsKey("dbID")) ? dataTypeAt.get("dbID") : -1;
         int mendRecIndex = (dataTypeAt.containsKey("MendHomRec")) ? dataTypeAt.get("MendHomRec") : -1;
         int mendHetRecIndex = (dataTypeAt.containsKey("MendHetRec")) ? dataTypeAt.get("MendHetRec") : -1;
         int mendDomIndex = (dataTypeAt.containsKey("MendDom")) ? dataTypeAt.get("MendDom") : -1;
@@ -601,7 +640,10 @@ public class VarData {
         }
 
         //dbSNP
-        int nodbSNP = annotMapper[dbSNPIndex].getIndexOf("-");
+        int nodbSNP = -1;
+        if (dbSNPIndex > -1) {
+            nodbSNP = annotMapper[dbSNPIndex].getIndexOf("-");
+        }
 
         //menHetRec
         if (mask[1].get(VarSifter.MENDHETREC)) {
@@ -665,8 +707,11 @@ public class VarData {
             }
 
             //dbSNP
-            if ( mask[1].get(0) && ( annotMapper[dbSNPIndex].getString(data[i][dbSNPIndex]).matches("^0|-$") )
+            if ( dbSNPIndex > -1 
+                && mask[1].get(0) 
+                && ( annotMapper[dbSNPIndex].getString(data[i][dbSNPIndex]).matches("^0|-$") )
                 ) {
+                
                 filterSet[1].set(i);
             }
             
@@ -935,6 +980,15 @@ public class VarData {
         outHash[0] = outStart;
         outHash[1] = outEnd;
         return outHash;
+    }
+
+
+    /**
+    *   Return array of comment lines
+    *   @return array of comment lines, one row per line
+    */
+    public String[] returnCommentList() {
+        return commentList.toArray(new String[0]);
     }
 
 
@@ -1246,7 +1300,8 @@ public class VarData {
                            controlAt,
                            vdatIn,
                            annotMapper,
-                           sampleMapper
+                           sampleMapper,
+                           commentList
                            );
     }
 

@@ -18,7 +18,7 @@ import components.TableSorter;
 */
 public class VarSifter extends JFrame implements ListSelectionListener, ActionListener, TableModelListener {
     
-    final String version = "0.12b";
+    final String version = "0.12c";
     final String id = "$Id$";
 
     final String govWork = "PUBLIC DOMAIN NOTICE\n" +
@@ -94,7 +94,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     private ListSelectionModel lsm;
     private JLabel lines = new JLabel();
 
-    private JCheckBox dbsnp = new JCheckBox("dbSNP");
+    private JCheckBox dbsnp = new JCheckBox("dbID");
     private JCheckBox mendRec = new JCheckBox("Hom. Recessive");
     private JCheckBox mendDom = new JCheckBox("Dominant");
     private JCheckBox mendBad = new JCheckBox("Inconsistent");
@@ -1042,6 +1042,13 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     *  
     */
     private void maskCBox() {
+        if (typeMap.containsKey("dbID")) {
+            dbsnp.setEnabled(true);
+        }
+        else {
+            dbsnp.setEnabled(false);
+        }
+
         if (typeMap.containsKey("MendHomRec")) {
             mendRec.setEnabled(true);
         }
@@ -1327,8 +1334,14 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
                 
                 PrintWriter pw = new PrintWriter(new BufferedWriter(new FileWriter(fcFile)));
                 int[][] outData = vdTemp.dataDump();
-                String[] dataNames = vdat.returnDataNames();
-                String[] sampleNamesOrig = vdat.returnSampleNamesOrig();
+                String[] dataNames = vdTemp.returnDataNames();
+                String[] sampleNamesOrig = vdTemp.returnSampleNamesOrig();
+                String[] commentList = vdTemp.returnCommentList();
+
+                //comments
+                for (String c : commentList) {
+                    pw.println(c);
+                }
 
                 //header
                 StringBuilder outString = new StringBuilder(100);
