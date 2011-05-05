@@ -31,7 +31,13 @@ $(JAR_FILE):
 	rm $(CLASS_LIST)
 
 docs:
-	@cd html; \
+	-@mkdir html; \
+	cd html; \
+	javadoc -J-Xmx500M -sourcepath ../ ../*.java
+
+docsi_private:
+	-@mkdir html; \
+	cd html; \
 	javadoc -J-Xmx500M -private -sourcepath ../ ../*.java
 	
 

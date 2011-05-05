@@ -18,7 +18,7 @@ import components.TableSorter;
 */
 public class VarSifter extends JFrame implements ListSelectionListener, ActionListener, TableModelListener {
     
-    final String version = "0.12c";
+    final String version = "0.12d_BETA";
     final String id = "$Id$";
 
     final String govWork = "PUBLIC DOMAIN NOTICE\n" +
@@ -174,7 +174,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
 
     private JLabel linesl = new JLabel("Number of Variant Positions: ");
     
-    final String newLine = System.getProperty("line.separator");
+    final static String newLine = System.getProperty("line.separator");
     private String geneFile = null;
     private String bedFile = null;
 

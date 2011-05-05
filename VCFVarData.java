@@ -118,7 +118,7 @@ public class VCFVarData extends VarData {
                 else if (head_pat.matcher(line).find()) {
 
                     //Ask User to give more info about data
-                    InputTableDialog itd = new InputTableDialog(infoMetaVCF);
+                    InputTableDialog itd = new InputTableDialog(infoMetaVCF, inFile);
                     infoMetaVCF = itd.runDialog();
                     itd = null;
 
