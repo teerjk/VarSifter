@@ -20,6 +20,7 @@ public class VCFVarData extends VarData {
     *   @param inFile Absolute pathe of VCF file to load
     */
     public VCFVarData(String inFile) {
+        dataFile = inFile;
         
         try {
             BufferedReader br = new BufferedReader(new FileReader(inFile));

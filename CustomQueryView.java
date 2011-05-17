@@ -1,4 +1,5 @@
 import java.awt.*;
+import java.io.*;
 import javax.swing.*;
 import javax.swing.event.*;
 import javax.swing.border.*;
@@ -95,6 +96,8 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
     private JButton apply = new JButton("Apply Query");
     private JButton reset = new JButton("Reset Current Query");
     private JButton delete = new JButton("Delete Selected");
+    private JButton qSave = new JButton("Save Query");
+    private JButton qLoad = new JButton("Load Query");
     private JButton clear = new JButton("Clear All");
     private JComboBox modeBox;
     
@@ -286,6 +289,10 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
         runPane.add(Box.createRigidArea(new Dimension(5,0)));
         runPane.add(reset);
         runPane.add(Box.createRigidArea(new Dimension(5,0)));
+        runPane.add(qSave);
+        runPane.add(Box.createRigidArea(new Dimension(5,0)));
+        runPane.add(qLoad);
+        runPane.add(Box.createRigidArea(new Dimension(5,0)));
         runPane.add(delete);
         runPane.add(Box.createRigidArea(new Dimension(5,0)));
         runPane.add(clear);
@@ -316,6 +323,8 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
         applyStringPattern.addActionListener(this);
         apply.addActionListener(this);
         reset.addActionListener(this);
+        qSave.addActionListener(this);
+        qLoad.addActionListener(this);
         delete.addActionListener(this);
         clear.addActionListener(this);
         andButton.addActionListener(this);
@@ -412,6 +421,12 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
         }
         else if (es == reset) {
             resetQuery();
+        }
+        else if (es == qSave) {
+            writeGraph();
+        }
+        else if (es == qLoad) {
+            readGraph();
         }
         else if (es == delete) {
             deletePicked();
@@ -905,6 +920,87 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
         }
         vv.setGraphLayout(new TreeLayout<CustomVertex,Integer>(graph, (maxWidth + 5), 80));
         vv.repaint();
+    }
+
+
+    /**
+    *   Use serialization to read graph object file
+    */
+    private void readGraph() {
+        try {
+            File df = new File(vdat.dataFile);
+            File queryFile;
+            JFileChooser fc = new JFileChooser(System.getProperty("user.dir"));
+            fc.setDialogTitle("Open Query");
+            int fcReturnVal = fc.showOpenDialog(this);
+            if (fcReturnVal == JFileChooser.APPROVE_OPTION) {
+                queryFile = fc.getSelectedFile();
+                ObjectInputStream ois = new ObjectInputStream(new FileInputStream(queryFile));
+                String queryOfFile = (String)ois.readObject();
+                System.out.println("Read query for data " + queryOfFile);
+                if ( queryOfFile.equals(df.getName()) ) {
+                    JOptionPane.showMessageDialog(this, "<html>The loaded query appears to match this data file by name." 
+                        + "<p>However, if the query didn't really come from this EXACT data file, you will get incorrect results!!!");
+                    graph = (DelegateForest<CustomVertex,Integer>)ois.readObject();
+                    redrawGraph();
+                } 
+                else {
+                    VarSifter.showError("<html>It looks like the query you loaded was saved from a different data file: " +
+                        queryOfFile + " <p>Refusing to load, as the query results will be incorrect.");
+                }
+                ois.close();
+            }
+            else {
+                System.out.println("No file selected");
+            }
+        }
+        catch (IOException ioe) {
+            System.out.println(ioe.toString());
+        }
+        catch (ClassNotFoundException e) {
+            System.out.println(e.toString());
+        }
+    }
+
+
+    /**
+    *   Use serialization to save graph
+    */
+    private void writeGraph() {
+        try {
+            File df = new File(vdat.dataFile);
+            File queryFile;
+            int ovwResult = JOptionPane.YES_OPTION;
+            JFileChooser fc = new JFileChooser(System.getProperty("user.dir"));
+            fc.setDialogTitle("Save Query As");
+            int fcReturnVal = fc.showSaveDialog(this);
+            if (fcReturnVal == JFileChooser.APPROVE_OPTION) {
+                queryFile = fc.getSelectedFile();
+
+                if (queryFile.exists()) {
+                    ovwResult = JOptionPane.showConfirmDialog(null, queryFile.getAbsolutePath() + "already exists.  " +
+                        "Do you want to overwrite it?", "Overwrite Warning", 
+                        JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+                }
+
+                if (ovwResult == JOptionPane.YES_OPTION) {
+                    ObjectOutputStream ow = new ObjectOutputStream(new FileOutputStream(queryFile));
+                    ow.writeObject(df.getName());
+                    ow.writeObject(graph);
+                    ow.close();
+                    System.out.println("Saved query for data " + df.getName());
+                }
+                else {
+                    System.out.println("Query file not written.");
+                }
+            }
+            else {
+                System.out.println("Query file not written.");
+            }
+        }
+        catch (IOException ioe) {
+            System.out.println(ioe.toString());
+        }
     }
 
     /** 

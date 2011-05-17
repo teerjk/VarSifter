@@ -18,7 +18,7 @@ import components.TableSorter;
 */
 public class VarSifter extends JFrame implements ListSelectionListener, ActionListener, TableModelListener {
     
-    final String version = "0.12d_BETA";
+    final String version = "0.12d";
     final String id = "$Id$";
 
     final String govWork = "PUBLIC DOMAIN NOTICE\n" +
@@ -243,7 +243,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     public void actionPerformed(ActionEvent e) {
         Object es = e.getSource();
 
-        if (es == apply) {
+        if (es == apply || es == geneRegexField) {
             
             sorter.setTableHeader(null);    //Must do this to avoid memory leak
             mask = getFilterMask();
@@ -833,6 +833,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         filterFileButton.addActionListener(this);
         bedFilterFileButton.addActionListener(this);
         geneViewButton.addActionListener(this);
+        geneRegexField.addActionListener(this);
 
         //Disable unused buttons
         filterFile.setEnabled(false);

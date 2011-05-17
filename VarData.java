@@ -78,6 +78,7 @@ public class VarData {
     protected int numCols = 0;         // Number of columns.  Set from first line, used to check subseq. lines
     protected String customQuery = "";
     protected BitSet[] bitSets;
+    protected String dataFile;
 
     /**    
     *    Constructor reads in the file specified by full path in String inFile.
@@ -87,7 +88,8 @@ public class VarData {
     *   @param inFile Absolute path to VS file to load.
     */
     public VarData(String inFile) {
-
+        dataFile = inFile;
+    
         try {
             BufferedReader br = new BufferedReader(new FileReader(inFile));
             String line = br.readLine();
