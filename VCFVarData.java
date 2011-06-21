@@ -144,9 +144,9 @@ public class VCFVarData extends VarData {
 
                     for (int i=0; i < sampleCount; i++) {
                         sampleNames[i] = tempLine[i + annotCount + 1];
-                        sampleNamesOrig[ (i * S_FIELDS) + 0 ] = sampleNames[i] + "_NA";
-                        sampleNamesOrig[ (i * S_FIELDS) + 1 ] = sampleNames[i] + "_NA.score";
-                        sampleNamesOrig[ (i * S_FIELDS) + 2 ] = sampleNames[i] + "_NA.coverage";
+                        sampleNamesOrig[ (i * S_FIELDS) + 0 ] = sampleNames[i] + ".NA";
+                        sampleNamesOrig[ (i * S_FIELDS) + 1 ] = sampleNames[i] + ".NA.score";
+                        sampleNamesOrig[ (i * S_FIELDS) + 2 ] = sampleNames[i] + ".NA.coverage";
                     }
 
                     //Fill dataNames, dataTypeAt

@@ -286,7 +286,7 @@ public class VarData {
                 //Handle the Header
                 if (first) {
                     
-                    final Pattern samPat = Pattern.compile("NA");
+                    final Pattern samPat = Pattern.compile("\\.NA(?:\\.\\w+)?$");
                     final Pattern edPat = Pattern.compile("Comments");
                     final Pattern samAff = Pattern.compile("aff");
                     final Pattern samNorm = Pattern.compile("norm");
