@@ -1,4 +1,5 @@
 import java.io.*;
+import java.text.NumberFormat;
 import java.util.regex.*;
 import java.util.BitSet;
 import java.util.HashMap;
@@ -118,6 +119,12 @@ public class VCFVarData extends VarData {
                 }
                 else if (head_pat.matcher(line).find()) {
 
+                    if (tempLine.length < annotCount) {
+                        VarSifter.showError("<html>Header line (#CHROM...) column count is less than required."
+                            + "<p>Check the file format, and make sure the text file is tab-delimited!");
+                        System.exit(1);
+                    }
+
                     //Ask User to give more info about data
                     InputTableDialog itd = new InputTableDialog(infoMetaVCF, inFile);
                     infoMetaVCF = itd.runDialog();
@@ -190,6 +197,18 @@ public class VCFVarData extends VarData {
                     }
                     dataNamesOrig = dataNames;
 
+                    //change genotype qual mapper to float if needed
+                    if (formatMetaVCF.containsKey("GQ")) {
+
+                        String tempType = formatMetaVCF.get("GQ").get("Type");
+                        String tempNum = formatMetaVCF.get("GQ").get("Number");
+
+                        //assign class
+                        if (tempType.equals("Float") && tempNum.equals("1")) {
+                            sampleMapper[1] = new FloatMapper();
+                        }
+                    }
+
 
                     //TESTING
                     //for (int i=0; i<dataNames.length; i++) {
@@ -225,6 +244,14 @@ public class VCFVarData extends VarData {
 
                 }
                 else if (! comment.matcher(line).find()) {
+                    
+                    if (tempLine.length < annotCount) {
+                        VarSifter.showError("<html>Data line column count is less than required."
+                            + "<p>Check the file format, and make sure the text file is tab-delimited!");
+                        System.exit(1);
+                    }
+
+
                     //include multiple lines
                     String varAllele = tempLine[4];
                     if (varAllele.contains(",")) {
@@ -485,11 +512,13 @@ public class VCFVarData extends VarData {
 
                                 // Qual score
                                 if (sampHash.get("GQ") == null || sampTemp.length == 1) {
-                                    samples[tempLineCount][i - (annotCount + 1)][1] = 0;
+                                    samples[tempLineCount][i - (annotCount + 1)][1] = sampleMapper[1].addData(0);
                                 }
                                 else {
                                     samples[tempLineCount][i - (annotCount + 1)][1] 
-                                        = Integer.parseInt(sampTemp[sampHash.get("GQ")]);
+                                        = (sampleMapper[1].getDataType() == FLOAT) 
+                                        ? sampleMapper[1].addData(Float.parseFloat(sampTemp[sampHash.get("GQ")])) 
+                                        : sampleMapper[1].addData(Integer.parseInt(sampTemp[sampHash.get("GQ")]));
                                 }
 
                                 // Read depth
@@ -517,6 +546,12 @@ public class VCFVarData extends VarData {
         catch (IOException ioe) {
             System.out.println(ioe);
             VarSifter.showError(ioe.toString());
+            System.exit(1);
+        }
+        catch (Exception e) {
+            VarSifter.showError("<html>Ooops - VarSifter encountered an unexpected error when loading your "
+                + "VCF file.<p>Check the terminal output for full details:<p>" + e.toString());
+            e.printStackTrace();
             System.exit(1);
         }
         

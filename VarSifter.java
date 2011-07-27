@@ -18,7 +18,7 @@ import components.TableSorter;
 */
 public class VarSifter extends JFrame implements ListSelectionListener, ActionListener, TableModelListener {
     
-    final String version = "0.12e";
+    final String version = "1.0";
     final String id = "$Id$";
 
     final String govWork = "PUBLIC DOMAIN NOTICE\n" +
@@ -367,6 +367,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
                 genScoreCovRatioThresh = gSCRT;
                 sampleTable.setDefaultRenderer(Object.class, new SampleScoreRenderer(genScoreCovRatioThresh));
                 sampleTable.setDefaultRenderer(Number.class, new SampleScoreRenderer(genScoreCovRatioThresh));
+                sampleTable.setDefaultRenderer(Float.class, new SampleScoreRenderer(genScoreCovRatioThresh));
 
             }
             catch (NumberFormatException nfe) {
@@ -488,8 +489,12 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         else if (es == check) {
             int row = outTable.getSelectedRow();
             int col = outTable.getSelectedColumn();
-            System.out.println(row + "\t" + col + "\t" + outTable.getValueAt(row,col).getClass() +
+            int sRow = sampleTable.getSelectedRow();
+            int sCol = sampleTable.getSelectedColumn();
+            System.out.println("Ann: " + row + "\t" + col + "\t" + outTable.getValueAt(row,col).getClass() +
                 "\t" + outTable.getColumnClass(col));
+            System.out.println("Sample: " + sRow + "\t" + sCol + "\t" + sampleTable.getValueAt(sRow,sCol).getClass() + 
+                "\t" + sampleTable.getColumnClass(sCol));
 
         }
     }
@@ -676,6 +681,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         sampleScroller.setAlignmentY(Component.TOP_ALIGNMENT);
         sampleTable.setDefaultRenderer(Object.class, new SampleScoreRenderer(genScoreCovRatioThresh));
         sampleTable.setDefaultRenderer(Number.class, new SampleScoreRenderer(genScoreCovRatioThresh));
+        sampleTable.setDefaultRenderer(Float.class, new SampleScoreRenderer(genScoreCovRatioThresh));
         initColSizes(sampleTable, (SampleTableModel)((TableSorter)sampleTable.getModel()).getTableModel() );
         
         //Sample display

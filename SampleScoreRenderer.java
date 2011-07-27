@@ -41,8 +41,8 @@ public class SampleScoreRenderer extends DefaultTableCellRenderer {
         float ratio = 1.0f;
 
         if (table.getModel().getColumnCount() >= 4) {
-            ratio = ((Integer)table.getModel().getValueAt(row, 2)).floatValue() 
-                / ((Integer)table.getModel().getValueAt(row, 3)).floatValue() ;
+            ratio = ((Number)table.getModel().getValueAt(row, 2)).floatValue() 
+                / ((Number)table.getModel().getValueAt(row, 3)).floatValue() ;
         }
         
         if (ratio < cutoffRatio) {

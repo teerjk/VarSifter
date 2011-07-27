@@ -526,7 +526,12 @@ public class VarData {
             System.out.println(ioe);
             System.exit(1);
         }
-
+        catch (Exception e) {
+            VarSifter.showError("<html>Ooops - VarSifter encountered an unexpected error when loading your " 
+                + "VS file.<p>Check the terminal output for full details:<p>" + e.toString());
+            e.printStackTrace();
+            System.exit(1);
+        }
    
     }
 
@@ -537,8 +542,8 @@ public class VarData {
     protected void checkReqHeaders() {
         for (String s : requiredHeaders) {
             if ( !dataTypeAt.containsKey(s) ) {
-                VarSifter.showError("Required column \"" + s + "\" missing! This will probably break something, so "
-                    + "program closing.");
+                VarSifter.showError("Required column \"" + s + "\" missing! Please review the VS file format "
+                    + "in the User Guide. Exiting.");
                 System.exit(1);
             }
         }
@@ -973,6 +978,7 @@ public class VarData {
                     outEnd.get(lineArray[0]).add(Integer.valueOf(lineArray[2]));
                 }
             }
+            br.close();
         }
         catch (IOException ioe) {
             System.out.println(ioe);

@@ -35,10 +35,10 @@ public class IntMapper implements AbstractMapper {
 
 
     /**
-    *   Not used, returns null
+    *   Returns integer
     */
     public int addData(Object obj) {
-        return -1;
+        return (Integer)obj;
     }
 
     /**

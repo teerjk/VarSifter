@@ -437,19 +437,19 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
             graph = new DelegateForest<CustomVertex,Integer>();
         }
         else if (es == exactMatch) {
-            buildQueryVertex("==","==");
+            buildQueryVertex("equals","==");
         }
         else if (es == noMatch) {
-            buildQueryVertex("!=","!=");
+            buildQueryVertex("does not equal","!=");
         }
         else if (es == annotExactMatch) {
             buildQueryVertex("equals","==");
         }
         else if (es == annotNoMatch) {
-            buildQueryVertex("not equals","!=");
+            buildQueryVertex("does not equal","!=");
         }
         else if (es == eqButton) {
-            buildQueryVertex("==","==");
+            buildQueryVertex("equals","==");
         }
         else if (es == gtButton) {
             buildQueryVertex(">", ">");
