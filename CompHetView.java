@@ -18,7 +18,7 @@ public class CompHetView extends JFrame {
     private final String[] columnDefaultName = new String[]{"Gene_name", "Chr", 
                                                             "A_left flank", "A_score", "A_type",  
                                                             "B_left flank", "B_score", "B_type"};
-    private final int COLUMN_NUMBER = 3;
+    private final static int COLUMN_NUMBER = 3;
     private String[] columnName;
     private int[][] data;
     private VarData v;

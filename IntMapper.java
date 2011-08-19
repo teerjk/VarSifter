@@ -10,7 +10,7 @@ import java.util.regex.*;
 */
 public class IntMapper implements AbstractMapper {
     private Map<Integer, Integer> dataList;
-    private final int dataType = VarData.INTEGER;
+    private final static int dataType = VarData.INTEGER;
 
     /**
     *   Constructor

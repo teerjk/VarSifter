@@ -89,7 +89,7 @@ public class VCFVarData extends VarData {
             System.exit(1);
         }
 
-        String line = new String();
+        String line = "";
         boolean indel;
         boolean noSamples = false;
         int lineCount = 0;
@@ -460,8 +460,9 @@ public class VCFVarData extends VarData {
 
                         if (noSamples) {
                             samples[tempLineCount][0][0] = sampleMapper[0].getIndexOf("NA");
-                            samples[tempLineCount][0][1] = -1;
-                            samples[tempLineCount][0][2] = -1;
+                            samples[tempLineCount][0][1] = (sampleMapper[1].getDataType() == FLOAT) 
+                                ? sampleMapper[1].addData(Float.parseFloat("NaN")) : 0;
+                            samples[tempLineCount][0][2] = 0;
                         }
                         else {
                             String[] sampTemp = tempLine[8].split(":");
@@ -511,8 +512,11 @@ public class VCFVarData extends VarData {
                                 samples[tempLineCount][i - (annotCount + 1)][0] = sampleMapper[0].addData(geno);
 
                                 // Qual score
-                                if (sampHash.get("GQ") == null || sampTemp.length == 1) {
-                                    samples[tempLineCount][i - (annotCount + 1)][1] = sampleMapper[1].addData(0);
+                                if (sampHash.get("GQ") == null || sampTemp.length == 1 || sampTemp[sampHash.get("GQ")].equals(".")) {
+                                    samples[tempLineCount][i - (annotCount + 1)][1] 
+                                    = (sampleMapper[1].getDataType() == FLOAT)
+                                    ? sampleMapper[1].addData(Float.parseFloat("NaN"))
+                                    : sampleMapper[1].addData(0);
                                 }
                                 else {
                                     samples[tempLineCount][i - (annotCount + 1)][1] 
@@ -522,7 +526,7 @@ public class VCFVarData extends VarData {
                                 }
 
                                 // Read depth
-                                if (sampHash.get("DP") == null || sampTemp.length == 1) {
+                                if (sampHash.get("DP") == null || sampTemp.length == 1 || sampTemp[sampHash.get("DP")].equals(".")) {
                                     samples[tempLineCount][i - (annotCount + 1)][2] = 0;
                                 }
                                 else {

@@ -13,10 +13,10 @@ import java.util.regex.*;
 public class MultiStringMapper implements AbstractMapper {
     private Map<String, Integer> dataMap;
     private Map<Integer, String> indexMap;
-    private final int dataType = VarData.MULTISTRING;
+    private final static int dataType = VarData.MULTISTRING;
     private int lastIndex = 0;
     private String stringSepChar = ";";
-    private final int MAX = 31; //As I store flags in an int, can only have 31.
+    private final static int MAX = 31; //As I store flags in an int, can only have 31.
 
     /**
     *   Constructor

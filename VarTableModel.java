@@ -66,7 +66,7 @@ public class VarTableModel extends AbstractTableModel {
                     
                     switch (mapper[mapIndex].getDataType()) {
                         case VarData.INTEGER:
-                            data[i][j] = new Integer(inData[i][j]);
+                            data[i][j] = Integer.valueOf(inData[i][j]);
                             if (first || (Integer)data[i][j] > (Integer)largestInColumn[j]) {
                                 largestInColumn[j] = data[i][j];
                             }

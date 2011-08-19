@@ -13,7 +13,7 @@ import java.util.regex.*;
 public class StringMapper implements AbstractMapper {
     private Map<String, Integer> dataMap;
     private Map<Integer, String> indexMap;
-    private final int dataType = VarData.STRING;
+    private final static int dataType = VarData.STRING;
     private int lastIndex = 0;
 
     /**

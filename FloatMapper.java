@@ -10,7 +10,7 @@ import java.util.regex.*;
 public class FloatMapper implements AbstractMapper {
     private Map<Float, Integer> dataMap;
     private Map<Integer, Float> indexMap;
-    private final int dataType = VarData.FLOAT;
+    private final static int dataType = VarData.FLOAT;
     private int lastIndex = 0;
 
     /**

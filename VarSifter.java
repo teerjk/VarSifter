@@ -18,8 +18,8 @@ import components.TableSorter;
 */
 public class VarSifter extends JFrame implements ListSelectionListener, ActionListener, TableModelListener {
     
-    final String version = "1.0";
-    final String id = "$Id$";
+    final static String version = "1.0";
+    final static String id = "$Id$";
 
     final String govWork = "PUBLIC DOMAIN NOTICE\n" +
     "National Human Genome Research Institute\n" +
@@ -41,8 +41,8 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     //The two subsequent statements are required to be distributed with the 
     //source and binary re-distributions of the TableSorter class,
 
-    final String sunCopyright = "Copyright (c) 1995 - 2008 Sun Microsystems, Inc.  All rights reserved.";
-    final String sunDisclaimer = "Redistribution and use in source and binary forms, with or without\n" +
+    final static String sunCopyright = "Copyright (c) 1995 - 2008 Sun Microsystems, Inc.  All rights reserved.";
+    final static String sunDisclaimer = "Redistribution and use in source and binary forms, with or without\n" +
     "modification, are permitted provided that the following conditions\n" +
     "are met:\n" +
     "    \n" +
@@ -68,13 +68,13 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     "NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS\n" +
     "SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.";
 
-    final String geneNotFoundError  = new String("It looks like you may have switched columns! "
-        + "Switch them so the gene names are in the first column!");
+    final String geneNotFoundError  = "It looks like you may have switched columns! "
+        + "Switch them so the gene names are in the first column!";
 
-    final int VARIANT_FILE = 0;
-    final int GENE_FILTER_FILE = 1;
-    final int BED_FILTER_FILE = 2;
-    final int MAX_COLUMN_SIZE = 150;
+    final static int VARIANT_FILE = 0;
+    final static int GENE_FILTER_FILE = 1;
+    final static int BED_FILTER_FILE = 2;
+    final static int MAX_COLUMN_SIZE = 150;
 
     final String[] sampleTableLabels = {"Sample", "Genotype", "Genotype score", "coverage"};
 
@@ -304,7 +304,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         else if (es == geneViewButton) {
 
             //Use this button to return a VarSifter view of one gene
-            String geneRegex = new String("");
+            String geneRegex = "";
             if (isShowVar) {
                 int dataRowIndex = sorter.modelIndex(outTable.getSelectedRow());
                 String geneName = vdat.returnDataValueAt(dataRowIndex, "Gene_name");

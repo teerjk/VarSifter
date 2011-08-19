@@ -44,7 +44,7 @@ $(ZIP_FILE): $(JAR_FILE)
 	echo "$${exec}" > VarSifter_$(VERSION).bat && chmod 755 VarSifter_$(VERSION).bat; \
 	zip $@ -j $< jung/jung-graph-impl-2.0.1.jar README.txt JUNG_bsd_license.txt apache2_license.txt \
 	jung/jung-visualization-2.0.1.jar jung/jung-algorithms-2.0.1.jar jung/jung-api-2.0.1.jar \
-	jung/collections-generic-4.01.jar VarSifter_$(VERSION).sh VarSifter_$(VERSION).bat;
+	jung/collections-generic-4.01.jar VarSifter_$(VERSION).command VarSifter_$(VERSION).bat;
 
 $(SRC_FILE): clean
 	tar -cvzf $@ *.java images/* components/*.java Makefile manifest.txt BUILD.txt;
@@ -62,5 +62,5 @@ docs_private:
 	
 
 clean:
-	-rm *class */*class *jar *zip *.src.tgz VarSifter_*.sh VarSifter_*.bat classes.txt; \
+	-rm *class */*class *jar *zip *.src.tgz VarSifter_*.command VarSifter_*.bat classes.txt; \
 	rm -rf html/*

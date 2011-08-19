@@ -50,12 +50,12 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
 
     private int lastQueryIndex = 0;
     private Integer edgeCount = 0;
-    final int SAMPLE = 0;
-    final int FIXED_SAMPLE = 1;
-    final int ACTION = 2;
-    final int ANNOT_ACTION = 3;
-    final int ANNOT_COMP = 4;
-    final int LOGICAL = 5;
+    final static int SAMPLE = 0;
+    final static int FIXED_SAMPLE = 1;
+    final static int ACTION = 2;
+    final static int ANNOT_ACTION = 3;
+    final static int ANNOT_COMP = 4;
+    final static int LOGICAL = 5;
 
     private final static Pattern compPat = Pattern.compile("[<>=&]|get|isH");
 
@@ -153,7 +153,7 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
 
         vv.setGraphMouse(graphMouse);
 
-        String out = new String("");
+        String out = "";
         sampleList = new JList(sampleNames);
         annotList = new JList(annotNames);
 

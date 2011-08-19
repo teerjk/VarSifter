@@ -42,21 +42,21 @@ public class CompHetTableModel extends AbstractTableModel {
                 //Annotations - 1st member of pair
                 for (int j=0; j < chl; j++) {
                     if (compHetFields[j] == -1) {
-                        data[i][j] = new String("-");
+                        data[i][j] = "-";
                         continue;
                     }
 
                     AbstractMapper aM = annotMapper[compHetFields[j]];
                     switch (aM.getDataType()) {
                         case VarData.INTEGER:
-                            data[i][j] = new Integer(inData[i][j]);
+                            data[i][j] = Integer.valueOf(inData[i][j]);
                             break;
                         case VarData.FLOAT:
                             data[i][j] = new Float(aM.getFloat(inData[i][j]));
                             break;
                         case VarData.STRING:
                         case VarData.MULTISTRING:
-                            data[i][j] = new String(aM.getString(inData[i][j]));
+                            data[i][j] = aM.getString(inData[i][j]);
                             break;
                     }
                 }
@@ -67,13 +67,13 @@ public class CompHetTableModel extends AbstractTableModel {
                     AbstractMapper sM = sampleMapper[ (j-chl) % VarData.S_FIELDS ];
                     switch (sM.getDataType()) {
                         case VarData.INTEGER:
-                            data[i][j] = new Integer(inData[i][j]);
+                            data[i][j] = Integer.valueOf(inData[i][j]);
                             break;
                         case VarData.FLOAT:
                             data[i][j] = new Float(sM.getFloat(inData[i][j]));
                             break;
                         case VarData.STRING:
-                            data[i][j] = new String(sM.getString(inData[i][j]));
+                            data[i][j] = sM.getString(inData[i][j]);
                             break;
                     }
                 }
@@ -83,21 +83,21 @@ public class CompHetTableModel extends AbstractTableModel {
 
                     int correctedIndex = j + chl + sampleFieldsLength - 2; //Subtract 2 for the fields we omit
                     if (compHetFields[j] == -1) {
-                        data[i][correctedIndex] = new String("-");
+                        data[i][correctedIndex] = "-";
                         continue;
                     }
 
                     AbstractMapper aM = annotMapper[compHetFields[j]];
                     switch (aM.getDataType()) {
                         case VarData.INTEGER:
-                            data[i][correctedIndex] = new Integer(inData[i][correctedIndex]);
+                            data[i][correctedIndex] = Integer.valueOf(inData[i][correctedIndex]);
                             break;
                         case VarData.FLOAT:
                             data[i][correctedIndex] = new Float(aM.getFloat(inData[i][correctedIndex]));
                             break;
                         case VarData.STRING:
                         case VarData.MULTISTRING:
-                            data[i][correctedIndex] = new String(aM.getString(inData[i][correctedIndex]));
+                            data[i][correctedIndex] = aM.getString(inData[i][correctedIndex]);
                             break;
                     }
                 }
@@ -107,13 +107,13 @@ public class CompHetTableModel extends AbstractTableModel {
                     AbstractMapper sM = sampleMapper[ (j - ((chl*2)-2) - sampleFieldsLength) % VarData.S_FIELDS ];
                     switch (sM.getDataType()) {
                         case VarData.INTEGER:
-                            data[i][j] = new Integer(inData[i][j]);
+                            data[i][j] = Integer.valueOf(inData[i][j]);
                             break;
                         case VarData.FLOAT:
                             data[i][j] = new Float(sM.getFloat(inData[i][j]));
                             break;
                         case VarData.STRING:
-                            data[i][j] = new String(sM.getString(inData[i][j]));
+                            data[i][j] = sM.getString(inData[i][j]);
                             break;
                     }
                 }

@@ -192,7 +192,7 @@ public class VarData {
     */
     private void loadVSFile(String inFile) {
         final int header_lines = 1;
-        String line = new String();
+        String line = "";
         int lineCount = 0;
         long time = System.currentTimeMillis();
         boolean first = true;
@@ -433,7 +433,7 @@ public class VarData {
                     //Handle map file if available
                     File f = new File(inFile + ".map");
                     if (f.exists()) {
-                        String mapLine = new String();
+                        String mapLine = "";
                         Map<String, String> mapHash = new HashMap<String, String>();
                         BufferedReader mapReader = new BufferedReader(new FileReader(f));
                         while ((mapLine = mapReader.readLine()) != null) {
@@ -963,7 +963,7 @@ public class VarData {
         Map[] outHash = new Map[2];
 
         try {
-            String line = new String();
+            String line = "";
             Pattern chr = Pattern.compile("^chr");
             BufferedReader br = new BufferedReader(new FileReader(inFile));
             while ((line = br.readLine()) != null) {
@@ -1134,7 +1134,7 @@ public class VarData {
     protected Set<String> returnGeneSet(String inFile) {
         Set<String> outSet = new HashSet<String>();
         try {
-            String line = new String();
+            String line = "";
             BufferedReader br = new BufferedReader(new FileReader(inFile));
             while ((line = br.readLine()) != null) {
                 outSet.add(line.toLowerCase());

@@ -27,7 +27,7 @@ public class InputTableDialog {
     private Map<String, Map<String, String>> inHash = new HashMap<String, Map<String, String>>();
     private List<String> iList; //Primary keys, the ID fields
     private String inFile = "";
-    private final String vcfConfigExt = ".vcf_config";
+    private final static String vcfConfigExt = ".vcf_config";
 
     /**
     *   Constructor using a hash of hashes.
@@ -73,7 +73,7 @@ public class InputTableDialog {
                 }
             }
             data[i][j] = new JCheckBox();
-            data[i][j+1] = new String("");
+            data[i][j+1] = "";
 
             if (tempMap.containsKey("Number") && !tempMap.get("Number").equals(".")) {
                 ((JCheckBox)data[i][j]).setEnabled(false);
@@ -96,7 +96,7 @@ public class InputTableDialog {
             && JOptionPane.showConfirmDialog(null, cMessage, null, JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE) 
                == JOptionPane.YES_OPTION) {
 
-            String cLine = new String();
+            String cLine = "";
             try {
                 BufferedReader cReader = new BufferedReader(new FileReader(f));
                 while ((cLine = cReader.readLine()) != null) {

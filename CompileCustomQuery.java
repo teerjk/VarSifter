@@ -17,7 +17,7 @@ import javax.tools.DiagnosticCollector;
 *   @author Jamie K. Teer
 */
 public class CompileCustomQuery {
-    final String className = "VSQueryModule";
+    final static String className = "VSQueryModule";
     final String fullClassName = System.getProperty("user.home") 
                                + System.getProperty("file.separator")
                                + className
