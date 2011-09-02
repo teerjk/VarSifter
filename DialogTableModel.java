@@ -7,15 +7,18 @@ import javax.swing.table.AbstractTableModel;
 public class DialogTableModel extends AbstractTableModel {
     protected Object[][] data;
     protected String[] colNames;
+    protected int editableColCount; //Last this many columns are editable
 
     /**
     *   Constructor
     *   @param inData 2-d array of Objects
     *   @param inCol Array of column names
+    *   @param inCount Number of editable columns (counting from the right)
     */
-    public DialogTableModel(Object[][] inData, String[] inCol) {
+    public DialogTableModel(Object[][] inData, String[] inCol, int inCount) {
         data = inData;
         colNames = inCol;
+        editableColCount = inCount;
     }
 
     /**
@@ -75,7 +78,7 @@ public class DialogTableModel extends AbstractTableModel {
     */
     @Override
     public boolean isCellEditable(int row, int col) {
-        if (col >= getColumnCount() - InputTableDialog.addedKeys.length) {
+        if (col >= getColumnCount() - editableColCount) {
             if (getColumnClass(col) == JCheckBox.class && !((JCheckBox)getValueAt(row, col)).isEnabled() ) {
                 return false;
             }

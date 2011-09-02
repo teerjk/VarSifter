@@ -18,10 +18,10 @@ import components.TableSorter;
 */
 public class VarSifter extends JFrame implements ListSelectionListener, ActionListener, TableModelListener {
     
-    final static String version = "1.0";
+    final static String version = "1.1";
     final static String id = "$Id$";
 
-    final String govWork = "PUBLIC DOMAIN NOTICE\n" +
+    final static String govWork = "PUBLIC DOMAIN NOTICE\n" +
     "National Human Genome Research Institute\n" +
     "This software/database is \"United States Government Work\" under the terms of\n" +
     "the United States Copyright Act.  It was written as part of the authors'\n" +
@@ -68,7 +68,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     "NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS\n" +
     "SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.";
 
-    final String geneNotFoundError  = "It looks like you may have switched columns! "
+    final static String geneNotFoundError  = "It looks like you may have switched columns! "
         + "Switch them so the gene names are in the first column!";
 
     final static int VARIANT_FILE = 0;
@@ -126,6 +126,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     private JMenuItem saveAsItem;
     private JMenuItem saveViewItem;
     private JMenuItem preferViewItem;
+    private JMenuItem sampleSettingsItem;
     private JMenuItem exitItem;
     private JMenuItem compHetViewItem;
     private JMenuItem customQueryViewItem;
@@ -354,6 +355,16 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             preferViewParent.setVisible(true);
         }
 
+        else if (es == sampleSettingsItem) {
+            SampleSettingsDialog ssd = new SampleSettingsDialog(vdat);
+            ssd.runDialog();
+            maskCBox();
+            drawMinAffSpinner();
+            drawCaseControlSpinner();
+            //Fire list selection to update names
+            lsm.setSelectionInterval(outTable.getSelectedRow(), outTable.getSelectedRow() + 1);
+        }
+
         else if (es == prefApply) {
             try {
                 int mM = Integer.parseInt(minMPGField.getText());
@@ -390,7 +401,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         }
 
         else if (es == compHetGeneViewButton) {
-            String geneRegex = new String("");
+            String geneRegex = "";
             int indexIndex = ((Integer)typeMap.get("Index")).intValue();
             int mendHetRecIndex = ((Integer)typeMap.get("MendHetRec")).intValue();
             
@@ -623,6 +634,10 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         pane.setLayout(new BorderLayout());
         pane.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
 
+        ToolTipManager.sharedInstance().setInitialDelay(1250);
+        ToolTipManager.sharedInstance().setReshowDelay(0);
+        ToolTipManager.sharedInstance().setDismissDelay(10000);
+
         //Menu
         JMenuBar mBar = new JMenuBar();
         JMenu fileMenu = new JMenu("File");
@@ -632,6 +647,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         saveAsItem = new JMenuItem("Save File As");
         saveViewItem = new JMenuItem("Save Current View As");
         preferViewItem = new JMenuItem("Preferences");
+        sampleSettingsItem = new JMenuItem("Sample Settings");
         exitItem = new JMenuItem("Exit");
         compHetViewItem = new JMenuItem("Viewing Compound Hets");
         customQueryViewItem = new JMenuItem("Custom Query");
@@ -640,6 +656,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         fileMenu.add(saveAsItem);
         fileMenu.add(saveViewItem);
         fileMenu.add(preferViewItem);
+        fileMenu.add(sampleSettingsItem);
         fileMenu.add(exitItem);
         viewMenu.add(compHetViewItem);
         viewMenu.add(customQueryViewItem);
@@ -830,6 +847,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         saveAsItem.addActionListener(this);
         saveViewItem.addActionListener(this);
         preferViewItem.addActionListener(this);
+        sampleSettingsItem.addActionListener(this);
         prefApply.addActionListener(this);
         compHetViewItem.addActionListener(this);
         customQueryViewItem.addActionListener(this);
@@ -851,6 +869,21 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         }
         compHetGeneViewButton.setEnabled(false);
         maskCBox();
+
+        //ToolTips
+        apply.setToolTipText("Execute the query using all checked filters");
+        clear.setToolTipText("Unset all filters");
+        includePane.setToolTipText("Variants meeting these conditions will be displayed");
+        excludePane.setToolTipText("Variants meeting these conditions will NOT be displayed");
+        sampleFiltPane.setToolTipText("Variants meeting these conditions will be displayed");
+        showVar.setToolTipText("Annotation Panel will show each variant");
+        showGene.setToolTipText("Annotation Panel will show each gene, and the number of variants in that gene.");
+        filterFileButton.setToolTipText("<html>Select a file of gene names for filtering.<p>"
+            + "Remember to check the \"Include/Exclude Gene File\" filter box!");
+        bedFilterFileButton.setToolTipText("<html>Select a file with BED format regions for filtering.<p>"
+            + "Remember to check the \"Include Bed File Regions\" filter box!");
+        geneViewButton.setToolTipText("Open a new window showing all variants for the highlighted gene");
+
                 
         pane.add(tablePanel, BorderLayout.CENTER);
         pane.add(filtScroll, BorderLayout.LINE_END);
@@ -1054,6 +1087,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         }
         else {
             dbsnp.setEnabled(false);
+            dbsnp.setSelected(false);
         }
 
         if (typeMap.containsKey("MendHomRec")) {
@@ -1061,6 +1095,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         }
         else {
             mendRec.setEnabled(false);
+            mendRec.setSelected(false);
         }
 
         if (typeMap.containsKey("MendHetRec")) {
@@ -1071,6 +1106,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         }
         else {
             mendCompHet.setEnabled(false);
+            mendCompHet.setSelected(false);
             compHetGeneViewButton.setEnabled(false);
             compHetPairViewButton.setEnabled(false);
             compHetAllButton.setEnabled(false);
@@ -1081,6 +1117,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         }
         else {
             mendDom.setEnabled(false);
+            mendDom.setSelected(false);
         }
         
         if (typeMap.containsKey("MendInconsis")) {
@@ -1088,11 +1125,13 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         }
         else {
             mendBad.setEnabled(false);
+            mendBad.setSelected(false);
         }
 
         
         if (vdat.countSampleType(vdat.AFF_NORM_PAIR) == 0) {
             uniqInAff.setEnabled(false);
+            uniqInAff.setSelected(false);
             minAffSpinner.setEnabled(false);
             affSpinnerLabel.setEnabled(false);
         }
@@ -1104,6 +1143,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
 
         if (vdat.countSampleType(vdat.CASE) == 0) {
             caseControl.setEnabled(false);
+            caseControl.setSelected(false);
             caseSpinner.setEnabled(false);
         }
         else {
@@ -1112,6 +1152,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         }
         if (vdat.countSampleType(vdat.CONTROL) == 0) {
             caseControl.setEnabled(false);
+            caseControl.setSelected(false);
             controlSpinner.setEnabled(false);
         }
         else {

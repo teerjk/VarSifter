@@ -42,10 +42,10 @@ public class VarData {
     final static int STRING = 2;
     final static int MULTISTRING = 3;
 
-    protected String[] dataNamesOrig;     // All data names, for writing purposes
-    protected String[] dataNames;
-    protected String[] sampleNamesOrig;   // All sample names, for writing purposes
-    protected String[] sampleNames;
+    protected String[] dataNamesOrig = {""};     // All data names, for writing purposes
+    protected String[] dataNames = {""};
+    protected String[] sampleNamesOrig = {""};   // All sample names, for writing purposes
+    protected String[] sampleNames = {""};
 
     //data fields
     protected int[][] data;           // Fields: [line][var_annotation col]
@@ -70,10 +70,10 @@ public class VarData {
     
     protected Map<String, Integer> dataTypeAt = new HashMap<String, Integer>();
 
-    protected int[] affAt;
-    protected int[] normAt;
-    protected int[] caseAt;
-    protected int[] controlAt;
+    protected int[] affAt = new int[0];
+    protected int[] normAt = new int[0];
+    protected int[] caseAt = new int[0];
+    protected int[] controlAt = new int[0];
     protected VarData parentVarData = null;
     protected int numCols = 0;         // Number of columns.  Set from first line, used to check subseq. lines
     protected String customQuery = "";
@@ -271,13 +271,13 @@ public class VarData {
                 }
                 
                 String temp[] = line.split("\t", 0);
-                String sampleTemp = "";
-                String sampleTempOrig = "";
-                String dataTemp = "";
-                String affPos = "";
-                String normPos = "";
-                String casePos = "";
-                String controlPos = "";
+                List<String> sampleTemp = new ArrayList<String>();
+                List<String> sampleTempOrig = new ArrayList<String>();
+                List<String> dataTemp = new ArrayList<String>();
+                List<Integer> affPos = new ArrayList<Integer>();
+                List<Integer> normPos = new ArrayList<Integer>();
+                List<Integer> casePos = new ArrayList<Integer>();
+                List<Integer> controlPos = new ArrayList<Integer>();
 
                 long startT = System.currentTimeMillis();
                 long annotT;
@@ -292,10 +292,6 @@ public class VarData {
                     final Pattern samNorm = Pattern.compile("norm");
                     final Pattern casePat = Pattern.compile("case");
                     final Pattern controlPat = Pattern.compile("control");
-                    String[] affPosArr;
-                    String[] normPosArr;
-                    String[] casePosArr;
-                    String[] controlPosArr;
                     int dataCount = 0;
                     int sampleCount = 0;
                     
@@ -304,25 +300,25 @@ public class VarData {
                         if ((samPat.matcher(temp[i])).find()) {
 
                             if (sampleCount % S_FIELDS == 0) {  //Sample name, not score, cov, etc
-                                sampleTemp += (temp[i] + "\t");
+                                sampleTemp.add(temp[i]);
                                 int samPos = (i - dataCount)/S_FIELDS;
                                 
                                 if ((samAff.matcher(temp[i])).find()) {
-                                    affPos += ( samPos + "\t");
+                                    affPos.add(samPos);
                                 }
                                 else if ((samNorm.matcher(temp[i])).find()) {
-                                    normPos += ( samPos + "\t");
+                                    normPos.add(samPos);
                                 }
 
                                 if ((casePat.matcher(temp[i])).find()) {
-                                    casePos += ( samPos + "\t");
+                                    casePos.add(samPos);
                                 }
                                 else if ((controlPat.matcher(temp[i])).find()) {
-                                    controlPos += ( samPos + "\t");
+                                    controlPos.add(samPos);
                                 }
                             }
                             sampleCount++;
-                            sampleTempOrig += (temp[i] + "\t");
+                            sampleTempOrig.add(temp[i]);
                         }
 
                         //Is column an annotation?
@@ -336,7 +332,7 @@ public class VarData {
                                 temp[i] = "dbID";
                             }
 
-                            dataTemp += (temp[i] + "\t");
+                            dataTemp.add(temp[i]);
 
                             // May want to read a flag from header - then can make checkboxes from this.
                             if (dataTypeAt.containsKey(temp[i])) {
@@ -392,41 +388,33 @@ public class VarData {
                         sampleMapper[0].addData("NA");
                     }
                     else {
-                        sampleNames = sampleTemp.split("\t");
-                        sampleNamesOrig = sampleTempOrig.split("\t");
+                        sampleNames = sampleTemp.toArray(sampleNames);
+                        sampleNamesOrig = sampleTempOrig.toArray(sampleNamesOrig);
                     }
                     
-                    dataNames = dataTemp.split("\t");
+                    dataNames = dataTemp.toArray(dataNames);
                     dataNamesOrig = dataNames; //Will have to change this when not all data included
                     annotMapper = annotMapperBuilder.toArray(annotMapper);
                     
-                    if (affPos.length() > 0 && normPos.length() > 0) {
-                        affPosArr = affPos.split("\t");
-                        normPosArr = normPos.split("\t");
-                        affAt = new int[affPosArr.length];
-                        normAt = new int[normPosArr.length];
-                        for (int i=0; i < affPosArr.length; i++) { //Only works with norm/aff pairs...
-                            affAt[i] = Integer.parseInt(affPosArr[i]);
-                            normAt[i] = Integer.parseInt(normPosArr[i]);
+                    if (affPos.size() > 0 && normPos.size() > 0) {
+                        affAt = new int[affPos.size()];
+                        normAt = new int[normPos.size()];
+                        for (int i=0; i < affAt.length; i++) { //Only works with norm/aff pairs...
+                            affAt[i] = affPos.get(i);
+                            normAt[i] = normPos.get(i);
                         }
-                    }
-                    else {
-                        affAt = null;
-                        normAt = null;
                     }
 
-                    if (casePos.length() > 0) {
-                        casePosArr = casePos.split("\t");
-                        caseAt = new int[casePosArr.length];
-                        for (int i=0; i < casePosArr.length; i++) {
-                            caseAt[i] = Integer.parseInt(casePosArr[i]);
+                    if (casePos.size() > 0) {
+                        caseAt = new int[casePos.size()];
+                        for (int i=0; i < caseAt.length; i++) {
+                            caseAt[i] = casePos.get(i);
                         }
                     }
-                    if (controlPos.length() > 0) {
-                        controlPosArr = controlPos.split("\t");
-                        controlAt = new int[controlPosArr.length];
-                        for (int i=0; i< controlPosArr.length; i++) {
-                            controlAt[i] = Integer.parseInt(controlPosArr[i]);
+                    if (controlPos.size() > 0) {
+                        controlAt = new int[controlPos.size()];
+                        for (int i=0; i< controlAt.length; i++) {
+                            controlAt[i] = controlPos.get(i);
                         }
                     }
 

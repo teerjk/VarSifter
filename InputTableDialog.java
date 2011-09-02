@@ -14,7 +14,7 @@ import java.util.Collections;
 */
 public class InputTableDialog {
 
-    public static final String[] addedKeys      = { "MultiAllele",
+    private static final String[] addedKeys      = { "MultiAllele",
                                              "Sub-delimiter"
                                            };
     //private static Object[] addedObjects = { new JCheckBox(),
@@ -116,8 +116,8 @@ public class InputTableDialog {
         else {
 
             JOptionPane oPane = new JOptionPane();
-            JTable mapTable = getTable(oPane);
-            oPane.setInputValue(mapTable.getModel());
+            JTable mapTable = getTable();
+            //oPane.setInputValue(mapTable.getModel());
             JScrollPane s = new JScrollPane(mapTable); 
                                             //ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS,
                                             //ScrollPaneConstants.HORIZONTAL_SCROLLBAR_ALWAYS);
@@ -128,10 +128,11 @@ public class InputTableDialog {
             d.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
             d.setResizable(true);
             d.setVisible(true);
-            DialogTableModel dtm = (DialogTableModel)oPane.getInputValue();
+            //DialogTableModel dtm = (DialogTableModel)oPane.getInputValue();
             d.dispose();
             
             //Handle data, return HashMap
+            DialogTableModel dtm = (DialogTableModel)mapTable.getModel();
             int colCount = dtm.getColumnCount();
             for (int i=0; i<dtm.getRowCount(); i++) {
                 Map<String, String> tempMap = inHash.get( (String)dtm.getValueAt(i,pKeyIndex) );
@@ -156,19 +157,18 @@ public class InputTableDialog {
     
     /**
     *    Initiate JTable to place in dialog
-    *    @param opt JOptionPane to store data in upon change
     *    @return The JTable with data and listener
     */
-    private JTable getTable(final JOptionPane opt) {
-        JTable t = new JTable(new DialogTableModel(data, colNames));
+    private JTable getTable() {
+        JTable t = new JTable(new DialogTableModel(data, colNames, addedKeys.length));
         t.setDefaultRenderer(JCheckBox.class, new JCheckBoxRenderer());
         t.setDefaultEditor(JCheckBox.class, new JCheckBoxCellEditor());
-        t.getModel().addTableModelListener(new TableModelListener() {
-                                        public void tableChanged(TableModelEvent e) {
-                                            opt.setInputValue((DialogTableModel)e.getSource());
-                                            return;
-                                        }
-        });
+        //t.getModel().addTableModelListener(new TableModelListener() {
+        //                                public void tableChanged(TableModelEvent e) {
+        //                                    opt.setInputValue((DialogTableModel)e.getSource());
+        //                                    return;
+        //                                }
+        //});
         return t;
     }
 

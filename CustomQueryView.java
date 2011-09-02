@@ -93,7 +93,7 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
     private JButton xorButton = new JButton("XOR");
     private JButton[] logicButtons = {andButton, orButton, xorButton};
 
-    private JButton apply = new JButton("Apply Query");
+    private JButton finalizeQuery = new JButton("Finalize Query");
     private JButton reset = new JButton("Reset Current Query");
     private JButton delete = new JButton("Delete Selected");
     private JButton qSave = new JButton("Save Query");
@@ -167,6 +167,11 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
     */
     private void initTable() {
         this.setLayout(new BorderLayout());
+
+        ToolTipManager.sharedInstance().setInitialDelay(1250);
+        ToolTipManager.sharedInstance().setReshowDelay(0);
+        ToolTipManager.sharedInstance().setDismissDelay(10000);
+
 
         /* *******
         *   Sample query setup
@@ -285,7 +290,7 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
         JPanel runPane = new JPanel();
         runPane.setLayout(new BoxLayout(runPane, BoxLayout.X_AXIS));
         runPane.setBorder(BorderFactory.createEmptyBorder(7,7,7,7));
-        runPane.add(apply);
+        runPane.add(finalizeQuery);
         runPane.add(Box.createRigidArea(new Dimension(5,0)));
         runPane.add(reset);
         runPane.add(Box.createRigidArea(new Dimension(5,0)));
@@ -309,7 +314,7 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
         extraPane.add(Box.createVerticalGlue());
 
         //Icons
-        apply.setIcon(createImageIcon("images/boxes.png", "filter tree"));
+        finalizeQuery.setIcon(createImageIcon("images/boxes.png", "filter tree"));
 
         //Listeners
         exactMatch.addActionListener(this);
@@ -321,7 +326,7 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
         ltButton.addActionListener(this);
         applyAnnotComp.addActionListener(this);
         applyStringPattern.addActionListener(this);
-        apply.addActionListener(this);
+        finalizeQuery.addActionListener(this);
         reset.addActionListener(this);
         qSave.addActionListener(this);
         qLoad.addActionListener(this);
@@ -342,6 +347,22 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
         applyStringPattern.setEnabled(false);
         stringAnnotList.setEnabled(false);
         inAnnotNumber.setEnabled(false);
+
+        //ToolTips
+        finalizeQuery.setToolTipText("<html>Prepares the query logic for filtering.<p>"
+            + "Must be clicked before filtering will work!");
+        reset.setToolTipText("<html>Returns the current query to the intial state, without affecting query "
+            + "boxes in the main window.<p>All selections used for the current query willl be lost.");
+        qSave.setToolTipText("<html>Saves the current query for later use.<p>"
+            + "Will only work for THIS data file!");
+        qLoad.setToolTipText("<html>Loads a previously saved query.<p>"
+            + "Can only load a query that was saved using THIS data file!");
+        clear.setToolTipText("Deletes are queries and logical connections.");
+        delete.setToolTipText("Deletes the selected query boxes.");
+        modeBox.setToolTipText("<html>Defines box selection behavior:<p>"
+            + "PICKING: Allows selection of boxes. Shift-click to select multiple boxes," 
+            + "or click-drag to draw a selection box.<p>"
+            + "TRANSFORMING: Click-drag the screen to move it around.");
 
 
         /* ********
@@ -416,7 +437,7 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
     public void actionPerformed(ActionEvent e) {
         Object es = e.getSource();
 
-        if (es == apply) {
+        if (es == finalizeQuery) {
             finalizeQuery();
         }
         else if (es == reset) {
