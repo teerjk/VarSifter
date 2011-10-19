@@ -135,8 +135,7 @@ public class MultiStringMapper implements AbstractMapper {
     public String[] getSortedEntries() {
         List<String> list = new ArrayList<String>(dataMap.keySet());
         Collections.sort(list);
-        String[] s = new String[list.size()];
-        s = (list.toArray(s));
+        String[] s = list.toArray(new String[list.size()]);
         return s;
     }
 

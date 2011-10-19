@@ -92,6 +92,7 @@ public class VCFVarData extends VarData {
         String line = "";
         boolean indel;
         boolean noSamples = false;
+        boolean loadAll = false;
         int lineCount = 0;
         int infoCount = 0;
         int headCount = 0;
@@ -129,6 +130,32 @@ public class VCFVarData extends VarData {
                     InputTableDialog itd = new InputTableDialog(infoMetaVCF, inFile);
                     infoMetaVCF = itd.runDialog();
                     itd = null;
+
+                    // Allow user to select columns for loading / viewing
+                    ColumnSelectionDialog csd = new ColumnSelectionDialog(tempNames.toArray(new String[tempNames.size()]), 0);
+                    colMask = csd.runDialog();
+                    csd = null;
+
+                    if (colMask.cardinality() == tempNames.size()) {
+                        loadAll = true;
+                    }
+                    else {
+                        List<String> maskedTempNames = new ArrayList<String>();
+                        Map<String, Integer> maskedDataTypeAt = new HashMap<String, Integer>(colMask.cardinality());
+                        int colCount = fixedNames.length;
+                        for (int i=0; i<tempNames.size(); i++) {
+                            if ( ! colMask.get(i) ) {
+                                infoMetaVCF.remove(tempNames.get(i));
+                            }
+                            else {
+                                maskedTempNames.add(tempNames.get(i));
+                                maskedDataTypeAt.put(infoMetaVCF.get(tempNames.get(i)).get("Description"), colCount);
+                                colCount++;
+                            }
+                        }
+                        dataTypeAt = maskedDataTypeAt;
+                        tempNames = maskedTempNames;
+                    }
 
                     sampleCount = tempLine.length - (annotCount + 1);
                     sampleMapper[0] = new StringMapper();

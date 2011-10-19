@@ -67,6 +67,8 @@ public class VarData {
 
     protected BitSet dataIsIncluded;      // A mask used to filter data, samples
     protected BitSet dataIsEditable = new BitSet();      // Which data elements can be edited
+
+    protected BitSet colMask;   // A mask used to load (and thus display) annotation columns (load if true)
     
     protected Map<String, Integer> dataTypeAt = new HashMap<String, Integer>();
 
@@ -197,6 +199,14 @@ public class VarData {
         long time = System.currentTimeMillis();
         boolean first = true;
         boolean noSamples = false;
+        int sampleCount = 0;
+        boolean loadAll = false;
+        final Pattern samPat = Pattern.compile("\\.NA(?:\\.\\w+)?$");
+        final Pattern edPat = Pattern.compile("Comments");
+        final Pattern samAff = Pattern.compile("aff");
+        final Pattern samNorm = Pattern.compile("norm");
+        final Pattern casePat = Pattern.compile("case");
+        final Pattern controlPat = Pattern.compile("control");
         
         try {
             BufferedReader br = new BufferedReader(new FileReader(inFile));
@@ -209,7 +219,32 @@ public class VarData {
                 lineCount++;
                 String[] temp = line.split("\t", 0);
                 if (first) {
+
+                    List<String> dataT = new ArrayList<String>();
+                    // Allow user to select columns for loading/viewing
+                    for (int i=0; i<temp.length; i++) {
+                        if ((samPat.matcher(temp[i])).find() ) {
+                            sampleCount++;
+                        }
+                        else {
+                            dataT.add(temp[i]);
+                        }
+                    }
                     numCols = temp.length;
+
+                    ColumnSelectionDialog csd = new ColumnSelectionDialog(dataT.toArray(new String[dataT.size()]), 
+                                                                          requiredHeaders.length);
+                    colMask = csd.runDialog();
+                    csd = null;
+
+                    if ((colMask.cardinality() + sampleCount) == temp.length) {
+                        loadAll = true;
+                    }
+                    else {
+                        //trim temp
+                        temp = maskLine(temp, sampleCount);
+                    }
+                    
                     classList = new int[temp.length];
                     for (int i=0; i<classList.length; i++) {
                         classList[i] = INTEGER;
@@ -227,6 +262,9 @@ public class VarData {
                 }
                 
                 //Determine class of each column, change if not int; for now, do NOT set MULTISTRING here
+                if (! loadAll) {
+                    temp = maskLine(temp, sampleCount);
+                }
                 for (int i=0; i<temp.length; i++) {
                     if (classList[i] == STRING || classList[i] == MULTISTRING) {
                         continue;
@@ -283,17 +321,15 @@ public class VarData {
                 long annotT;
                 long sampleT;
                 
+                if (! loadAll) {
+                    temp = maskLine(temp, sampleCount);
+                }
+
                 //Handle the Header
                 if (first) {
                     
-                    final Pattern samPat = Pattern.compile("\\.NA(?:\\.\\w+)?$");
-                    final Pattern edPat = Pattern.compile("Comments");
-                    final Pattern samAff = Pattern.compile("aff");
-                    final Pattern samNorm = Pattern.compile("norm");
-                    final Pattern casePat = Pattern.compile("case");
-                    final Pattern controlPat = Pattern.compile("control");
                     int dataCount = 0;
-                    int sampleCount = 0;
+                    sampleCount = 0;
                     
                     for (int i=0; i < temp.length; i++) {
                         // Is column a sample?
@@ -388,13 +424,13 @@ public class VarData {
                         sampleMapper[0].addData("NA");
                     }
                     else {
-                        sampleNames = sampleTemp.toArray(sampleNames);
-                        sampleNamesOrig = sampleTempOrig.toArray(sampleNamesOrig);
+                        sampleNames = sampleTemp.toArray(new String[sampleTemp.size()]);
+                        sampleNamesOrig = sampleTempOrig.toArray(new String[sampleTempOrig.size()]);
                     }
                     
-                    dataNames = dataTemp.toArray(dataNames);
+                    dataNames = dataTemp.toArray(new String[dataTemp.size()]);
                     dataNamesOrig = dataNames; //Will have to change this when not all data included
-                    annotMapper = annotMapperBuilder.toArray(annotMapper);
+                    annotMapper = annotMapperBuilder.toArray(new AbstractMapper[annotMapperBuilder.size()]);
                     
                     if (affPos.size() > 0 && normPos.size() > 0) {
                         affAt = new int[affPos.size()];
@@ -936,6 +972,29 @@ public class VarData {
         filterOutput();
     }
 
+
+    /**
+    *   Remove elements of array not matching mask
+    *
+    *   @param inLine The araays of strings to mask
+    *   @param unmaskedCount The number of elements (from right side) excluded from mask - usually sample cols
+    *   @return The newly masked string array
+    */
+    protected String[] maskLine(String[] inLine, int unmaskedCount) {
+        int colTot = colMask.cardinality();
+        String[] outArray = new String[colTot + unmaskedCount];
+        int annotCount = inLine.length - unmaskedCount;
+        int colCount = 0;
+        for (int i=0; i<annotCount; i++) {
+            if (colMask.get(i)) {
+                outArray[colCount] = inLine[i];
+                colCount++;
+            }
+        }
+        System.arraycopy(inLine, annotCount, outArray, colCount, unmaskedCount);
+
+        return outArray;
+    }
     
 
     /** 
@@ -984,7 +1043,7 @@ public class VarData {
     *   @return array of comment lines, one row per line
     */
     public String[] returnCommentList() {
-        return commentList.toArray(new String[0]);
+        return commentList.toArray(new String[commentList.size()]);
     }
 
 

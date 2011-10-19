@@ -18,7 +18,7 @@ import components.TableSorter;
 */
 public class VarSifter extends JFrame implements ListSelectionListener, ActionListener, TableModelListener {
     
-    final static String version = "1.1";
+    final static String version = "1.2";
     final static String id = "$Id$";
 
     final static String govWork = "PUBLIC DOMAIN NOTICE\n" +

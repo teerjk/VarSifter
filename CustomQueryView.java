@@ -851,8 +851,7 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
         if (picked.size() > 0) {
             for (CustomVertex cv: picked) {
                 Collection<Integer> childEdges = graph.getChildEdges(cv);
-                Integer[] ceArray = new Integer[childEdges.size()];
-                childEdges.toArray(ceArray);
+                Integer[] ceArray = childEdges.toArray(new Integer[childEdges.size()]);
                 for (Integer ce: ceArray) {
                     graph.removeEdge(ce, false);
                 }
@@ -923,7 +922,7 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
             }
             outText.setText(outGroup);
             vdat.setCustomQuery(outGroup);
-            vdat.setCustomBitSet(bitSetList.toArray(new BitSet[0]));
+            vdat.setCustomBitSet(bitSetList.toArray(new BitSet[bitSetList.size()]));
         }
         else {
             VarSifter.showError("The query is disconnected!  Please make sure all the parts are connected as one unit!");
