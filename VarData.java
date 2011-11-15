@@ -64,6 +64,7 @@ public class VarData {
     protected final static Pattern fDigits = VarSifter.fDigits;
     protected final static Pattern digits = VarTableModel.digits;
     protected final static Pattern comment = Pattern.compile("^#");
+    protected final static Pattern floatNaN = Pattern.compile("^-?nan$", Pattern.CASE_INSENSITIVE);
 
     protected BitSet dataIsIncluded;      // A mask used to filter data, samples
     protected BitSet dataIsEditable = new BitSet();      // Which data elements can be edited
@@ -413,9 +414,38 @@ public class VarData {
                         noSamples = true;
                     }
 
-                    
+                    //Genotype
                     sampleMapper[0] = new StringMapper();
-                    sampleMapper[1] = new IntMapper();
+                    
+                    //Genotype Qual (Integer or Float?)
+                    boolean isFloat = false;
+                    for (int j=dataCount+1; j <= temp.length; j+=3) {
+                        if (classList[j] == FLOAT) {
+                            isFloat = true;
+                        }
+                        else if (classList[j] == INTEGER) {
+                            //OK, do nothing
+                        }
+                        else {
+                            VarSifter.showError("<html> It looks like you have a non-integer, non-floating point value"
+                                + "<p>in the genotype score column! Row: " + lineCount + " Col: " + (j+1));
+                            System.out.println("Error: non-integer, non-floating point number in genotype score"
+                                + "column, exiting!");
+                            System.exit(1);
+                        }
+                    }
+                    sampleMapper[1] = (isFloat) ? new FloatMapper() : new IntMapper();
+
+                    //Genotype coverage
+                    for (int j=dataCount+2; j <= temp.length; j+=3) {
+                        if (classList[j] != INTEGER) {
+                            VarSifter.showError("<html>It looks like you have a non-integer value in the genotype " 
+                                + "<p>coverage column! Row: " 
+                                + lineCount + " Col: " + (j+1));
+                            System.out.println("Error: non-integer in genotype coverage column, exiting!");
+                            System.exit(1);
+                        }
+                    }
                     sampleMapper[2] = new IntMapper();
 
                     if (noSamples) {

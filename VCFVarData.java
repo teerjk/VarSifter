@@ -439,7 +439,12 @@ public class VCFVarData extends VarData {
                                     case FLOAT:
                                         float f = 0f;
                                         if (infoHash.containsKey(key) && altI < multiValues.length) {
-                                            f = Float.parseFloat(multiValues[altI]);
+                                            if (floatNaN.matcher(infoHash.get(key)).find()) {
+                                                f = Float.parseFloat("NaN");
+                                            }
+                                            else {
+                                                f = Float.parseFloat(multiValues[altI]);
+                                            }
                                         }
                                         data[tempLineCount][pos] = annotMapper[pos].addData(f);
                                         break;
@@ -466,7 +471,12 @@ public class VCFVarData extends VarData {
                                     case FLOAT:
                                         float f = 0f;
                                         if (infoHash.containsKey(key)) {
-                                            f = Float.parseFloat(infoHash.get(key));
+                                            if (floatNaN.matcher(infoHash.get(key)).find()) {
+                                                f = Float.parseFloat("NaN");
+                                            }
+                                            else {
+                                                f = Float.parseFloat(infoHash.get(key));
+                                            }
                                         }
                                         data[tempLineCount][pos] = annotMapper[pos].addData(f);
                                         break;

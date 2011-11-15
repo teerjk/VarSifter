@@ -18,7 +18,7 @@ import components.TableSorter;
 */
 public class VarSifter extends JFrame implements ListSelectionListener, ActionListener, TableModelListener {
     
-    final static String version = "1.2";
+    final static String version = "1.3_BETA";
     final static String id = "$Id$";
 
     final static String govWork = "PUBLIC DOMAIN NOTICE\n" +
@@ -182,7 +182,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     private BitSet[] mask = new BitSet[2]; // holds { type filter mask (typeCBox), preset (cBox) }
     private boolean isShowVar = true;
     private DataFilter df = null;
-    public final static Pattern fDigits = Pattern.compile("^-?[0-9]+\\.[0-9]+$");
+    public final static Pattern fDigits = Pattern.compile("^-?[0-9]+\\.[0-9]+$|^NaN$");
     private final Pattern vcfPat = Pattern.compile("\\.vcf$");
     private final Pattern gzPat = Pattern.compile("\\.gz$");
 
