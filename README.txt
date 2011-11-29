@@ -4,13 +4,19 @@ Welcome to VarSifter!
 
 Running VarSifter:
 
-1. Unzip the VarSifter_<version>.zip file (which you've probably already done.)
+1. Unzip the VarSifter_<version>.zip file (which you've probably already done)
+   and enter the VarSifter_<version> directory.
 
 2. OSX users: Double-click VarSifter_<version>.command file to run VarSifter.
    Windows users: Double-click VarSifter_<version>.bat file to run VarSifter.
 
-3. A File Selection window appears, which you should use to navigate to and
-   select your file of interest.
+3. The main window opens, with a message outlining steps to getting started.
+   Basically, click "File" on the menu and then "Open File".  Choose your data
+   file, and click "Open". 
+
+   (If you wish to skip this step, the name of a data file can be added at the
+   end of the "java -Xmx..." line in the .command or .bat file, or on the
+   command line.)
 
 4. If you have chosen a VCF file, you need to give VarSifter some hints about
    your data:
@@ -26,6 +32,10 @@ Running VarSifter:
     this. The delimiting character should be entered in the "Sub-delimiter"
     field. After entering the last character, you must either select a
     different box or hit "return" in order for your change to stick.
+
+5. Finally, you can choose which annotation columns to load and display. By
+   default, all columns are selected.  Uncheck any you do not wish to load,
+   and click "Ok".
 
 --------------------
 
