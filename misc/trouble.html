@@ -1,0 +1,28 @@
+<html>
+<body>
+<h2> <span class="mw-headline" id="Troubleshooting"> Troubleshooting </span></h2>
+<ol><li> VarSifter will not start.  I see error messages about "class" or "loading".
+
+<ul><li> If you've copied and pasted the start command from the internet or email, try typing it by hand.  Sometimes, the minus sign is interpreted as a weird character that command lines do not recognize.
+</li><li> If you're using a Windows machine, Internet explorer may be "helpful" and rename the .jar file as .zip.  This is bad.  Either use Firefox to "Save As" the file (making sure it is not changing the filetype) or rename the file.  To rename the file in Windows correctly, you either must be showing file extensions, or you have to use the "ren" command on the command prompt.
+</li><li> If you are using a helper file, make sure the VarSifter version in the helper file matches the version you want to be using (the latest version in your directory.)
+</li></ul>
+</li><li> VarSifter will not start.  I see error messages about "heap space" or "memory".
+<ul><li> VarSifter is not being started with enough memory.  Increase the memory requested in the -Xmx command.  If using a helper file, change this in the helper file.  Note that this value must be less than the total system memory in your machine, and you may have to close other programs to be able to use this memory.
+</li><li> You may be using a 32-bit Java virtual machine.  In 64-bit <b>Mac OSX</b>, open "Java Preferences" in Applications-&gt;Utilities.  Make sure that the topmost java version is 64-bit.  Note that any 32-bit operating system (includes Windows XP) will not be able to run a 64-bit Java, and will be limited in how much memory can be used!
+</li></ul>
+
+</li><li> VarSifter gives errors about Custom Querying, but I have the full Java 1.6 JDK installed.
+<ul><li> Although the full Java Development Kit may be installed, your system may not be recognizing it.  Ensure the 1.6 JDK is the system default. This is probably defined in your Java settings, which tend to be system specific.  Alternately, find the correct java binary file, and point your scripts at the full path to that file. On OS X ~10.6, that may be in: /System/Library/Frameworks/JavaVM.framework/Versions/.
+</li><li> This can be especially problematic on Windows machines.  Here is a workaround, courtesy of David Adams:
+</li></ul>
+<ol><li>Install java JDK
+</li><li>Append JDK bin directory to system PATH environmental variable
+</li><li>Go into JDK bin directory and make a copy of the java (java.exe if you have extensions visible) file and name the copy javasdk (javasdk.exe)
+</li><li>Start VarSifter at command line with "java -Xmx1000M -jar VarSifter/<version/>.jar"
+</li></ol>
+<ul><li>Alternatively, one can remove all Java versions, and then install only the Java JDK 1.6.
+</li></ul>
+</li></ol>
+</body>
+<html>

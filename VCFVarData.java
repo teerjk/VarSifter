@@ -132,7 +132,8 @@ public class VCFVarData extends VarData {
                     itd = null;
 
                     // Allow user to select columns for loading / viewing
-                    ColumnSelectionDialog csd = new ColumnSelectionDialog(tempNames.toArray(new String[tempNames.size()]), 0);
+                    ColumnSelectionDialog csd = new ColumnSelectionDialog(tempNames.toArray(new String[tempNames.size()]), 
+                                                                                            new String[]{""});
                     colMask = csd.runDialog();
                     csd = null;
 

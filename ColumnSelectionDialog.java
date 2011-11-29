@@ -2,7 +2,10 @@ import java.awt.*;
 import java.io.*;
 import javax.swing.*;
 import javax.swing.event.*;
+import java.util.Arrays;
 import java.util.BitSet;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
 *   Creates a window to handle GUI selection of columns to load (and display)
@@ -21,16 +24,17 @@ public class ColumnSelectionDialog {
     *   Constructor
     *
     *   @param inCols Array of column names
-    *   @param toShow This many columns (from left) must be shown.
+    *   @param reqHeaders  String array containing the required headers
     */
-    public ColumnSelectionDialog(String[] inCols, int toShow) {
+    public ColumnSelectionDialog(String[] inCols, String[] reqHeaders) {
         data = new Object[inCols.length][colNames.length];
         colMask = new BitSet(inCols.length);
+        Set<String> reqSet = new HashSet<String>(Arrays.asList(reqHeaders));
         
         for (int i=0; i<inCols.length; i++) {
             data[i][0] = inCols[i];
             data[i][1] = new JCheckBox("", true);
-            if (i < toShow) {
+            if (reqSet.contains(inCols[i])) {
                 ((JCheckBox)data[i][1]).setEnabled(false);
             }
         }

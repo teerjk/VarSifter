@@ -27,10 +27,11 @@ src: $(SRC_FILE)
 
 $(CLASS_LIST):
 	@find . -name '*.class' -print > $(CLASS_LIST); \
-	find . -name '*.png' -print >> $(CLASS_LIST);
+	find . -name '*.png' -print >> $(CLASS_LIST); \
+	find misc/ -name '*.html' -print >> $(CLASS_LIST);
 
 $(JAR_FILE): 
-	@if [ ! -s "$(CLASS_LIST)" ]; then \
+	@if ! ls *.class ; then \
 		echo "No .class files found - please run make compile."; \
 		rm $(CLASS_LIST); \
 		exit 1; \
@@ -39,12 +40,22 @@ $(JAR_FILE):
 	rm $(CLASS_LIST)
 
 $(ZIP_FILE): $(JAR_FILE)
+	dir="VarSifter_$(VERSION)"; \
+	mkdir $${dir}; \
 	exec="java -Xmx500M -jar VarSifter_$(VERSION).jar"; \
-	echo -e "#!/bin/bash\ncd \`dirname \$$0\`\n$${exec}" > VarSifter_$(VERSION).command && chmod 755 VarSifter_$(VERSION).command; \
-	echo "$${exec}" > VarSifter_$(VERSION).bat && chmod 755 VarSifter_$(VERSION).bat; \
-	zip $@ -j $< jung/jung-graph-impl-2.0.1.jar README.txt JUNG_bsd_license.txt apache2_license.txt \
-	jung/jung-visualization-2.0.1.jar jung/jung-algorithms-2.0.1.jar jung/jung-api-2.0.1.jar \
-	jung/collections-generic-4.01.jar VarSifter_$(VERSION).command VarSifter_$(VERSION).bat;
+	echo -e "#!/bin/bash\ncd \`dirname \$$0\`\n$${exec}" > $${dir}/VarSifter_$(VERSION).command && chmod 755 $${dir}/VarSifter_$(VERSION).command; \
+	echo "$${exec}" > $${dir}/VarSifter_$(VERSION).bat && chmod 755 $${dir}/VarSifter_$(VERSION).bat; \
+	cp jung/jung-graph-impl-2.0.1.jar $$dir; \
+	cp README.txt $$dir; \
+	cp JUNG_bsd_license.txt $$dir; \
+	cp apache2_license.txt $$dir; \
+	cp jung/jung-visualization-2.0.1.jar $$dir; \
+	cp jung/jung-algorithms-2.0.1.jar $$dir; \
+	cp jung/jung-api-2.0.1.jar $$dir; \
+	cp jung/collections-generic-4.01.jar $$dir; \
+	cp $< $$dir; \
+	zip -r $@ $$dir; \
+	rm -rf $$dir/
 
 $(SRC_FILE): clean
 	tar -cvzf $@ *.java images/* components/*.java Makefile manifest.txt BUILD.txt;

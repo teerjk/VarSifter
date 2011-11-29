@@ -94,7 +94,7 @@ public class VarData {
         dataFile = inFile;
     
         try {
-            BufferedReader br = new BufferedReader(new FileReader(inFile));
+            BufferedReader br = new BufferedReader(new FileReader(dataFile));
             String line = br.readLine();
             br.close();
             
@@ -233,10 +233,17 @@ public class VarData {
                     }
                     numCols = temp.length;
 
-                    ColumnSelectionDialog csd = new ColumnSelectionDialog(dataT.toArray(new String[dataT.size()]), 
-                                                                          requiredHeaders.length);
-                    colMask = csd.runDialog();
-                    csd = null;
+                    if (VarSifter.emptyPat.matcher(inFile).find()) {
+                        int emptyL = (VarSifter.emptyHeader.split("\t")).length;
+                        colMask = new BitSet(emptyL);
+                        colMask.set(0, emptyL);
+                    }
+                    else {
+                        ColumnSelectionDialog csd = new ColumnSelectionDialog(dataT.toArray(new String[dataT.size()]), 
+                                                                              requiredHeaders);
+                        colMask = csd.runDialog();
+                        csd = null;
+                    }
 
                     if ((colMask.cardinality() + sampleCount) == temp.length) {
                         loadAll = true;

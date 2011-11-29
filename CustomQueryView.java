@@ -44,6 +44,7 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
     AbstractMapper[] annotMap;
     AbstractMapper currentMap;
     private VarData vdat;
+    private VarSifter gui;
     Map<String, Integer> dataTypeAt;
     int annoSize;
     DelegateForest<CustomVertex, Integer> graph;
@@ -56,6 +57,8 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
     final static int ANNOT_ACTION = 3;
     final static int ANNOT_COMP = 4;
     final static int LOGICAL = 5;
+    final static int ANNOT_LIST = 6;
+    final static int ANNOT_VAL = 7;
 
     private final static Pattern compPat = Pattern.compile("[<>=&]|get|isH");
 
@@ -72,6 +75,17 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
     private JList annotList;
     private JList stringAnnotList = new JList();
     
+    private JLabel sSampleLabel = new JLabel("Samples:");
+    private JLabel sGenLabel = new JLabel("Genotypes:");
+    private JLabel sActionLabel = new JLabel("Sample Actions:");
+
+    private JLabel aAnnoLabel = new JLabel("Annotations:");
+    private JLabel aValueLabel = new JLabel("Annotation Values:");
+    private JLabel aActionLabel = new JLabel("Annotation Actions:");
+    private JLabel aNumActionLabel = new JLabel("Annot. Numeric Actions:");
+
+    private JLabel logicLabel = new JLabel("Logical connectors:");
+
     private JButton exactMatch = new JButton("Exactly Matches");
     private JButton noMatch = new JButton("Does Not Match");
     private JButton[] actionButtons = {exactMatch, noMatch};
@@ -102,6 +116,7 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
     private JComboBox modeBox;
     
     private JTextField outText = new JTextField();
+    private JTextArea outMessage = new JTextArea("Select a Sample or Annotation");
     private JTextField inAnnotNumber = new JTextField();
     private JTextField inStringPattern = new JTextField();
     private StringBuilder query;
@@ -119,8 +134,9 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
     *
     *   @param inVdat VarData Object
     */
-    public CustomQueryView(VarData inVdat) {
+    public CustomQueryView(VarData inVdat, VarSifter inGui) {
         vdat = inVdat;
+        gui = inGui;
         sampleNames = vdat.returnSampleNames();
         annotNames = vdat.returnDataNames();
         dataTypeAt = vdat.returnDataTypeAt();
@@ -310,7 +326,9 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
         extraPane.add(Box.createRigidArea(new Dimension(5,0)));
         outText.setMaximumSize(new Dimension( outText.getMaximumSize().width, 
                                               outText.getMinimumSize().height));
-        extraPane.add(outText);
+        //extraPane.add(outText);   //Debugging
+        extraPane.add(outMessage);
+        outMessage.setEditable(false);
         extraPane.add(Box.createVerticalGlue());
 
         //Icons
@@ -342,10 +360,10 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
         stringAnnotList.addListSelectionListener(this);
 
         // Mask buttons
-        enableButtons(new int[] {ACTION,ANNOT_ACTION,ANNOT_COMP,LOGICAL, FIXED_SAMPLE}, false);
+        enableButtons(new int[] {ACTION,ANNOT_ACTION,ANNOT_COMP,LOGICAL,ANNOT_VAL,FIXED_SAMPLE}, false);
         applyAnnotComp.setEnabled(false);
         applyStringPattern.setEnabled(false);
-        stringAnnotList.setEnabled(false);
+        //stringAnnotList.setEnabled(false);
         inAnnotNumber.setEnabled(false);
 
         //ToolTips
@@ -379,16 +397,16 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
                                     BorderFactory.createEmptyBorder(2,5,2,2)
                                     ));
 
-        sampleControlPane.add(new JLabel("Samples:"));
+        sampleControlPane.add(sSampleLabel);
         sampleControlPane.add(samplePane);
         sampleControlPane.add(Box.createRigidArea(new Dimension(0,5)));
-        sampleControlPane.add(new JLabel("Genotypes:"));
+        sampleControlPane.add(sGenLabel);
         sampleControlPane.add(fixedPane);
         sampleControlPane.add(Box.createRigidArea(new Dimension(0,5)));
-        sampleControlPane.add(new JLabel("Actions:"));
+        sampleControlPane.add(sActionLabel);
         sampleControlPane.add(actionPane);
         sampleControlPane.add(Box.createRigidArea(new Dimension(0,5)));
-        sampleControlPane.add(new JLabel("Logical:"));
+        sampleControlPane.add(logicLabel);
         sampleControlPane.add(connectPane);
 
         JPanel annotControlPane = new JPanel();
@@ -400,16 +418,16 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
                                     BorderFactory.createEmptyBorder(2,2,2,5)
                                     ));
 
-        annotControlPane.add(new JLabel("Annotations:"));
+        annotControlPane.add(aAnnoLabel);
         annotControlPane.add(annotPane);
         annotControlPane.add(Box.createRigidArea(new Dimension(0,5)));
-        annotControlPane.add(new JLabel("Annotation Values:"));
+        annotControlPane.add(aValueLabel);
         annotControlPane.add(stringAnnotPane);
         annotControlPane.add(Box.createRigidArea(new Dimension(0,5)));
-        annotControlPane.add(new JLabel("Annotation Actions:"));
+        annotControlPane.add(aActionLabel);
         annotControlPane.add(annotActionPane);
         annotControlPane.add(Box.createRigidArea(new Dimension(0,5)));
-        annotControlPane.add(new JLabel("Annot. Numeric Actions:"));
+        annotControlPane.add(aNumActionLabel);
         annotControlPane.add(annotCompPane);
 
         JPanel mainControlPane = new JPanel();
@@ -586,21 +604,35 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
             switch (bG) {
                 case SAMPLE:
                     sampleList.setEnabled(toEnabled);
+                    sSampleLabel.setEnabled(toEnabled);
                     break;
                 case FIXED_SAMPLE:
                     fixedSampleList.setEnabled(toEnabled);
+                    sGenLabel.setEnabled(toEnabled);
                     break;
                 case ACTION:
                     group = actionButtons;
+                    sActionLabel.setEnabled(toEnabled);
                     break;
                 case ANNOT_ACTION:
                     group = annotActionButtons;
+                    aActionLabel.setEnabled(toEnabled);
                     break;
                 case ANNOT_COMP:
                     group = annotCompButtons;
+                    aNumActionLabel.setEnabled(toEnabled);
                     break;
                 case LOGICAL:
                     group = logicButtons;
+                    logicLabel.setEnabled(toEnabled);
+                    break;
+                case ANNOT_LIST:
+                    annotList.setEnabled(toEnabled);
+                    aAnnoLabel.setEnabled(toEnabled);
+                    break;
+                case ANNOT_VAL:
+                    stringAnnotList.setEnabled(toEnabled);
+                    aValueLabel.setEnabled(toEnabled);
                     break;
             }
             if (group != null) {
@@ -625,6 +657,7 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
                 if (isAnnotQuery) {
                     int selIndex = annotList.getSelectedIndex();
                     currentMap = annotMap[selIndex];
+                    outMessage.setText("Next, please select an Annotation Action");
                     switch (currentMap.getDataType()) {
                         case VarData.MULTISTRING:
                         case VarData.STRING:
@@ -641,10 +674,11 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
                     }
                 }
                 else {
+                    outMessage.setText("Next, please select a Sample Action");
                     enableButtons(new int[] {ACTION}, true);
                 }
-                enableButtons(new int[] {SAMPLE}, false);
-                annotList.setEnabled(false);
+                enableButtons(new int[] {SAMPLE, ANNOT_LIST, LOGICAL}, false);
+                //annotList.setEnabled(false);
                 break;
             case 2:
                 vertexLabel.append(labelString + "<p>");
@@ -665,17 +699,22 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
                             query.insert(0, "(");
                         case VarData.STRING:
                             applyStringPattern.setEnabled(true);
-                            stringAnnotList.setEnabled(true);
+                            enableButtons(new int[] {ANNOT_VAL}, true);
+                            outMessage.setText("Finally, select an Annotation Value, or enter Search Text" + 
+                                VarSifter.newLine + "and click \"Apply Search Text\"");
+                            //stringAnnotList.setEnabled(true);
                             break;
                         case VarData.FLOAT:
                         case VarData.INTEGER:
                             inAnnotNumber.setEnabled(true);
                             applyAnnotComp.setEnabled(true);
+                            outMessage.setText("Finally, enter a Number and click \"Apply Number\"");
                             break;
                     }
                     
                 }
                 else {
+                    outMessage.setText("Finally, select another Sample or a Genotype");
                     enableButtons(new int[] {ACTION}, false);
                     enableButtons(new int[] {FIXED_SAMPLE, SAMPLE}, true);
                 }
@@ -722,14 +761,15 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
     *   Reset the query state to 1 (ready for a new query)
     */
     private void resetQuery() {
-        enableButtons(new int[] {LOGICAL, SAMPLE}, true);
-        enableButtons(new int[] {ACTION, ANNOT_ACTION, ANNOT_COMP, FIXED_SAMPLE}, false);
+        enableButtons(new int[] {LOGICAL, SAMPLE, ANNOT_LIST}, true);
+        enableButtons(new int[] {ACTION, ANNOT_ACTION, ANNOT_COMP, ANNOT_VAL, FIXED_SAMPLE}, false);
         annotList.clearSelection();
         stringAnnotList.clearSelection();
         stringAnnotList.setListData(new String[]{""});
         isAnnotQuery = false;
-        annotList.setEnabled(true);
-        stringAnnotList.setEnabled(false);
+        outMessage.setText("Select a Sample or Annotation");
+        //annotList.setEnabled(true);
+        //stringAnnotList.setEnabled(false);
         applyAnnotComp.setEnabled(false);
         applyStringPattern.setEnabled(false);
         vertexLabelCount = 1;
@@ -923,6 +963,10 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
             outText.setText(outGroup);
             vdat.setCustomQuery(outGroup);
             vdat.setCustomBitSet(bitSetList.toArray(new BitSet[bitSetList.size()]));
+            if (gui != null) {
+                gui.setCBoxChecked(gui.CUSTOM, true);
+                gui.toFront();
+            }
         }
         else {
             VarSifter.showError("The query is disconnected!  Please make sure all the parts are connected as one unit!");

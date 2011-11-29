@@ -3,10 +3,13 @@ import java.net.URL;
 import javax.swing.*;
 import javax.swing.event.*;
 import javax.swing.table.*;
+import javax.swing.text.html.HTMLDocument;
 import java.awt.event.*;
 import java.util.BitSet;
 import java.util.regex.*;
 import java.io.*;
+import java.util.List;
+import java.util.ArrayList;
 import java.util.Map;
 import components.TableSorter;
 
@@ -18,58 +21,8 @@ import components.TableSorter;
 */
 public class VarSifter extends JFrame implements ListSelectionListener, ActionListener, TableModelListener {
     
-    final static String version = "1.3_BETA";
+    final static String version = "1.3";
     final static String id = "$Id$";
-
-    final static String govWork = "PUBLIC DOMAIN NOTICE\n" +
-    "National Human Genome Research Institute\n" +
-    "This software/database is \"United States Government Work\" under the terms of\n" +
-    "the United States Copyright Act.  It was written as part of the authors'\n" +
-    "official duties for the United States Government and thus cannot be copyrighted.\n" +
-    "This software/database is freely available to the public for use without a copyright\n" +
-    "notice.  Restrictions cannot be placed on its present or future use.\n\n" +
-    "Although all reasonable efforts have been taken to ensure the accuracy and\n" +
-    "reliability of the software and data, the National Human Genome Research Institute\n" +
-    "(NHGRI) and the U.S. Government does not and cannot warrant the performance or results\n" +
-    "that may be obtained by using this software or data.  NHGRI and the U.S. Government\n" +
-    "disclaims all warranties as to performance, merchantability or fitness for any\n" +
-    "particular purpose.\n\n" +
-    "In any work or product derived from this material, proper attribution of the authors\n" +
-    "as the source of the software or data should be made.";
-
-    //This class uses TableSorter.java, a class to sort a JTable.
-    //The two subsequent statements are required to be distributed with the 
-    //source and binary re-distributions of the TableSorter class,
-
-    final static String sunCopyright = "Copyright (c) 1995 - 2008 Sun Microsystems, Inc.  All rights reserved.";
-    final static String sunDisclaimer = "Redistribution and use in source and binary forms, with or without\n" +
-    "modification, are permitted provided that the following conditions\n" +
-    "are met:\n" +
-    "    \n" +
-    "  - Redistributions of source code must retain the above copyright\n" +
-    "    notice, this list of conditions and the following disclaimer.\n" +
-    "       \n" +
-    "  - Redistributions in binary form must reproduce the above copyright\n" +
-    "    notice, this list of conditions and the following disclaimer in the\n" +
-    "    documentation and/or other materials provided with the distribution.\n" +
-    "           \n" +
-    "  - Neither the name of Sun Microsystems nor the names of its\n" +
-    "    contributors may be used to endorse or promote products derived\n" +
-    "    from this software without specific prior written permission.\n\n" +
-    "THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS \"AS\n" +
-    "IS\" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,\n" +
-    "THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR\n" +
-    "PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR\n" +
-    "CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,\n" +
-    "EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,\n" +
-    "PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR\n" +
-    "PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF\n" +
-    "LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING\n" +
-    "NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS\n" +
-    "SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.";
-
-    final static String geneNotFoundError  = "It looks like you may have switched columns! "
-        + "Switch them so the gene names are in the first column!";
 
     final static int VARIANT_FILE = 0;
     final static int GENE_FILTER_FILE = 1;
@@ -120,7 +73,8 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
                                  bedFilterFile,
                                  customQuery
                                };
-    public final static int MENDHETREC = 4; //index of mendCompHet
+    public final static int MENDHETREC = 4;  //index of mendCompHet
+    public final static int CUSTOM     = 10; //index of customQuery
 
     private JMenuItem openItem;
     private JMenuItem saveAsItem;
@@ -131,9 +85,10 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     private JMenuItem compHetViewItem;
     private JMenuItem customQueryViewItem;
     private JMenuItem aboutItem;
+    private JMenuItem docItem;
+    private JMenuItem troubleItem;
 
     private JButton apply = new JButton("Apply Filter");
-    private JButton selectAll = new JButton("Select All");
     private JButton clear = new JButton("Clear All");
     private JRadioButton showVar = new JRadioButton("Show Variants", true);
     private JRadioButton showGene = new JRadioButton("Show Genes");
@@ -147,6 +102,8 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     private JButton compHetGeneViewButton = new JButton("View by Gene");
     private JButton compHetPairViewButton = new JButton("View Pairs of Selected Position");
     private JButton compHetAllButton = new JButton("View All Compound Hets");
+
+    private List<AbstractButton> listenerList = new ArrayList<AbstractButton>(20);
 
     private JFrame compHetParent;
     private JFrame customQueryParent;
@@ -183,6 +140,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     private boolean isShowVar = true;
     private DataFilter df = null;
     public final static Pattern fDigits = Pattern.compile("^-?[0-9]+\\.[0-9]+$|^NaN$");
+    public final static Pattern emptyPat = Pattern.compile("emptyVS_.*tmp");
     private final Pattern vcfPat = Pattern.compile("\\.vcf$");
     private final Pattern gzPat = Pattern.compile("\\.gz$");
 
@@ -196,6 +154,8 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     private AbstractMapper[] annotMapper;
     private AbstractMapper[] sampleMapper;
 
+    public final static String emptyHeader = "Chr\tLeftFlank\tRightFlank\tGene_name\ttype\tmuttype\tref_allele\tvar_allele";
+
 
     /** 
     *   Initiate GUI, instantiate VarData
@@ -206,16 +166,41 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     public VarSifter(String inFile) {
         
         //initiate parent window
-        super("VarSifter - " + inFile);
+        //super("VarSifter - " + inFile);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setBounds(0, (h/8), (w/2), (h/2));
 
         if (inFile == null) {
-            inFile = openData(VARIANT_FILE);
+            try {
+                File emptyFile = File.createTempFile("emptyVS_", null, null);
+                emptyFile.deleteOnExit();
+                PrintWriter pw = new PrintWriter(new BufferedWriter(new FileWriter(emptyFile)));
+                pw.println(emptyHeader);
+                pw.close();
+                inFile = emptyFile.toString();
+            }
+            catch (IOException ioe) {
+                VarSifter.showError("<html>Could not write to Java temp directory.<p>To avoid this error again, " +
+                    "either allow write permission in the Java temp directory,<p>" +
+                    "or open a file from the commandline:<p>java -jar VarSifter[version].jar [your data file]</html>");
+                System.out.println(ioe);
+                System.exit(1);
+            }
+
+        }
+        if (emptyPat.matcher(inFile).find()) {
+            this.setTitle("VarSifter - No file loaded yet");
+        }
+        else {
+            this.setTitle("VarSifter - " + inFile);
         }
         outTable = new JTable();
         redrawOutTable(inFile);
         initTable();
+
+        if (emptyPat.matcher(inFile).find()) {
+             VarSifter.showMessage(VSMessages.welcome);
+        }
     }
 
     /** 
@@ -270,14 +255,6 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             
         }
 
-        else if (es == selectAll) {
-            for (JCheckBox cb : cBox) {
-                if (cb.isEnabled()) {
-                    cb.setSelected(true);
-                }
-            }
-        }
-
         else if (es == clear) {
             for (JCheckBox cb : typeCBox) {
                 cb.setSelected(false);
@@ -316,7 +293,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
                     geneRegex = "^" + (String)outTable.getValueAt(outTable.getSelectedRow(), 0) + "$";
                 }
                 catch (ClassCastException cce) {
-                    showError(geneNotFoundError);
+                    showError(VSMessages.geneNotFoundError);
                     return;
                 }
             }
@@ -333,9 +310,22 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         else if (es == openItem) {
             String fName = openData(VARIANT_FILE);
 
+            // If a new data file is loaded, we need to clear out the current data
             if (fName != null) {
+                //Clear listeners
+                registerActionListeners(listenerList, false);
+                listenerList.clear();
+                geneRegexField.removeActionListener(this);
+                
+                //lsm.removeListSelectionListener(this);
+
+                //Clear JFrames
                 customQueryParent.dispose();
+                compHetParent.dispose();
+                preferViewParent.dispose();
                 dispose();
+
+                //Reinitialize, load data
                 frameInit();
                 redrawOutTable(fName);
                 initTable();
@@ -415,7 +405,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
                     geneRegex = "^" + (String)outTable.getValueAt(outTable.getSelectedRow(), 0) + "$";
                 }
                 catch (ClassCastException cce) {
-                    showError(geneNotFoundError);
+                    showError(VSMessages.geneNotFoundError);
                     return;
                 }
             }
@@ -486,15 +476,57 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         
         else if (es == aboutItem) {
             JTextArea tPane = new JTextArea("VarSifter v" + version + "\n" +
-                "Jamie K. Teer, 2010\n\n" + govWork + "\n" + id +
+                "Jamie K. Teer, 2010\n\n" + VSMessages.govWork + "\n" + id +
                 "\n\n--------------------------------------------------------" +
                 "\n\nThis program uses the JTable sorting class TableSorter.java from Sun\n" +
                 "and must include the following copyright notification:\n\n" +
-                sunCopyright + "\n" + sunDisclaimer);
+                VSMessages.sunCopyright + "\n" + VSMessages.sunDisclaimer);
 
             JScrollPane sPane = new JScrollPane(tPane);
             sPane.setPreferredSize(new Dimension(600,600));
             JOptionPane.showMessageDialog(null, sPane, "About VarSifter", JOptionPane.PLAIN_MESSAGE);
+        }
+
+        else if (es == docItem) {
+            Font f = new Font(Font.SANS_SERIF, Font.PLAIN, 12); 
+            java.net.URL dURL = getClass().getResource("misc/doc.html");
+            JEditorPane dPane = null;
+            try {
+                dPane = new JEditorPane(dURL);
+            }
+            catch (IOException ioe) {
+                showError("<html>This is embarassing - the Documentation page could not be loaded.<p>"
+                    + "Please see the online documentation to answer your questions.");
+                ioe.printStackTrace();
+            }
+            String css = "body { font-family: " + f.getFamily() + "; " + "font-size: " + f.getSize() + "pt; }";
+            ((HTMLDocument)dPane.getDocument()).getStyleSheet().addRule(css);
+            dPane.setEditable(false);
+            JScrollPane sPane = new JScrollPane(dPane);
+            sPane.setPreferredSize(new Dimension(600,800));
+            JOptionPane.showMessageDialog(null, sPane, "VarSifter Documentation", JOptionPane.PLAIN_MESSAGE);            
+        }
+
+        else if (es == troubleItem) {
+            //Font f = UIManager.getFont("TextArea.font");
+            Font f = new Font(Font.SANS_SERIF, Font.PLAIN, 12); 
+            java.net.URL tsURL = getClass().getResource("misc/trouble.html");
+            JEditorPane tsPane = null;
+            try {
+                tsPane = new JEditorPane(tsURL);
+            }
+            catch (IOException ioe) {
+                showError("<html>This is embarassing - the TroubleShooting page could not be loaded.<p>"
+                    + "Please see the online documentation to answer your questions.");
+                ioe.printStackTrace();
+            }
+            //tsPane.setFont(f);
+            String css = "body { font-family: " + f.getFamily() + "; " + "font-size: " + f.getSize() + "pt; }";
+            ((HTMLDocument)tsPane.getDocument()).getStyleSheet().addRule(css);
+            tsPane.setEditable(false);
+            JScrollPane sPane = new JScrollPane(tsPane);
+            sPane.setPreferredSize(new Dimension(600,800));
+            JOptionPane.showMessageDialog(null, sPane, "TroubleShooting", JOptionPane.PLAIN_MESSAGE);
         }
 
         else if (es == check) {
@@ -652,6 +684,8 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         compHetViewItem = new JMenuItem("Viewing Compound Hets");
         customQueryViewItem = new JMenuItem("Custom Query");
         aboutItem = new JMenuItem("About VarSifter");
+        docItem = new JMenuItem("VarSifter Documentation");
+        troubleItem = new JMenuItem("TroubleShooting");
         fileMenu.add(openItem);
         fileMenu.add(saveAsItem);
         fileMenu.add(saveViewItem);
@@ -661,6 +695,8 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         viewMenu.add(compHetViewItem);
         viewMenu.add(customQueryViewItem);
         helpMenu.add(aboutItem);
+        helpMenu.add(docItem);
+        helpMenu.add(troubleItem);
         mBar.add(fileMenu);
         mBar.add(viewMenu);
         mBar.add(helpMenu);
@@ -754,6 +790,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         sampleFiltPane.add(caseControl);
         sampleFiltPane.add(casePane);
         sampleFiltPane.add(controlPane);
+        sampleFiltPane.add(customQuery);
 
         JPanel regexPane = new JPanel();
         regexPane.setLayout(new BoxLayout(regexPane, BoxLayout.Y_AXIS));
@@ -762,12 +799,6 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             (int)geneRegexField.getMinimumSize().getHeight()));
         regexPane.add(geneRegexField);
         
-        JPanel selClearPane = new JPanel();
-        selClearPane.setLayout(new BoxLayout(selClearPane, BoxLayout.X_AXIS));
-        selClearPane.setAlignmentX(Component.LEFT_ALIGNMENT);
-        selClearPane.add(selectAll);
-        selClearPane.add(Box.createRigidArea(new Dimension(5,0)));
-        selClearPane.add(clear);
         JPanel fFiltPane = new JPanel();
         fFiltPane.setLayout(new BoxLayout(fFiltPane, BoxLayout.Y_AXIS));
         fFiltPane.add(filterFileLabel);
@@ -802,11 +833,6 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         filtPane.add(Box.createRigidArea(new Dimension(0,15)));
         filtPane.add(showPane);
         filtPane.add(Box.createRigidArea(new Dimension(0,15)));
-        filtPane.add(selClearPane);
-        filtPane.add(Box.createRigidArea(new Dimension(0,10)));
-        apply.setMnemonic(KeyEvent.VK_F);
-        filtPane.add(apply);
-        filtPane.add(Box.createRigidArea(new Dimension(0,15)));
         filtPane.add(Box.createVerticalGlue());
         filtPane.add(fFiltPane);
         filtPane.add(Box.createRigidArea(new Dimension(0,10)));
@@ -821,9 +847,17 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         filtScroll.setBorder(null);
 
         //Stats (line count)
+        apply.setMnemonic(KeyEvent.VK_F);
         JPanel stats = new JPanel();
+        stats.setLayout(new BoxLayout(stats, BoxLayout.X_AXIS));
+        stats.setBorder(BorderFactory.createEmptyBorder(10,0,0,0));
         stats.add(linesl);
         stats.add(lines);
+        stats.add(Box.createHorizontalGlue());
+        stats.add(apply);
+        stats.add(Box.createRigidArea(new Dimension(15,0)));
+        stats.add(clear);
+        stats.add(Box.createRigidArea(new Dimension(21,0)));
 
 
         JPanel tablePanel = new JPanel();
@@ -833,37 +867,38 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         tablePanel.add(dataScroller);
         tablePanel.add(Box.createRigidArea(new Dimension(0,15)));
         tablePanel.add(samplePane);
-        tablePanel.add(stats);
 
         //Icons
         setIconImage(createImageIcon("images/vs.png", "VarSifter").getImage());
         apply.setIcon(createImageIcon("images/sift_a.png", "Sift variants"));
 
         //Listener Registration
-        apply.addActionListener(this);
-        selectAll.addActionListener(this);
-        clear.addActionListener(this);
-        openItem.addActionListener(this);
-        saveAsItem.addActionListener(this);
-        saveViewItem.addActionListener(this);
-        preferViewItem.addActionListener(this);
-        sampleSettingsItem.addActionListener(this);
-        prefApply.addActionListener(this);
-        compHetViewItem.addActionListener(this);
-        customQueryViewItem.addActionListener(this);
-        exitItem.addActionListener(this);
-        aboutItem.addActionListener(this);
-        check.addActionListener(this);
-        filterFileButton.addActionListener(this);
-        bedFilterFileButton.addActionListener(this);
-        geneViewButton.addActionListener(this);
+        listenerList.add(apply);
+        listenerList.add(clear);
+        listenerList.add(openItem);
+        listenerList.add(saveAsItem);
+        listenerList.add(saveViewItem);
+        listenerList.add(preferViewItem);
+        listenerList.add(sampleSettingsItem);
+        listenerList.add(prefApply);
+        listenerList.add(compHetViewItem);
+        listenerList.add(customQueryViewItem);
+        listenerList.add(exitItem);
+        listenerList.add(aboutItem);
+        listenerList.add(docItem);
+        listenerList.add(troubleItem);
+        listenerList.add(check);
+        listenerList.add(filterFileButton);
+        listenerList.add(bedFilterFileButton);
+        listenerList.add(geneViewButton);
+        registerActionListeners(listenerList, true);
+
         geneRegexField.addActionListener(this);
 
         //Disable unused buttons
         filterFile.setEnabled(false);
         notFilterFile.setEnabled(false);
         bedFilterFile.setEnabled(false);
-        selectAll.setVisible(false);    //Should eventually remove this
         if (vdat.returnParent() != null) {
             geneViewButton.setVisible(false);
         }
@@ -887,6 +922,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
                 
         pane.add(tablePanel, BorderLayout.CENTER);
         pane.add(filtScroll, BorderLayout.LINE_END);
+        pane.add(stats, BorderLayout.PAGE_END);
         add(pane);
         pack();
         setVisible(true);
@@ -1055,14 +1091,12 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         //Initialize (but don't display) customQueryParent
         try {
             customQueryParent = new JFrame("Custom Query");
-            cqPane = new CustomQueryView(vdat);
+            cqPane = new CustomQueryView(vdat, this);
             JPanel customQueryPane = new JPanel();
             customQueryPane.setPreferredSize(new Dimension(w/2, h/2));
             customQueryPane.setLayout(new BoxLayout(customQueryPane, BoxLayout.Y_AXIS));
             customQueryPane.setBorder(BorderFactory.createEmptyBorder(6,6,6,6));
             customQueryPane.add(cqPane);
-            customQueryPane.add(Box.createRigidArea(new Dimension(0,10)));
-            customQueryPane.add(customQuery);
             customQueryParent.add(customQueryPane);
             customQueryParent.pack();
             //customQueryParent.setVisible(true);
@@ -1145,19 +1179,23 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             caseControl.setEnabled(false);
             caseControl.setSelected(false);
             caseSpinner.setEnabled(false);
+            caseSpinnerLabel.setEnabled(false);
         }
         else {
             caseControl.setEnabled(true);
             caseSpinner.setEnabled(true);
+            caseSpinnerLabel.setEnabled(true);
         }
         if (vdat.countSampleType(vdat.CONTROL) == 0) {
-            caseControl.setEnabled(false);
+            //caseControl.setEnabled(false);
             caseControl.setSelected(false);
             controlSpinner.setEnabled(false);
+            controlSpinnerLabel.setEnabled(false);
         }
         else {
-            caseControl.setEnabled(true);
+            //caseControl.setEnabled(true);
             controlSpinner.setEnabled(true);
+            controlSpinnerLabel.setEnabled(true);
         }
 
     }      
@@ -1272,6 +1310,27 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     }
 
 
+    /**
+    *   Add or remove Action Listeners
+    *   @param inList A Set of AbstractButtons to add/remove
+    *   @param doAdd Add if true, remove if false
+    */
+    private void registerActionListeners(List<AbstractButton> inList, boolean doAdd) {
+        if (doAdd) {
+            //Add listener
+            for (AbstractButton ab : inList) {
+                ab.addActionListener(this);
+            }
+        }
+        else {
+            //Remove listener
+            for (AbstractButton ab : inList) {
+                ab.removeActionListener(this);
+            }
+        }
+    }
+
+
     /** 
     *   Display error as dialog
     *  
@@ -1279,6 +1338,26 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     */
     public static void showError(String err) {
         JOptionPane.showMessageDialog(null, err, "Error!", JOptionPane.ERROR_MESSAGE);
+    }
+
+
+    /**
+    *   Display message as dialog
+    *
+    *   @param mess A message to display
+    */
+    public static void showMessage(String mess) {
+        JOptionPane.showMessageDialog(null, mess, "VarSifter Message", JOptionPane.INFORMATION_MESSAGE);
+    }
+
+
+    /**
+    *   Set the "checked" status of the fixed checkboxes
+    *   @param index The 0-based index of the desired JCheckBox in cBox
+    *   @param val  True or false (should be box be checked)
+    */
+    public void setCBoxChecked(int index, boolean val) {
+        cBox[index].setSelected(val);
     }
 
 
@@ -1319,8 +1398,8 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             System.out.println("No File opened.");
 
             if (vdat == null) {
-                showError("This program really only works if you open a file. Exiting.");
-                System.out.println("This program really only works if you open a file. Exiting.");
+                showError("No file specified. Please specify a file to open.");
+                System.out.println("No file specified. Please specify a file to open.");
                 System.exit(0);
             }
             return null;
