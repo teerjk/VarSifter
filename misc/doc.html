@@ -12,7 +12,7 @@
             </P>
             <H2>Requirements</H2>
             <P>
-              Basic VarSifter functionality requires Java JRE 1.5 or newer, but Java JDK 1.6 is recommended, as the custom query/filter functionality requires Java JDK 1.6 or better (JDK is the full Java Development Kit).
+              Basic VarSifter functionality requires Java JRE 1.5 or newer, but Java JDK 1.6 is recommended, as the custom query/filter functionality requires Java JDK 1.6 or better (JDK is the full Java Development Kit). Although any operating system with a version of Java should work, it is known to work on Windows XP and XP 64-bit, Mac OS X, and the CentOS and Gentoo distributions of GNU/Linux. VarSifter has been successfully tested on Oracle Java and the IcedTea build of the open source OpenJDK.
             </P>
 
             <P>
@@ -37,7 +37,7 @@
               This will open a terminal window, and execute the Java commands to run VarSifter. Leave the terminal window open until you are finished with VarSifter, as important messages and any detailed error messages will appear here.
             </P>
             <P>
-              Once VarSifter is started, you are asked to choose a file. (Data files can be specified in the helper files - see "Manual Start".) This is the .vs or .vcf file with the variant data (descriptions below). Click this file, click 'Open', and you're ready to start sifting! 
+              Once VarSifter is started, you should choose a file. To do this, click "File" on the menu bar, and then "Open File". Then, choose the .vs or .vcf file with the variant data (descriptions below). Click this file, click 'Open', and you're ready to start sifting! (Data files can be specified in the helper files - see "Manual Start".) 
             </P>
             <H2>Manual Start</H2>
             <P>
@@ -143,7 +143,7 @@
               If you have correctly unzipped the JUNG files into the same directory as the Varsifter.jar (or have unzipped the 'package' installation), and are using Java JDK 1.6 or higher, you can create custom queries/filters. Click 'View' in the menu, and then 'Custom Query'. There are two types of filters you can create. Sample filters (left side) allow you to compare sample genotypes. For example, you can click on one sample in the "Samples:" list, click 'Exactly Matches', and then click on another sample to create a filter that requires the two samples to have the same genotype. Annotation filters (right side) allow you to create filters based on the included annotation columns. Start by selecting and annotation column from "Annotations:". Then, if the data is textual, click either 'Exactly Matches' or 'Does Not Match' in the "Annotation Actions:" box. You can then either select a value present in the file in the "Annotation Values:" box, or enter a search term (regular expressions supported) in the "Annotation Actions:" box and click 'Apply Search Text'. If the column you originally selected contained numeric information, you can specify numeric relations in the "Annot. Numeric Actions" box. Click a comparison term, enter a number in the box, and click "Apply Number".
             </P>
             <P>
-              You now have a box in the middle of the screen. This is a query. You can use it now by clicking 'Finalize Query', checking the "Custom Query" checkbox at the bottom of the window, and then clicking 'Apply Filter' back on the main window.
+              You now have a box in the middle of the screen. This is a query. You can use it now by clicking 'Finalize Query' and then clicking 'Apply Filter' back on the main window.
             </P>
             <P>
 
@@ -213,59 +213,41 @@
             </P>
             <P>
 
-              The following is a list of commonly used, and special column headers:
+              The following is a list of commonly used, and special column headers:<br />
+                <STRONG>Required:</STRONG>
               <UL>
-                <LI><STRONG>Index</STRONG>: An numeric index numbering lines is used to allow compound het pairs to remain linked, even when a subview is saved. It is required if using <STRONG>MendHetRec</STRONG>.</LI>
                 <LI><STRONG>Chr</STRONG>: chromosome</LI>
                 <LI><STRONG>LeftFlank</STRONG>: The position to the left of the variant. For indels, the position to the left of the ambiguous bases.</LI>
 
                 <LI><STRONG>RightFlank</STRONG>: The position to the right of the variant (and indel, as above). </LI>
                 <LI><STRONG>Gene_name</STRONG>: The name of the gene. We use the refseq gene symbol.</LI>
-                <LI><STRONG>transcript</STRONG>: The UCSC ID of the displayed transcript.</LI>
-                <LI><STRONG>info</STRONG>: Currently unused</LI>
                 <LI><STRONG>type</STRONG>: Variant type. VarSifter uses the entries in the file to create filter buttons.</LI>
 
                 <LI><STRONG>muttype</STRONG>: <STRONG>SNP</STRONG> for single nucleotide variant or <STRONG>INDEL</STRONG> for insertion/deletion variant.</LI>
-                <LI><STRONG>dbID</STRONG>: dbSNP ID (or other ID), or - if none.</LI>
                 <LI><STRONG>ref_allele</STRONG>: Reference base at this position (plus strand).</LI>
+                <LI><STRONG>var_allele</STRONG>: variant base at this position (plus strand).</LI></UL>
 
-                <LI><STRONG>var_allele</STRONG>: variant base at this position (plus strand).</LI>
-                <LI><STRONG>ref_aa</STRONG>: Reference amino acid, or -</LI>
-                <LI><STRONG>var_aa</STRONG>: Variant amino acid, or -</LI>
-                <LI><STRONG>aa_pos</STRONG>: The position of the amino acid, or 0.</LI>
-                <LI><STRONG>strand</STRONG>: The strand of the gene, or "NA".</LI>
-
-                <LI><STRONG>CDPred_score</STRONG>: The Conserved Domain Prediction score (Praveen Cherukuri).</LI>
+                <STRONG>Reserved (VarSifter uses these for the indicated purpose):</STRONG>
+                <UL>
+                <LI><STRONG>dbID</STRONG>: dbSNP ID (or other ID), or - if none.</LI>
                 <LI><STRONG>Comments</STRONG>: An editable field to write comments. Must save the file using File menu to save comments.</LI>
+                <LI><STRONG>Index</STRONG>: An numeric index numbering lines is used to allow compound het pairs to remain linked, even when a subview is saved. It is required if using <STRONG>MendHetRec</STRONG>.</LI>
                 <LI><STRONG>MendHomRec</STRONG>: Mendelian Homozygous Recessive. 1 if yes, 0 if no.</LI>
                 <LI><STRONG>MendDom</STRONG>: Mendelian Dominant. 1 if yes, 0 if no.</LI>
                 <LI><STRONG>MendHetRec</STRONG>: Mendelian Heterozygous Recessive (compound het). Comma separated list of pair-indices (from <STRONG>Index</STRONG> field) if yes, '0,' if no. Requires <STRONG>Index</STRONG> field to work properly.</LI>
 
                 <LI><STRONG>MendInconsis</STRONG>: Mendelian Inconsistant. Can be either artifacts, or de novo mutations. 1 if yes, 0 if no.</LI>
-                <LI><STRONG>c_genotypes</STRONG>: number of genotypes at this location.</LI>
-                <LI><STRONG>c_homref</STRONG>: number of homozygous reference genotypes.</LI>
-                <LI><STRONG>c_het</STRONG>: number of heterozygous genotypes where the reference is one of the alleles.</LI>
-                <LI><STRONG>c_homnonref</STRONG>: number of homozygous non-reference genotypes.</LI>
-
-                <LI><STRONG>c_hetnonref</STRONG>: number of heterozygous genotypes where the reference is not one of the alleles.</LI>
-                <LI><STRONG>c_refallele</STRONG>: total number of alleles. The counts are gender aware.</LI>
-                <LI><STRONG>c_nonrefallele</STRONG>: total number of non-reference alleles.</LI>
-                <LI><STRONG>freq_homref</STRONG>: frequency of homozygous reference genotypes.</LI>
-                <LI><STRONG>freq_het</STRONG>: frequency of heterozygous genotypes where the reference is one of the alleles.</LI>
-
-                <LI><STRONG>freq_homnonref</STRONG>: frequency of homozygous non-reference genotypes.</LI>
-                <LI><STRONG>freq_hetnonref</STRONG>: frequency of heterozygous genotypes where the reference is not one of the alleles.</LI>
-                <LI><STRONG>freq_refallele</STRONG>: frequency of the reference allele.</LI>
-                <LI><STRONG>freq_nonrefallele</STRONG>: frequency of all non-reference alleles together.</LI>
-                <LI><STRONG>ref_is_minor</STRONG>: flag 1 if the reference is the minor allele.</LI>
-
-                <LI><STRONG>c_major</STRONG>: major and minor alleles are computed from the 2 most frequent alleles with MPG score &gt;=10. c_major is the number of major alleles.</LI>
-                <LI><STRONG>c_minor</STRONG>: major and minor alleles are computed from the 2 most frequent alleles with MPG score &gt;= 10. c_major is the number of major alleles.</LI>
-                <LI><STRONG>Maf</STRONG>: minor allele frequency. Computed from the 2 most frequent alleles with MPG score &gt;= 10.</LI>
-                <LI><STRONG>chisquare</STRONG>: Chisquare test for HWE. Negative one means the value cannot be computed. At 0.05 values greater than 3.84 are significant.</LI>
-
-              </UL>
+               </UL>
             </P>
+
+            <H2>Tutorial</H2>
+            <P>
+                As part of the "Exome 101" course presented by researchers at NHGRI in the fall of 2011, the author of VarSifter (Dr. Jamie K. Teer) presented a session titled "Variant Annotation and Viewing Exome Sequencing Data". The full lecture series is available on YouTube through the GenomeTV channel: http://www.youtube.com/playlist?list=PL6E6AA89291FBA884
+            </P>
+            <P>
+                Dr. Teer's session (http://www.youtube.com/watch?v=I7azpqTWFuM&list=PL6E6AA89291FBA884&index=3&feature=plpp_video) presents a brief demo of VarSifter starting at 26:50.
+            </P>
+
             <H2>Troubleshooting</H2>
             <P>
               <OL>

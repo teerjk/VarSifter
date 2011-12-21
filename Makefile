@@ -58,7 +58,7 @@ $(ZIP_FILE): $(JAR_FILE)
 	rm -rf $$dir/
 
 $(SRC_FILE): clean
-	tar -cvzf $@ *.java images/* components/*.java Makefile manifest.txt BUILD.txt;
+	tar -cvzf $@ *.java images/* misc/* components/*.java Makefile manifest.txt BUILD.txt;
 
 
 docs:

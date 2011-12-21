@@ -21,7 +21,7 @@ import components.TableSorter;
 */
 public class VarSifter extends JFrame implements ListSelectionListener, ActionListener, TableModelListener {
     
-    final static String version = "1.3";
+    final static String version = "1.4_BETA";
     final static String id = "$Id$";
 
     final static int VARIANT_FILE = 0;
@@ -84,6 +84,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     private JMenuItem exitItem;
     private JMenuItem compHetViewItem;
     private JMenuItem customQueryViewItem;
+    private JMenuItem sampleExportItem;
     private JMenuItem aboutItem;
     private JMenuItem docItem;
     private JMenuItem troubleItem;
@@ -145,10 +146,14 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     private final Pattern gzPat = Pattern.compile("\\.gz$");
 
     //Default score cutoff thresholds
+    protected static int SCORE_THRESH = 10;
+    protected static float SCORE_COV_THRESH = 0.5f;
+
+
     private int minMPG = 0;
     private float minMPGCovRatio = 0f;
-    private int genScoreThresh = 10;
-    private float genScoreCovRatioThresh = 0.5f;
+    private int genScoreThresh = SCORE_THRESH;
+    private float genScoreCovRatioThresh = SCORE_COV_THRESH;
 
     private Map<String, Integer> typeMap;
     private AbstractMapper[] annotMapper;
@@ -473,6 +478,57 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
                 showError("No compound heterozygous positions. Check your filters!");
             }
         }
+
+        else if (es == sampleExportItem) {
+            SampleExporter se = new SampleExporter(vdat);
+
+            File fcFile;
+            String fileName;
+            String outLine;
+            int ovwResult = JOptionPane.YES_OPTION;
+            JFileChooser fc = new JFileChooser(System.getProperty("user.dir"));
+            fc.setDialogTitle("Save Sample Export File As");
+            int fcReturn = fc.showSaveDialog(VarSifter.this);
+            if (fcReturn == JFileChooser.APPROVE_OPTION) {
+                fcFile = fc.getSelectedFile();
+                fileName = fcFile.getAbsolutePath();
+
+                if (fcFile.exists()) {
+                    ovwResult = JOptionPane.showConfirmDialog(null, fileName + " already exists. " +
+                        "Do you want to overwrite it?", "Overwrite Warning",
+                        JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+                }
+
+                if (ovwResult == JOptionPane.YES_OPTION) {
+                    try {
+
+                        PrintWriter pw = new PrintWriter(new BufferedWriter(new FileWriter(fcFile)));
+                        pw.println(se.getHeader());
+                        while ((outLine = se.getNextVariant()) != null) {
+                            pw.println(outLine);
+                        }
+                        pw.close();
+                        if (pw.checkError()) {
+                            showError("Error Detected writing sample export file! File NOT saved!");
+                            System.out.println("Error Detected writing sample export file");
+                        }
+                        else {
+                            System.out.println("File " + fileName + " written");
+                        }
+                    }
+                    catch (IOException ioe) {
+                        showError("File write error: " + ioe.getMessage());
+                    }
+                }
+                else {
+                    System.out.println(fileName + " not overwritten");
+                }
+
+            }
+            else {
+                System.out.println("Sample Export NOT saved!");
+            }
+        }
         
         else if (es == aboutItem) {
             JTextArea tPane = new JTextArea("VarSifter v" + version + "\n" +
@@ -674,6 +730,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         JMenuBar mBar = new JMenuBar();
         JMenu fileMenu = new JMenu("File");
         JMenu viewMenu = new JMenu("View");
+        JMenu toolMenu = new JMenu("Tools");
         JMenu helpMenu = new JMenu("Help");
         openItem = new JMenuItem("Open File");
         saveAsItem = new JMenuItem("Save File As");
@@ -683,6 +740,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         exitItem = new JMenuItem("Exit");
         compHetViewItem = new JMenuItem("Viewing Compound Hets");
         customQueryViewItem = new JMenuItem("Custom Query");
+        sampleExportItem = new JMenuItem("Export Samples");
         aboutItem = new JMenuItem("About VarSifter");
         docItem = new JMenuItem("VarSifter Documentation");
         troubleItem = new JMenuItem("TroubleShooting");
@@ -694,11 +752,13 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         fileMenu.add(exitItem);
         viewMenu.add(compHetViewItem);
         viewMenu.add(customQueryViewItem);
+        toolMenu.add(sampleExportItem);
         helpMenu.add(aboutItem);
         helpMenu.add(docItem);
         helpMenu.add(troubleItem);
         mBar.add(fileMenu);
         mBar.add(viewMenu);
+        mBar.add(toolMenu);
         mBar.add(helpMenu);
         setJMenuBar(mBar);
 
@@ -883,6 +943,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         listenerList.add(prefApply);
         listenerList.add(compHetViewItem);
         listenerList.add(customQueryViewItem);
+        listenerList.add(sampleExportItem);
         listenerList.add(exitItem);
         listenerList.add(aboutItem);
         listenerList.add(docItem);
@@ -1365,7 +1426,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     *   Set Component size
     *   @param comp Component for which to modify size
     */
-    private void setJComponentSize(JComponent comp) {
+    protected static void setJComponentSize(JComponent comp) {
         Dimension d = comp.getPreferredSize();
         d.width = 60;
         comp.setPreferredSize(d);

@@ -53,6 +53,11 @@ public class SampleScoreRenderer extends DefaultTableCellRenderer {
             comp.setBackground(null);
             comp.setForeground(null);
         }
+
+        if (isSelected) {
+            comp.setForeground(table.getSelectionForeground());
+            comp.setBackground(table.getSelectionBackground());
+        }
         return comp;
     }
 }
