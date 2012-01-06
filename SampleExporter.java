@@ -10,12 +10,18 @@ import java.util.Map;
 public class SampleExporter {
 
     final String title = "<html>Select variant type(s).<p>Samples with variants of these types will be exported.</html>";
+    final String outTitle = "Select information to output.";
 
     private JCheckBox homRefCB = new JCheckBox("Homozygous Reference");
     private JCheckBox homVarCB = new JCheckBox("Homozygous Variant");
     private JCheckBox hetVarCB = new JCheckBox("Heterozygous Variant");
     private JCheckBox otherCB  = new JCheckBox("Other");
+    private JCheckBox nameCB   = new JCheckBox("Sample Name", true);
+    private JCheckBox genCB    = new JCheckBox("Genotype");
+    private JCheckBox scoreCB  = new JCheckBox("Genotype Score");
+    private JCheckBox covCB    = new JCheckBox("Genotype Coverage");
     private JCheckBox[] genOptions = {homRefCB, homVarCB, hetVarCB, otherCB};
+    private JCheckBox[] outOptions = {nameCB, genCB, scoreCB, covCB};
     private JTextField genScoreField = new JTextField(10);
     private JTextField genScoreCovRatioField = new JTextField(10);
 
@@ -76,7 +82,8 @@ public class SampleExporter {
         filtPane.add(scorePane);
         filtPane.add(scoreCovPane);
 
-        Object[] params = {title, genOptions, new JSeparator(SwingConstants.HORIZONTAL), filtPane};
+        Object[] params = {title, genOptions, new JSeparator(SwingConstants.HORIZONTAL), filtPane, 
+                           new JSeparator(SwingConstants.HORIZONTAL), outTitle, outOptions};
 
         int opt = JOptionPane.showConfirmDialog(null, params, "Sample Export", JOptionPane.OK_CANCEL_OPTION,
                                                 JOptionPane.QUESTION_MESSAGE);
@@ -106,7 +113,7 @@ public class SampleExporter {
 
 
     /**
-    *   Returns the samples with previously selected samples type(s) for the next variant line from the FILTERED vars.
+    *   Returns the samples with previously selected genotype type(s) for the next variant line from the FILTERED vars.
     *   Returns null when nothing left to do (or nothing to do in first place.)
     *   Therefore, its best to call this function as if reading a file:
     *   SampleExporter se = new SampleExporter(Vardata v);
@@ -133,6 +140,7 @@ public class SampleExporter {
                       "Please use an integer for Genotype Score, and a floating point number for " +
                       "Score/Cov Ratio.</html");
             System.out.println(nfe);
+            return null;
         }
 
         String refAllele = annotMapper[refIndex].getString(outData[lastLine][refIndex]);
@@ -158,6 +166,20 @@ public class SampleExporter {
 
         for (int j=0; j<names.length; j++) {
             int sampGen = sampDataLine[j][1];
+
+            //qual filters - procede on success ("continue" otherwise)
+            if ((sampleMapper[1].getDataType() == VarData.INTEGER &&
+                 sampDataLine[j][2] >= scoreT &&
+                 ((float)sampDataLine[j][2] / sampDataLine[j][3]) >= scoreCovT) ||
+                (sampleMapper[1].getDataType() == VarData.FLOAT &&
+                 sampleMapper[1].getFloat(sampDataLine[j][2]) >= scoreT &&
+                 (sampleMapper[1].getFloat(sampDataLine[j][2]) / sampDataLine[j][3]) >= scoreCovT)
+               ) {
+                //Proceed
+            }
+            else {
+                continue;
+            }
 
             //homnonref
             if (homRefCB.isSelected() && sampGen == homRefGen) {
@@ -217,12 +239,21 @@ public class SampleExporter {
     */
     private String fetchSampleInfo(int sampIndex, int[][] sampLine) {
         StringBuilder outString = new StringBuilder();
-        outString.append(names[sampIndex] + ";"); //Sample name!
-        for (int i=0; i<VarData.S_FIELDS; i++) {
-            // Add 1 to sampLine second dimension (sampIndex[][THIS]), as the name has been added to beggining.
-            outString.append(sampleMapper[i].getString(sampLine[sampIndex][i+1]) + ";");
+        
+        if (nameCB.isSelected()) {
+            outString.append(names[sampIndex] + ";"); //Sample name!
         }
-        outString.deleteCharAt(outString.length() - 1);
+        for (int i=0; i<VarData.S_FIELDS; i++) {
+            // Check whether to output; Add 1 to outOptions index (as name has been added to beginning)
+            if (outOptions[i+1].isSelected()) { 
+                // Add 1 to sampLine second dimension (sampIndex[][THIS]), as the name has been added to beginning.
+                outString.append(sampleMapper[i].getString(sampLine[sampIndex][i+1]) + ";");
+            }
+        }
+
+        if (outString.length() > 0) {
+            outString.deleteCharAt(outString.length() - 1);
+        }
         return outString.toString();
 
     }

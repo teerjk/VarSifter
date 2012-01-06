@@ -812,8 +812,14 @@ public class VarData {
                     if (affTemp != normTemp &&
                         affTemp != naInt &&
                         normTemp != naInt &&
-                        samples[i][affAt[j]][1] >= genScoreThresh &&
-                        samples[i][normAt[j]][1] >= genScoreThresh) {
+                        ((sampleMapper[1].getDataType() == INTEGER && 
+                          samples[i][affAt[j]][1] >= genScoreThresh &&
+                          samples[i][normAt[j]][1] >= genScoreThresh) ||
+                         (sampleMapper[1].getDataType() == FLOAT &&
+                          sampleMapper[1].getFloat(samples[i][affAt[j]][1]) >= genScoreThresh &&
+                          sampleMapper[1].getFloat(samples[i][normAt[j]][1]) >= genScoreThresh)
+                        )
+                       ) {
 
                         count++;
                     }
@@ -830,14 +836,25 @@ public class VarData {
                 for (int j=0; j < caseAt.length; j++) {
                     String caseTemp = sampleMapper[0].getString(samples[i][caseAt[j]][0]).replaceAll(":", "");
                     if ( (caseTemp.equals(hetNonRefGen) || caseTemp.equals(homNonRefGen)) &&
-                        samples[i][caseAt[j]][1] >= genScoreThresh) {
+                        ((sampleMapper[1].getDataType() == INTEGER &&
+                          samples[i][caseAt[j]][1] >= genScoreThresh) ||
+                         (sampleMapper[1].getDataType() == FLOAT &&
+                          sampleMapper[1].getFloat(samples[i][caseAt[j]][1]) >= genScoreThresh)
+                        )
+                       ) {
+
                         caseCount++;
                     }
                 }
                 for (int j=0; j < controlAt.length; j++) {
                     String controlTemp = sampleMapper[0].getString(samples[i][controlAt[j]][0]).replaceAll(":","");
                     if ( (controlTemp.equals(hetNonRefGen) || controlTemp.equals(homNonRefGen)) &&
-                        samples[i][controlAt[j]][1] >= genScoreThresh) {
+                        ((sampleMapper[1].getDataType() == INTEGER &&
+                          samples[i][controlAt[j]][1] >= genScoreThresh) ||
+                         (sampleMapper[1].getDataType() == FLOAT &&
+                          sampleMapper[1].getFloat(samples[i][controlAt[j]][1]) >= genScoreThresh)
+                        )
+                       ) {
                         controlCount++;
                     }
                 }
@@ -892,11 +909,20 @@ public class VarData {
                 int minMPGCount = 0;
                 int minMPGCovCount = 0;
                 for (int j=0; j < sampleNames.length; j++) {
-                    if (samples[i][j][1] >= minMPG) {
+                    if ((sampleMapper[1].getDataType() == INTEGER &&
+                          samples[i][j][1] >= minMPG) ||
+                        (sampleMapper[1].getDataType() == FLOAT &&
+                          sampleMapper[1].getFloat(samples[i][j][1]) >=minMPG)
+                       ) {
                         minMPGCount++;
                     }
                     if ( samples[i][j][2] != 0 &&
-                         ((float)samples[i][j][1] / (float)samples[i][j][2]) >= minMPGCovRatio) {
+                         ((sampleMapper[1].getDataType() == INTEGER &&
+                           ((float)samples[i][j][1] / (float)samples[i][j][2]) >= minMPGCovRatio) ||
+                          (sampleMapper[1].getDataType() == FLOAT &&
+                           (sampleMapper[1].getFloat(samples[i][j][1]) / samples[i][j][2]) >= minMPGCovRatio)
+                         )
+                       ) {
                         minMPGCovCount++;
                     }
                 }
