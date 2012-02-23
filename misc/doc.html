@@ -180,6 +180,14 @@
             <P>
               VarSifter saves VCF files as VS files, described below.
             </P>
+            <P>
+              VarSifter uses the Description fields of INFO entries to name annotation columns. Therefore, no two INFO
+              entries can have the same Description.  Additionally, VarSifter reserves a number of column names for its
+              proper functioning, and so VCF INFO Descriptions must be different from those in this list:
+              <STRONG>Chr, LeftFlank, RightFlank, Gene_name, type, muttype, dbID, ref_allele, var_allele, QUAL, 
+              FILTER</STRONG>.  If a duplicate description is found, VarSifter tries to append "_[a-z]" to distinguish 
+              multiple identical descriptions.
+            </P>
             <H2>VS File Format</H2>
             <P>
 

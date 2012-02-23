@@ -64,7 +64,8 @@ public class VarData {
     protected final static Pattern fDigits = VarSifter.fDigits;
     protected final static Pattern digits = VarTableModel.digits;
     protected final static Pattern comment = Pattern.compile("^#");
-    protected final static Pattern floatNaN = Pattern.compile("^-?nan$", Pattern.CASE_INSENSITIVE);
+    protected final static Pattern floatNaN = Pattern.compile("^-?nan?$", Pattern.CASE_INSENSITIVE);
+    protected final static Pattern colSuffixPat = Pattern.compile("_([a-z])$");
 
     protected BitSet dataIsIncluded;      // A mask used to filter data, samples
     protected BitSet dataIsEditable = new BitSet();      // Which data elements can be edited
@@ -376,14 +377,46 @@ public class VarData {
                                 temp[i] = "dbID";
                             }
 
-                            dataTemp.add(temp[i]);
-
                             // May want to read a flag from header - then can make checkboxes from this.
                             if (dataTypeAt.containsKey(temp[i])) {
-                                VarSifter.showError("Multiple columns have the same name, which is not allowed.  "
-                                    + "Please rename column #" + (i+1) + ": \"" + temp[i] + "\"");
-                                System.exit(1);
+                                Matcher m = colSuffixPat.matcher(temp[i]);
+
+                                if (m.find()) {
+                                    char suffix = m.group(1).toCharArray()[0];
+                                    if (suffix == 'z') {
+                                        VarSifter.showError("<html>Multiple columns have the same name, "
+                                            + "which is not allowed.<p>Program unable to create a unique name.<p>"
+                                            + "Please rename column #" + (i+1) + ": \"" + temp[i] + "\"</html>");
+                                            System.exit(1);
+                                    }
+                                    else {
+                                        suffix++;
+                                        temp[i] = temp[i].substring(0, temp[i].length() - 2);
+                                        temp[i] = (temp[i] + "_" + suffix);
+                                        if (dataTypeAt.containsKey(temp[i])) {
+                                            VarSifter.showError("<html>Multiple columns have the same name, "
+                                                + "which is not allowed.<p>Program unable to create a unique name.<p>"
+                                                + "Please rename column #" + (i+1) + ": \"" + temp[i] + "\"</html>");
+                                            System.exit(1);
+                                        }
+                                    }
+                                }
+                                else {
+                                    temp[i] += "_a";
+                                    if (dataTypeAt.containsKey(temp[i])) {
+                                        VarSifter.showError("<html>Multiple columns have the same name, "
+                                            + "which is not allowed.<p>Program unable to create a unique name.<p>"
+                                            + "Please rename column #" + (i+1) + ": \"" + temp[i] + "\"</html>");
+                                        System.exit(1);
+                                    }
+                                }
+
+
+                                VarSifter.showError("<html>Multiple columns have the same name, which is not allowed."
+                                    + "<p>To fix this, the column name has been appended with a unique identifier:<p>"
+                                    + temp[i] + "</html>");
                             }
+                            dataTemp.add(temp[i]);
                             dataTypeAt.put(temp[i], i);
 
                             if ((edPat.matcher(temp[i])).find()) {

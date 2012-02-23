@@ -16,7 +16,8 @@ public class MultiStringMapper implements AbstractMapper {
     private final static int dataType = VarData.MULTISTRING;
     private int lastIndex = 0;
     private String stringSepChar = ";";
-    private final static int MAX = 31; //As I store flags in an int, can only have 31.
+    private final static int MAX = 31; //As I store flags in a signed int, can only have 31.
+                                       //Will look into using sign bit to extend to 32.
 
     /**
     *   Constructor

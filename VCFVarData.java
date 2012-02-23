@@ -89,6 +89,11 @@ public class VCFVarData extends VarData {
             System.exit(1);
         }
 
+        //Fill dataTypeAt with fixed names
+        for (int i=0; i<fixedNames.length; i++) {
+            dataTypeAt.put(fixedNames[i], i);
+        }
+
         String line = "";
         boolean indel;
         boolean noSamples = false;
@@ -111,6 +116,61 @@ public class VCFVarData extends VarData {
                     int pos = fixedNames.length + infoCount;
                     String key = updateVCFMetaHash(line, infoMetaVCF);
                     Map<String, String> tempMeta = infoMetaVCF.get(key);
+                    String descTemp = tempMeta.get("Description");
+
+                    if (dataTypeAt.containsKey(descTemp)) {
+                        Matcher m = colSuffixPat.matcher(descTemp);
+
+                        if (m.find()) {
+                            char suffix = m.group(1).toCharArray()[0];
+                            if (suffix == 'z') {
+                                VarSifter.showError("<html>INFO column has already been seen or has the same "
+                                    + "Description as a reserved name in VarSifter,<p>"
+                                    + "As VarSifter uses the Description to identify the column, this will not work.<p><p>"
+                                    + "Cannot increment column name suffix to make it unique:<p>"
+                                    + "ID=" + tempMeta.get("ID") + "     Description=" 
+                                    + descTemp + "<p>Please rename this column.</html>");
+                                System.exit(1);
+                            }
+                            else {
+                                suffix++;
+                                descTemp = descTemp.substring(0, (descTemp.length() - 2));
+                                descTemp = (descTemp + "_" + suffix);
+                                if (dataTypeAt.containsKey(descTemp)) {
+                                    VarSifter.showError("<html>INFO column has already been seen or has the same "
+                                        + "Description as a reserved name in VarSifter,<p>"
+                                        + "As VarSifter uses the Description to identify the column, this will not work.<p><p>"
+                                        + "Failed to add a unique identifier, so please change the following:"
+                                        + "ID=" + tempMeta.get("ID") + "     Description=" 
+                                        + tempMeta.get("Description") + "</html>");
+                                    System.exit(1);
+                                }
+                            }
+                        }
+                        else {
+                            descTemp += "_a";
+                            if (dataTypeAt.containsKey(descTemp)) {
+                                VarSifter.showError("<html>INFO column has already been seen or has the same "
+                                    + "Description as a reserved name in VarSifter,<p>"
+                                    + "As VarSifter uses the Description to identify the column, this will not work.<p><p>"
+                                    + "Failed to add a unique identifier, so please change the following:"
+                                    + "ID=" + tempMeta.get("ID") + "     Description="
+                                    + tempMeta.get("Description") + "</html>");
+                                    System.exit(1);
+                            }
+                        }
+                                
+                        VarSifter.showError("<html>INFO column has the same Description as a reserved name in VarSifter,<p>"
+                            + "or as the INFO description of another INFO field.<p>"
+                            + "As VarSifter uses the Description to identify the column, this will not work.<p><p>" 
+                            + "To fix this, the column name has been appended with a unique identifier<p>"
+                            + "ID=" + tempMeta.get("ID") + "     Description=" + tempMeta.get("Description") 
+                            + "<p>New Description: " + descTemp
+                            + "</html>");
+                        tempMeta.put("Description", descTemp);
+
+
+                    }
                     dataTypeAt.put(tempMeta.get("Description"), pos);
                     tempNames.add(key);
                     infoCount++;
@@ -184,12 +244,9 @@ public class VCFVarData extends VarData {
                         sampleNamesOrig[ (i * S_FIELDS) + 2 ] = sampleNames[i] + ".NA.coverage";
                     }
 
-                    //Fill dataNames, dataTypeAt
+                    //Fill dataNames
                     System.arraycopy(fixedNames, 0, dataNames, 0, fixedNames.length);
                     System.arraycopy(fixedClassList, 0, classList, 0, fixedClassList.length);
-                    for (int i=0; i<fixedNames.length; i++) {
-                        dataTypeAt.put(dataNames[i], i);
-                    }
                     
                     for (int i=0; i<tempNames.size(); i++) {
                         dataNames[i + fixedNames.length] = infoMetaVCF.get(tempNames.get(i)).get("Description");
