@@ -202,8 +202,14 @@ public class VCFVarData extends VarData {
                     }
                     else {
                         List<String> maskedTempNames = new ArrayList<String>();
-                        Map<String, Integer> maskedDataTypeAt = new HashMap<String, Integer>(colMask.cardinality());
                         int colCount = fixedNames.length;
+                        Map<String, Integer> maskedDataTypeAt = 
+                            new HashMap<String, Integer>(colMask.cardinality() + colCount);
+                        //Fill maskedDataTypeAt with fixed names
+                        for (int i=0; i<fixedNames.length; i++) {
+                            maskedDataTypeAt.put(fixedNames[i], i);
+                        }
+
                         for (int i=0; i<tempNames.size(); i++) {
                             if ( ! colMask.get(i) ) {
                                 infoMetaVCF.remove(tempNames.get(i));
