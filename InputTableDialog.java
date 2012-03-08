@@ -15,7 +15,9 @@ import java.util.Collections;
 public class InputTableDialog {
 
     private static final String[] addedKeys      = { "MultiAllele",
-                                             "Sub-delimiter"
+                                             "Sub-delimiter",
+                                             "Gene_Name_Field",
+                                             "Type_Field"
                                            };
     //private static Object[] addedObjects = { new JCheckBox(),
     //                                         new String()
@@ -28,6 +30,8 @@ public class InputTableDialog {
     private List<String> iList; //Primary keys, the ID fields
     private String inFile = "";
     private final static String vcfConfigExt = ".vcf_config";
+    private ButtonGroup geneNameButtonGroup = new ButtonGroup();
+    private ButtonGroup typeButtonGroup = new ButtonGroup();
 
     /**
     *   Constructor using a hash of hashes.
@@ -74,6 +78,10 @@ public class InputTableDialog {
             }
             data[i][j] = new JCheckBox();
             data[i][j+1] = "";
+            data[i][j+2] = new JRadioButton();
+            geneNameButtonGroup.add( (JRadioButton)data[i][j+2] );
+            data[i][j+3] = new JRadioButton();
+            typeButtonGroup.add( (JRadioButton)data[i][j+3] );
 
             if (tempMap.containsKey("Number") && !tempMap.get("Number").equals(".")) {
                 ((JCheckBox)data[i][j]).setEnabled(false);
@@ -136,8 +144,12 @@ public class InputTableDialog {
             int colCount = dtm.getColumnCount();
             for (int i=0; i<dtm.getRowCount(); i++) {
                 Map<String, String> tempMap = inHash.get( (String)dtm.getValueAt(i,pKeyIndex) );
-                tempMap.put("MultiAllele",  Boolean.toString(((JCheckBox)dtm.getValueAt(i,colCount-2)).isSelected()) );
-                tempMap.put("Sub-delimiter", (String)dtm.getValueAt(i,colCount-1) );
+                tempMap.put("MultiAllele",  Boolean.toString(((JCheckBox)dtm.getValueAt(i,colCount-4)).isSelected()) );
+                tempMap.put("Sub-delimiter", (String)dtm.getValueAt(i,colCount-3) );
+                tempMap.put("Gene_Name_Field", Boolean.toString(
+                    ((JRadioButton)dtm.getValueAt(i,colCount-2)).isSelected()) );
+                tempMap.put("Type_Field", Boolean.toString(
+                    ((JRadioButton)dtm.getValueAt(i,colCount-1)).isSelected()) );
             }
 
             int saveOpt = JOptionPane.showConfirmDialog(null, "Save config for this VCF file?", "Config", 
@@ -163,6 +175,8 @@ public class InputTableDialog {
         JTable t = new JTable(new DialogTableModel(data, colNames, addedKeys.length));
         t.setDefaultRenderer(JCheckBox.class, new JCheckBoxRenderer());
         t.setDefaultEditor(JCheckBox.class, new JCheckBoxCellEditor());
+        t.setDefaultRenderer(JRadioButton.class, new JRadioButtonRenderer());
+        t.setDefaultEditor(JRadioButton.class, new JRadioButtonCellEditor());
         //t.getModel().addTableModelListener(new TableModelListener() {
         //                                public void tableChanged(TableModelEvent e) {
         //                                    opt.setInputValue((DialogTableModel)e.getSource());

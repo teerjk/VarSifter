@@ -101,5 +101,6 @@ public class DialogTableModel extends AbstractTableModel {
     public void setValueAt(Object newVal, int row, int col) {
         data[row][col] = newVal;
         fireTableCellUpdated(row, col);
+        fireTableDataChanged();
     }
 }

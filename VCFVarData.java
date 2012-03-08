@@ -102,6 +102,9 @@ public class VCFVarData extends VarData {
         int infoCount = 0;
         int headCount = 0;
         int sampleCount = 0;
+        String geneNameKey = "";
+        String typeKey = "";
+        String typeDelim = "/";
         final int annotCount = 8;
 
         List<String> tempNames = new ArrayList<String>();
@@ -160,7 +163,7 @@ public class VCFVarData extends VarData {
                             }
                         }
                                 
-                        VarSifter.showError("<html>INFO column has the same Description as a reserved name in VarSifter,<p>"
+                        VarSifter.showMessage("<html>INFO column has the same Description as a reserved name in VarSifter,<p>"
                             + "or as the INFO description of another INFO field.<p>"
                             + "As VarSifter uses the Description to identify the column, this will not work.<p><p>" 
                             + "To fix this, the column name has been appended with a unique identifier<p>"
@@ -191,13 +194,35 @@ public class VCFVarData extends VarData {
                     infoMetaVCF = itd.runDialog();
                     itd = null;
 
+                    //determine custom Gene_name, type infoMetaVCF key (if any)
+                    for (int i=0; i<tempNames.size(); i++) {
+                        if ( Boolean.parseBoolean(infoMetaVCF.get(tempNames.get(i)).get("Gene_Name_Field")) ) {
+                            if ( Boolean.parseBoolean(infoMetaVCF.get(tempNames.get(i)).get("Type_Field")) ) {
+                                VarSifter.showError("<html>You cannot use the same column for both \"Gene Name\" and \"Type\""
+                                    + ".<p>Please restart the program, and select distinct columns.</html>");
+                                System.exit(1);
+                            }
+
+                            geneNameKey = tempNames.get(i);
+                        }
+                        if ( Boolean.parseBoolean(infoMetaVCF.get(tempNames.get(i)).get("Type_Field")) ) {
+                            typeKey = tempNames.get(i);
+                            typeDelim = infoMetaVCF.get(tempNames.get(i)).get("Sub-delimiter");
+                            if (typeDelim == null || typeDelim.equals("")) {
+                                typeDelim = "/";
+                            }
+                        }
+                    }
+
                     // Allow user to select columns for loading / viewing
-                    ColumnSelectionDialog csd = new ColumnSelectionDialog(tempNames.toArray(new String[tempNames.size()]), 
-                                                                                            new String[]{""});
+                    ColumnSelectionDialog csd = new ColumnSelectionDialog(
+                        tempNames.toArray(new String[tempNames.size()]),
+                        new String[]{geneNameKey, typeKey} );
+
                     colMask = csd.runDialog();
                     csd = null;
 
-                    if (colMask.cardinality() == tempNames.size()) {
+                    if ( colMask.cardinality() == tempNames.size() && geneNameKey.equals("") ) {
                         loadAll = true;
                     }
                     else {
@@ -210,9 +235,17 @@ public class VCFVarData extends VarData {
                             maskedDataTypeAt.put(fixedNames[i], i);
                         }
 
+                        // Remove undesired columns 
+                        // (except Gene_name: remove from temp fields, but preserve info for fixed fields)
+                        // (Do NOT remove field asssigned to "type" - we will include both to preserve order,
+                        //  which is not preserved in the MULTISTRING type field)
                         for (int i=0; i<tempNames.size(); i++) {
                             if ( ! colMask.get(i) ) {
                                 infoMetaVCF.remove(tempNames.get(i));
+                            }
+                            else if ( geneNameKey.equals(tempNames.get(i)) ) {
+                                // Do nothing: don't remove from infoMetaVCF, but don't load to tempNames, dataTypeAt
+                                // (This will be the Gene_name field, and will have that dataTypeAt.)
                             }
                             else {
                                 maskedTempNames.add(tempNames.get(i));
@@ -328,7 +361,7 @@ public class VCFVarData extends VarData {
                                 annotMapper[i] = new StringMapper();
                                 break;
                             case MULTISTRING:
-                                annotMapper[i] = new MultiStringMapper("/");
+                                annotMapper[i] = new MultiStringMapper(typeDelim);
                                 break;
                         }
                     }
@@ -403,6 +436,20 @@ public class VCFVarData extends VarData {
                         int tempLineCount = lineCount + altI;
                         data[tempLineCount] = new int[dataNames.length];
 
+                        // First, load INFO fields to hash (so they are available for parsing)
+                        String[] infoTemp = tempLine[7].split(";");
+                        Map<String, String> infoHash = new HashMap<String, String>(tempNames.size() + 2);
+                        for (String s : infoTemp) {
+                            String[] pairs = s.split("=",2);
+                            if (pairs.length == 2) {
+                                infoHash.put(pairs[0], pairs[1]);
+                            }
+                            else if (pairs.length == 1) {
+                                infoHash.put(pairs[0], "1");
+                            }
+                        }
+
+
                         //Chr
                         if ( !tempLine[0].contains("chr") ) {
                             tempLine[0] = "chr" + tempLine[0];
@@ -413,11 +460,46 @@ public class VCFVarData extends VarData {
                         data[tempLineCount][1] = Integer.parseInt(tempLine[1]) - 1;
                         data[tempLineCount][2] = Integer.parseInt(tempLine[1]) + tempLine[3].length();
 
-                        //Gene_name   !!! Dummy for now !!!
-                        data[tempLineCount][3] = annotMapper[3].addData("-");
+                        //Gene_name
+                        if ( !geneNameKey.equals("") ) {
+                            if ( infoHash.get(geneNameKey) != null ) {
+                                data[tempLineCount][3] = annotMapper[3].addData(
+                                    infoHash.get(geneNameKey));
+                            }
+                            else {
+                                data[tempLineCount][3] = annotMapper[3].addData("-");
+                            }
+                        }
+                        else {
+                            data[tempLineCount][3] = annotMapper[3].addData("-");
+                        }
 
-                        //type    !!! Dummy for now !!!
-                        data[tempLineCount][4] = annotMapper[4].addData("-");
+                        //type
+                        if ( !typeKey.equals("") ) {
+                            if ( infoHash.get(typeKey) != null ) {
+                                if (infoMetaVCF.get(typeKey).get("MultiAllele").equals("true")) {
+                                    //split values, enter correct one for this allele
+                                    String[] multiValues = infoHash.get(typeKey).split(",",0);
+                                    String s = "-";
+                                    if (altI < multiValues.length) {
+                                        s = multiValues[altI];
+                                    }
+                                    data[tempLineCount][4] = annotMapper[4].addData(s);
+                                }
+                                else {                                        
+                                    //Not multiallele, so add complete value
+                                    data[tempLineCount][4] = annotMapper[4].addData(
+                                        infoHash.get(typeKey));
+                                }
+
+                            }
+                            else {
+                                data[tempLineCount][4] = annotMapper[4].addData("-");
+                            }
+                        }
+                        else {
+                            data[tempLineCount][4] = annotMapper[4].addData("-");
+                        }
 
                         //dbID
                         if (tempLine[2].equals(".")) {
@@ -468,17 +550,6 @@ public class VCFVarData extends VarData {
 
 
                         //INFO field
-                        String[] infoTemp = tempLine[7].split(";");
-                        Map<String, String> infoHash = new HashMap<String, String>(tempNames.size());
-                        for (String s : infoTemp) {
-                            String[] pairs = s.split("=",2);
-                            if (pairs.length == 2) {
-                                infoHash.put(pairs[0], pairs[1]);
-                            }
-                            else if (pairs.length == 1) {
-                                infoHash.put(pairs[0], "1");
-                            }
-                        }
                         for (int i=0; i<tempNames.size(); i++) {
                             int pos = i + fixedNames.length;
                             String key = tempNames.get(i);
