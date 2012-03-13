@@ -75,3 +75,7 @@ Jakarta Collections Framework (Apache Commons Foundation), is included.
     apache2_license.txt.
     Project is found here:
     http://larvalabs.com/collections/index.html
+
+json-simple - http://code.google.com/p/json-simple/
+    json-simple is distributed without alteration, and uses the Apache v2.0
+    license, enclosed as apache2_license.txt

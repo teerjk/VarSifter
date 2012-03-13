@@ -1,4 +1,6 @@
 import java.io.*;
+import java.net.URL;
+import javax.swing.*;
 import java.text.NumberFormat;
 import java.util.regex.*;
 import java.util.BitSet;
@@ -15,6 +17,8 @@ public class VCFVarData extends VarData {
 
     private Map<String, Map<String, String>> infoMetaVCF = new HashMap<String, Map<String, String>>();
     private Map<String, Map<String, String>> formatMetaVCF = new HashMap<String, Map<String, String>>();
+
+    private CustomAnnotation ca = null;
 
     /**
     *   Interpret VCF file - load VarData data structures
@@ -189,14 +193,46 @@ public class VCFVarData extends VarData {
                         System.exit(1);
                     }
 
-                    //Ask User to give more info about data
+                    // Load any Custom Annotation JSON files.
+                    CustomAnnotation[] caGroup = loadCustomAnnotation();
+                    List<String> annotFormats = new ArrayList<String>();
+
+                    for (CustomAnnotation cTemp : caGroup) {
+                        if (infoMetaVCF.containsKey(cTemp.columnKey)) {
+                            annotFormats.add(cTemp.format);
+                        }
+                    }
+
+                    // display formats available, have user choose one.
+                    if (annotFormats.size() > 0) {
+                        String annotChoice = (String)JOptionPane.showInputDialog(
+                            null,
+                            "<html>The following special annotation formats were detected.<p>"
+                                + "If you want VarSifter to interpret one of these, select it and click \"OK\".<p>"
+                                + "Otherwise, click \"Cancel\".</html>",
+                            "Choose Custom Annotation Format",
+                            JOptionPane.QUESTION_MESSAGE,
+                            null,
+                            annotFormats.toArray(new String[annotFormats.size()]),
+                            null);
+                        if (annotChoice != null && annotChoice.length() > 0) {
+                            for (int cIndex=0; cIndex < caGroup.length; cIndex++) {
+                                if (annotChoice.equals(caGroup[cIndex].format)) {
+                                    ca = caGroup[cIndex];
+                                }
+                            }
+                        }
+                    }
+
+                    // Ask User to give more info about data
                     InputTableDialog itd = new InputTableDialog(infoMetaVCF, inFile);
                     infoMetaVCF = itd.runDialog();
                     itd = null;
 
-                    //determine custom Gene_name, type infoMetaVCF key (if any)
+                    // determine custom Gene_name, type infoMetaVCF key (if any)
                     for (int i=0; i<tempNames.size(); i++) {
-                        if ( Boolean.parseBoolean(infoMetaVCF.get(tempNames.get(i)).get("Gene_Name_Field")) ) {
+                        if ( Boolean.parseBoolean(infoMetaVCF.get(tempNames.get(i)).get("Gene_Name_Field")) 
+                             && ca == null) {
                             if ( Boolean.parseBoolean(infoMetaVCF.get(tempNames.get(i)).get("Type_Field")) ) {
                                 VarSifter.showError("<html>You cannot use the same column for both \"Gene Name\" and \"Type\""
                                     + ".<p>Please restart the program, and select distinct columns.</html>");
@@ -205,19 +241,36 @@ public class VCFVarData extends VarData {
 
                             geneNameKey = tempNames.get(i);
                         }
-                        if ( Boolean.parseBoolean(infoMetaVCF.get(tempNames.get(i)).get("Type_Field")) ) {
+                        else if ( Boolean.parseBoolean(infoMetaVCF.get(tempNames.get(i)).get("Gene_Name_Field"))
+                                  && ca != null) {
+                            VarSifter.showMessage("<html>You have indicated the special " + ca.format + " annotations "
+                                + "should be used by VarSifter.<p>Therefore, the \"Gene_Name_Field\" selection will "
+                                + "be ignored.<html>");
+                        }
+                        if ( Boolean.parseBoolean(infoMetaVCF.get(tempNames.get(i)).get("Type_Field")) 
+                             && ca == null) {
                             typeKey = tempNames.get(i);
                             typeDelim = infoMetaVCF.get(tempNames.get(i)).get("Sub-delimiter");
                             if (typeDelim == null || typeDelim.equals("")) {
                                 typeDelim = "/";
                             }
                         }
+                        else if ( Boolean.parseBoolean(infoMetaVCF.get(tempNames.get(i)).get("Type_Field")) 
+                             && ca != null) {
+                            VarSifter.showMessage("<html>You have indicated the special " + ca.format + " annotations "
+                                + "should be used by VarSifter.<p>Therefore, the \"Type_Field\" selection will "
+                                + "be ignored.<html>");
+                        }
                     }
 
                     // Allow user to select columns for loading / viewing
+                    String[] toKeep = {geneNameKey, typeKey}; 
+                    if (ca != null) {
+                        toKeep = new String[] {ca.columnKey};
+                    }
                     ColumnSelectionDialog csd = new ColumnSelectionDialog(
-                        tempNames.toArray(new String[tempNames.size()]),
-                        new String[]{geneNameKey, typeKey} );
+                        tempNames.toArray(new String[tempNames.size()]), 
+                        toKeep);
 
                     colMask = csd.runDialog();
                     csd = null;
@@ -449,6 +502,16 @@ public class VCFVarData extends VarData {
                             }
                         }
 
+                        // Load Custom Annotation data string to object
+                        if (ca != null) {
+                            if (infoHash.containsKey(ca.columnKey)) {
+                                ca.loadAnnot(infoHash.get(ca.columnKey));
+                            }
+                            else {
+                                ca.loadAnnot("");
+                            }
+                        }
+
 
                         //Chr
                         if ( !tempLine[0].contains("chr") ) {
@@ -461,7 +524,10 @@ public class VCFVarData extends VarData {
                         data[tempLineCount][2] = Integer.parseInt(tempLine[1]) + tempLine[3].length();
 
                         //Gene_name
-                        if ( !geneNameKey.equals("") ) {
+                        if (ca != null) {
+                            data[tempLineCount][3] = annotMapper[3].addData(ca.getGeneName());
+                        }
+                        else if ( !geneNameKey.equals("") ) {
                             if ( infoHash.get(geneNameKey) != null ) {
                                 data[tempLineCount][3] = annotMapper[3].addData(
                                     infoHash.get(geneNameKey));
@@ -475,7 +541,11 @@ public class VCFVarData extends VarData {
                         }
 
                         //type
-                        if ( !typeKey.equals("") ) {
+                        if (ca != null) {
+                            // This does not yet split based on allele
+                            data[tempLineCount][4] = annotMapper[4].addData(ca.getType());
+                        }
+                        else if ( !typeKey.equals("") ) {
                             if ( infoHash.get(typeKey) != null ) {
                                 if (infoMetaVCF.get(typeKey).get("MultiAllele").equals("true")) {
                                     //split values, enter correct one for this allele
@@ -766,4 +836,37 @@ public class VCFVarData extends VarData {
         mHash.put(key, temp);
         return key;
     }
+
+    /**
+    *   Detect any JSON files in current working directory, return objects
+    *
+    *   @return array of CustomAnnotation objects representing available custom annotation descriptions
+    */
+    private CustomAnnotation[] loadCustomAnnotation() {
+        URL cDir = getClass().getProtectionDomain().getCodeSource().getLocation();
+        File file = new File(cDir.getFile());
+        if ( ! file.isDirectory() ) {
+            file = file.getParentFile();
+        }
+        //System.out.println(java.util.Arrays.toString(file.list()));
+        //System.out.println(cDir);
+        String[] files = file.list();
+        List<CustomAnnotation> out = new ArrayList<CustomAnnotation>();
+        for (String s : files) {
+            if (s.endsWith(".vs.json")) {
+                out.add(new CustomAnnotation(file + "/" + s));
+                //System.out.println(file + "/" + s);
+            }
+        }
+
+        /*
+        for (CustomAnnotation c: out) {
+            System.out.println(c.format + "  " + c.columnKey);
+        }
+        System.exit(0);
+        */
+
+        return out.toArray(new CustomAnnotation[out.size()]);
+    }
+
 }

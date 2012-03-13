@@ -1,0 +1,40 @@
+{
+    "main": {
+        "format": "snpEFF",
+        "columnKey": "EFF"
+    },
+    "multidelim": ",",
+    "data": {
+        "singledelim": "\\(|\\|",
+        "type": 0,
+        "type_allowed": [
+            "SPLICE_SITE_ACCEPTOR",
+            "SPLICE_SITE_DONOR",
+            "START_LOST",
+            "EXON_DELETED",
+            "FRAME_SHIFT",
+            "STOP_GAINED",
+            "STOP_LOST",
+            "NON_SYNONYMOUS_CODING",
+            "CODON_CHANGE",
+            "CODON_INSERTION",
+            "CODON_CHANGE_PLUS_CODON_INSERTION",
+            "CODON_DELETION",
+            "CODON_CHANGE_PLUS_CODON_DELETION",
+            "UTR_5_DELETED",
+            "UTR_3_DELETED",
+            "SYNONYMOUS_START",
+            "NON_SYNONYMOUS_START",
+            "START_GAINED",
+            "SYNONYMOUS_CODING",
+            "SYNONYMOUS_STOP",
+            "NON_SYNONYMOUS_STOP",
+            "UTR_5_PRIME",
+            "UTR_3_PRIME",
+            "UPSTREAM",
+            "DOWNSTREAM",
+            "REGULATION"
+        ],
+        "Gene_name": 5
+    }
+}

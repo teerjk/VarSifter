@@ -4,10 +4,15 @@
 
 2. Create a folder in working directory called 'jung'
 
-3. Download jung jar files from http://jung.sourceforge.net/
+3a. Download jung jar files from http://jung.sourceforge.net/
    VarSifter has been tested with jung2-2_0_1.zip.
    Unzip jung zipfile into 'jung' directory.
    NOTE: Make sure the jung/ directory contains the .jar files, not another directory!
+
+3b. Download json-simple jar file from http://code.google.com/p/json-simple/
+    VarSifter has been tested with 1.1.1.
+    Add json-simple jarfile into 'jung' directory (I should probably rename
+    this...).
 
 4. If you have 'make' installed, simply run make.
 

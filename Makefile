@@ -53,6 +53,8 @@ $(ZIP_FILE): $(JAR_FILE)
 	cp jung/jung-algorithms-2.0.1.jar $$dir; \
 	cp jung/jung-api-2.0.1.jar $$dir; \
 	cp jung/collections-generic-4.01.jar $$dir; \
+	cp jung/json-simple-1.1.1.jar $$dir; \
+	cp *.json $$dir; \
 	cp $< $$dir; \
 	zip -r $@ $$dir; \
 	rm -rf $$dir/

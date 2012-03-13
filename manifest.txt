@@ -4,5 +4,6 @@ Class-Path:
  jung-graph-impl-2.0.1.jar 
  jung-visualization-2.0.1.jar 
  jung-algorithms-2.0.1.jar 
+ json-simple-1.1.1.jar 
  cwd 
 
