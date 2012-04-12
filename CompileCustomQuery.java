@@ -60,6 +60,7 @@ public class CompileCustomQuery {
         out.append( "  private static final Pattern homPat = Pattern.compile(" );
         out.append(      "\"^([acgtnACGTN])\\\\1$|^([acgtnACGTN\'*]+):\\\\2$\");\n ");
         out.append( "  private int[][] allData;\n" );
+        out.append( "  private int[][][] sampData;\n" );
         out.append( "  private AbstractMapper[] sampleMapper;\n" );
         out.append( "  private AbstractMapper[] annotMapper;\n" );
         out.append( "  private int mutTypeIndex;\n" );
@@ -73,7 +74,8 @@ public class CompileCustomQuery {
         out.append( "  private int muttype; //Re-assigned for each data row\n" );
         out.append( "                                                           \n" );
         out.append( "  public ").append(className).append( "(VarData vdat) {\n" );
-        out.append( "    allData = vdat.dataDump();\n" );
+        out.append( "    allData = vdat.returnData();\n" );
+        out.append( "    sampData = vdat.returnSamples();\n" );
         out.append( "    bitSets = vdat.getCustomBitSet();\n" );
         out.append( "    annotMapper = vdat.returnAnnotMap();\n" );
         out.append( "    sampleMapper = vdat.returnSampleMap();\n" );

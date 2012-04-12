@@ -21,13 +21,15 @@ import components.TableSorter;
 */
 public class VarSifter extends JFrame implements ListSelectionListener, ActionListener, TableModelListener {
     
-    final static String version = "1.4";
+    final static String version = "1.5BETA";
     final static String id = "$Id$";
 
     final static int VARIANT_FILE = 0;
     final static int GENE_FILTER_FILE = 1;
     final static int BED_FILTER_FILE = 2;
     final static int MAX_COLUMN_SIZE = 150;
+
+    public final static boolean isDebug = false;
 
     final String[] sampleTableLabels = {"Sample", "Genotype", "Genotype score", "coverage"};
 
@@ -140,7 +142,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     private BitSet[] mask = new BitSet[2]; // holds { type filter mask (typeCBox), preset (cBox) }
     private boolean isShowVar = true;
     private DataFilter df = null;
-    public final static Pattern fDigits = Pattern.compile("^-?[0-9]+\\.[0-9]+$|^NaN$");
+    public final static Pattern fDigits = Pattern.compile("^-?[0-9]+\\.[0-9]+(E-?[0-9]+)?$|^NaN$");
     public final static Pattern emptyPat = Pattern.compile("emptyVS_.*tmp");
     private final Pattern vcfPat = Pattern.compile("\\.vcf$");
     private final Pattern gzPat = Pattern.compile("\\.gz$");
@@ -160,6 +162,8 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     private AbstractMapper[] sampleMapper;
 
     public final static String emptyHeader = "Chr\tLeftFlank\tRightFlank\tGene_name\ttype\tmuttype\tref_allele\tvar_allele";
+    public final static BitSet[] emptyBS = { new BitSet(), new BitSet() };
+    public final static int[] emptySpinnerData = {0,0,0,0,0};
 
 
     /** 
@@ -303,7 +307,6 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
                 }
             }
 
-            BitSet[] emptyBS = { new BitSet(), new BitSet() };
             vdat.filterData(new DataFilter(emptyBS, null, null, spinnerData, geneRegex, minMPG, minMPGCovRatio, genScoreThresh));
             VarData tempVdat = vdat.returnSubVarData(vdat, null);
             VarSifter vs = new VarSifter(tempVdat);
@@ -338,12 +341,11 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         }
 
         else if (es == saveAsItem) {
-            saveData(null, vdat);
+            saveData(null, true);
         }
 
         else if (es == saveViewItem) {
-            VarData subVdat = vdat.returnSubVarData(vdat, null);
-            saveData(null, subVdat);
+            saveData(null, false);
         }
 
         else if (es == preferViewItem) {
@@ -417,7 +419,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             BitSet[] tempBS = { mask[0], (BitSet)(mask[1].clone()) };
             tempBS[1].set(MENDHETREC);
             vdat.filterData(new DataFilter(tempBS, geneFile, bedFile, spinnerData, geneRegex, minMPG, minMPGCovRatio, genScoreThresh));
-            int temp[][] = vdat.returnData();
+            int temp[][] = vdat.returnOutData();
 
             //Must return the filtered state to what it was, to avoid data mapping errors!
             vdat.filterData(df);
@@ -461,7 +463,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             BitSet[] tempBS = { mask[0], (BitSet)(mask[1].clone()) };
             tempBS[1].set(MENDHETREC);
             vdat.filterData(new DataFilter(tempBS, geneFile, bedFile, spinnerData, geneRegex, minMPG, minMPGCovRatio, genScoreThresh));
-            int temp[][] = vdat.returnData();
+            int temp[][] = vdat.returnOutData();
 
             //Must return the filtered state to what it was, to avoid data mapping errors!
             vdat.filterData(df);
@@ -899,8 +901,10 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         filtPane.add(bFiltPane);
         filtPane.add(Box.createRigidArea(new Dimension(0,10)));
         filtPane.add(geneViewButton);
-        //filtPane.add(Box.createRigidArea(new Dimension(0,10)));
-        //filtPane.add(check);  //TESTING
+        if (isDebug) {
+            filtPane.add(Box.createRigidArea(new Dimension(0,10)));
+            filtPane.add(check);  //TESTING
+        }
         JScrollPane filtScroll = new JScrollPane(filtPane, 
             ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
             ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
@@ -1122,7 +1126,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         }
         int geneNameIndex = ((Integer)typeMap.get("Gene_name")).intValue();
         if (isShowVar) {
-            sorter = new TableSorter( new VarTableModel(vdat.returnData(),
+            sorter = new TableSorter( new VarTableModel(vdat.returnOutData(),
                                           vdat.returnDataNames(), 
                                           annotMapper,
                                           vdat ));
@@ -1487,9 +1491,9 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     *   Save data, either in place, or as new
     *  
     *   @param fileName Name of file to save to or null to open a FileChooser
-    *   @param vdTemp The VarData object containing data to save
+    *   @param saveAll Save all variants (or the selected subset, if false)
     */
-    private void saveData(String fileName, VarData vdTemp) {
+    private void saveData(String fileName, boolean saveAll) {
         File fcFile;
         int ovwResult = JOptionPane.YES_OPTION;
         
@@ -1519,12 +1523,17 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
 
         if (ovwResult == JOptionPane.YES_OPTION) {
             try {
+
+                if (saveAll) {
+                    // Remove all filters so all data included. MUST reset filter after writing!!
+                    vdat.filterData(new DataFilter(emptyBS, null, null, emptySpinnerData, null, 0, 0, 0));
+                }
                 
                 PrintWriter pw = new PrintWriter(new BufferedWriter(new FileWriter(fcFile)));
-                int[][] outData = vdTemp.dataDump();
-                String[] dataNames = vdTemp.returnDataNames();
-                String[] sampleNamesOrig = vdTemp.returnSampleNamesOrig();
-                String[] commentList = vdTemp.returnCommentList();
+                String[] dataNames = vdat.returnDataNames();
+                String[] sampleNamesOrig = vdat.returnSampleNamesOrig();
+                String[] sampleNames = vdat.returnSampleNames();
+                String[] commentList = vdat.returnCommentList();
 
                 //comments
                 for (String c : commentList) {
@@ -1542,21 +1551,32 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
                 outString.deleteCharAt(outString.length() - 1 );
                 pw.println(outString.toString());
 
-
+                int[][] outData = vdat.returnOutData();
                 for (int i=0; i < outData.length; i++) {
                     outString = new StringBuilder(100);
-                                    
+
+                    // append Annotatations to outString
                     for (int j=0; j < dataNames.length; j++) {
-                        outString.append(annotMapper[j].getString(outData[i][j]) + "\t"); 
+                        outString.append(annotMapper[j].getString(outData[i][j]) + "\t");
                     }
-                    for (int j=dataNames.length; j < outData[i].length; j++) {
-                                outString.append(sampleMapper[(j-dataNames.length) % VarData.S_FIELDS].getString(
-                                                 outData[i][j]) + "\t"); 
+
+                    // append sample info to outString
+                    int[][] outSamples = vdat.returnSample(i);
+                    for (int j=0; j < sampleNames.length; j++) {
+                        for (int k=0; k < VarData.S_FIELDS; k++) {
+                            outString.append(sampleMapper[k].getString(outSamples[j][k+1]) + "\t");
+                        }
                     }
                     outString.deleteCharAt(outString.length() - 1);
 
                     pw.println(outString.toString());
                 }
+
+                if (saveAll) {
+                    //Must return the filtered state to what it was, to avoid data mapping errors!
+                    vdat.filterData(df);
+                }
+
                 pw.close();
                 if (pw.checkError()) {
                     showError("Error Detected writing file! File NOT saved!");

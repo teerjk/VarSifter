@@ -45,7 +45,7 @@ public class SampleExporter {
     /**
     *   Constructor assigns local fields needed from VarData object; will use currently filtered variant list!
     *   Then, opens dialog to determine which variant types are desired.
-    *   @param inVdat VarData object
+    *   @param inVDat VarData object
     */
     public SampleExporter(VarData inVDat) {
         this.vdat = inVDat;
@@ -53,7 +53,7 @@ public class SampleExporter {
         Map<String, Integer> dataTypeAt = vdat.returnDataTypeAt();
         annotMapper = vdat.returnAnnotMap();
         sampleMapper = vdat.returnSampleMap();
-        outData = vdat.returnData();
+        outData = vdat.returnOutData();
         chrIndex = dataTypeAt.get("Chr");
         lfIndex = dataTypeAt.get("LeftFlank");
         rfIndex = dataTypeAt.get("RightFlank");

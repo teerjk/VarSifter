@@ -326,7 +326,9 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
         extraPane.add(Box.createRigidArea(new Dimension(5,0)));
         outText.setMaximumSize(new Dimension( outText.getMaximumSize().width, 
                                               outText.getMinimumSize().height));
-        //extraPane.add(outText);   //Debugging
+        if (VarSifter.isDebug) {
+            extraPane.add(outText);   //Debugging
+        }
         extraPane.add(outMessage);
         outMessage.setEditable(false);
         extraPane.add(Box.createVerticalGlue());
@@ -550,8 +552,7 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
                 int selIndex = sampleList.getSelectedIndex();
                 String labelTemp = sampleNames[selIndex];
                 labelTemp = labelTemp.replaceFirst("\\.NA$", "");
-                String queryTemp = ("allData[i]["
-                                    + (( selIndex * VarData.S_FIELDS) + annoSize) + "]");
+                String queryTemp = ("sampData[i][" + selIndex + "][0]");
                 buildQueryVertex(labelTemp, queryTemp);
                 sampleList.clearSelection();
             }
@@ -1006,6 +1007,16 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
                     JOptionPane.showMessageDialog(this, "<html>The loaded query appears to match this data file by name." 
                         + "<p>However, if the query didn't really come from this EXACT data file, you will get incorrect results!!!");
                     graph = (DelegateForest<CustomVertex,Integer>)ois.readObject();
+                    try {
+                        bitSetList = (ArrayList<BitSet>)ois.readObject();
+                    }
+                    catch (IOException ioe) {
+                        System.err.println(ioe);
+                        VarSifter.showError("<html>You have loaded a query object created from a VarSifter version<p>" +
+                            "earlier than 1.5. If there was a text search in your query, it will likely fail.<p>" +
+                            "It is highly recommended to remake the query to avoid errors!!</html>");
+                    }
+
                     redrawGraph();
                 } 
                 else {
@@ -1051,6 +1062,7 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
                     ObjectOutputStream ow = new ObjectOutputStream(new FileOutputStream(queryFile));
                     ow.writeObject(df.getName());
                     ow.writeObject(graph);
+                    ow.writeObject(bitSetList);
                     ow.close();
                     System.out.println("Saved query for data " + df.getName());
                 }

@@ -1154,12 +1154,40 @@ public class VarData {
         
 
     /** 
-    *   Return annotation data
+    *   Return all annotation data
     *  
-    *   @return Returns the annotaion data as a 2d array: [line][annotation column]
+    *   @return Returns all the annotaion data as a 2d array: [line][annotation column]
     */
     public int[][] returnData() {
+        return data;
+    }
+
+    /**
+    *   Return filtered annotation data
+    *
+    *   @return Returns on the annotation data for variants (rows) passing filter. [line][annotation column]
+    */
+    public int[][] returnOutData() {
         return outData;
+    }
+
+
+    /**
+    *   Return all sample data
+    *
+    *   @return Returns all sample data as a 3d array: [line][sample][gen:score:cov]
+    */
+    public int[][][] returnSamples() {
+        return samples;
+    }
+
+    /**
+    *   Return filtered sample data
+    *
+    *   @return Returns filtered sample data as 3d array: [line][sample][gen:score:cov]
+    */
+    public int[][][] returnOutSamples() {
+        return outSamples;
     }
 
 
@@ -1514,7 +1542,7 @@ public class VarData {
             input = args[0];
         }
         VarData vdat = new VarData(input);
-        String[][] outData = vdat.returnData();
+        String[][] outData = vdat.returnOutData();
         String[] outNames = vdat.returnDataNames();
         
         for (String title : outNames) {
