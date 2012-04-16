@@ -1,5 +1,6 @@
 import java.awt.*;
 import java.net.URL;
+import java.net.Socket;
 import javax.swing.*;
 import javax.swing.event.*;
 import javax.swing.table.*;
@@ -10,6 +11,7 @@ import java.util.regex.*;
 import java.io.*;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Map;
 import components.TableSorter;
 
@@ -21,7 +23,7 @@ import components.TableSorter;
 */
 public class VarSifter extends JFrame implements ListSelectionListener, ActionListener, TableModelListener {
     
-    final static String version = "1.5BETA";
+    final static String version = "1.5";
     final static String id = "$Id$";
 
     final static int VARIANT_FILE = 0;
@@ -48,6 +50,8 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     private JScrollPane sampleScroller;
     private ListSelectionModel lsm;
     private JLabel lines = new JLabel();
+    private ConfigHandler opt;
+    private Map<String,String> bamList = null;
 
     private JCheckBox dbsnp = new JCheckBox("dbID");
     private JCheckBox mendRec = new JCheckBox("Hom. Recessive");
@@ -108,6 +112,9 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
 
     private List<AbstractButton> listenerList = new ArrayList<AbstractButton>(20);
 
+    private MouseAdapter outTableMA;
+    private MouseAdapter sampleTableMA;
+
     private JFrame compHetParent;
     private JFrame customQueryParent;
     private CustomQueryView cqPane;
@@ -156,6 +163,8 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     private float minMPGCovRatio = 0f;
     private int genScoreThresh = SCORE_THRESH;
     private float genScoreCovRatioThresh = SCORE_COV_THRESH;
+    private int IGVport = 60151;
+    private String IGVhost = "127.0.0.1";
 
     private Map<String, Integer> typeMap;
     private AbstractMapper[] annotMapper;
@@ -178,6 +187,9 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         //super("VarSifter - " + inFile);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setBounds(0, (h/8), (w/2), (h/2));
+
+        //Load config file
+        opt = parseConfig();
 
         if (inFile == null) {
             try {
@@ -204,6 +216,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             this.setTitle("VarSifter - " + inFile);
         }
         outTable = new JTable();
+        sampleTable = new JTable();
         redrawOutTable(inFile);
         initTable();
 
@@ -225,6 +238,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         //setBounds(0, (h/4), (w/2), (h/2));
         vdat = vdatTemp;
         outTable = new JTable();
+        sampleTable = new JTable();
         redrawOutTable(null);
         initTable();
     }
@@ -324,6 +338,8 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
                 registerActionListeners(listenerList, false);
                 listenerList.clear();
                 geneRegexField.removeActionListener(this);
+                outTable.removeMouseListener(outTableMA);
+                sampleTable.removeMouseListener(sampleTableMA);
                 
                 //lsm.removeListSelectionListener(this);
 
@@ -779,14 +795,48 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         lsm = outTable.getSelectionModel();
         lsm.addListSelectionListener(this);
         
+        //IGV double click listener of outTable
+        // (courtesy of Timothy Gall)
+        outTableMA = new MouseAdapter() {
+            public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() == 2) {
+                    int dataRowIndex = sorter.modelIndex(outTable.getSelectedRow());           
+                    //IGV connection check
+                    try {
+                        Socket igvSocket = new Socket(IGVhost, IGVport);
+                    
+                        PrintWriter igvOut = new PrintWriter(igvSocket.getOutputStream(),true);
+                        BufferedReader igvIn = new BufferedReader(new InputStreamReader(igvSocket.getInputStream()));
+                        
+                        igvOut.println("goto " + vdat.returnDataValueAt(dataRowIndex, "Chr") + ":" 
+                            + String.valueOf(Integer.valueOf(vdat.returnDataValueAt(dataRowIndex, "LeftFlank")) + 1));
+                        String response = igvIn.readLine();
+                        System.out.println("IGV message: " +response);
+                        igvSocket.close();
+                        
+                    } catch (IOException igvExcept) {
+                        System.out.println("igvException");
+                        VarSifter.showError("IGV reported an error (or may not be opened!)");
+                    }
+                  
+                }
+            }
+        };
+        outTable.addMouseListener(outTableMA);
+        // End IGV outTable listener
+    
+    
         dataScroller = new JScrollPane(outTable,
             ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS,
             ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
         dataScroller.setPreferredSize(new Dimension((w/2), (h/4)));
         
+        if (sampleSorter != null) {
+            sampleSorter.setTableHeader(null); //Do this to avoid memory leak
+        }
         sampleSorter = new TableSorter( new SampleTableModel(vdat.returnSample(outTable.getSelectedRow()),
             sampleTableLabels, vdat ));
-        sampleTable = new JTable(sampleSorter);
+        sampleTable.setModel(sampleSorter);
         sampleSorter.setTableHeader(sampleTable.getTableHeader());
         sampleTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
         sampleScroller = new JScrollPane(sampleTable,
@@ -799,6 +849,81 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         sampleTable.setDefaultRenderer(Float.class, new SampleScoreRenderer(genScoreCovRatioThresh));
         initColSizes(sampleTable, (SampleTableModel)((TableSorter)sampleTable.getModel()).getTableModel() );
         
+    
+        //IGV double click listener of sampleTable
+        //(courtesy of Timothy Gall)
+        sampleTableMA = new MouseAdapter() {
+            public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() == 2) {
+
+                    String selectedSample = sampleTable.getValueAt(sampleTable.getSelectedRow(), 0).toString();
+                    String line = null;
+                    if (opt.exists("IGV_bampath")) {
+                        line = opt.get("IGV_bampath");
+                        line += selectedSample + ".bam";
+                    }
+                    else if (opt.exists("IGV_bamlist")) {
+                        if (bamList == null) {
+                            bamList = new HashMap<String,String>();
+                            String blLine;
+                            try {
+                                BufferedReader br = new BufferedReader(new FileReader(opt.get("IGV_bamlist")));
+                                while ( (blLine = br.readLine()) != null) {
+                                    String[] kv = blLine.split("=",2);
+                                    bamList.put(kv[0], kv[1]);
+                                }
+                                br.close();
+                            }
+                            catch (IOException ioe) {
+                                System.err.println("Error parsing IGV_bamlist!");
+                                System.err.println(ioe);
+                                showError("Error parsing IGV_bamlist! File may not be accessible - check console.");
+                            }
+                        }
+                        
+                        if (bamList.containsKey(selectedSample)) {
+                            line = bamList.get(selectedSample);
+                        }
+                        else {
+                            showError("<html>Selected sample " + selectedSample + " not in bamList "
+                                + opt.get("IGV_bamlist") + "<p>IGV cannot load this sample.</html>");
+                            System.err.println("Selected sample " + selectedSample + " not in bamList " 
+                                + opt.get("IGV_bamlist"));
+                        }
+                    }
+                    else {
+                        System.err.println("No way to identify bamfile - set option in VarSifter.config");
+                    }
+
+
+                    if (line != null && new File(line).exists()) {
+                        //IGV connection check
+                        try {
+                            System.out.println("Loading: " + line);
+                            Socket igvSocket = new Socket(IGVhost, IGVport);
+                        
+                            PrintWriter igvOut = new PrintWriter(igvSocket.getOutputStream(),true);
+                            BufferedReader igvIn = new BufferedReader(new InputStreamReader(igvSocket.getInputStream() ) );
+
+                            igvOut.println("load " + line);
+                            String response = igvIn.readLine();
+                            System.out.println(response);
+                            igvSocket.close();
+                            
+                        } catch (IOException igvExcept) {
+                            System.out.println("igvException");
+                            VarSifter.showError("IGV reported an error (or may not be opened!)");
+                        }
+                    }
+                    else {
+                        showError("File " + line + " does not exist - cannot load in IGV.");
+                    }
+                }
+            }
+        };
+        sampleTable.addMouseListener(sampleTableMA);
+        //End IGV sampleTable listener
+    
         //Sample display
         JPanel samplePane = new JPanel();
         samplePane.setLayout(new BoxLayout(samplePane, BoxLayout.X_AXIS));
@@ -1594,6 +1719,63 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         else {
             System.out.println(fileName + " not overwritten!");
         }
+
+    }
+
+
+    /**
+    *   Load config file and populate ConfigHandler
+    *   @return ConfigHanlder containing configfile info
+    */
+    private ConfigHandler parseConfig() {
+        URL cDir = getClass().getProtectionDomain().getCodeSource().getLocation();
+        File cPath = new File(cDir.getFile());
+        //System.out.println(cPath);
+        if (! cPath.isDirectory() ) {
+            cPath = cPath.getParentFile();
+        }
+        ConfigHandler cTemp = new ConfigHandler(cPath.getAbsolutePath() + "/VarSifter.config");
+        
+        if (cTemp.exists("IGV_port")) {
+            Integer i = cTemp.getInteger("IGV_port");
+            if (i != null) {
+                IGVport = i.intValue();
+            }
+        }
+
+        if (cTemp.exists("IGV_host")) {
+            IGVhost = cTemp.get("IGV_host");
+        }
+
+        if (cTemp.exists("Min_GenScore")) {
+            Integer i = cTemp.getInteger("Min_GenScore");
+            if (i != null) {
+                minMPG = i;
+            }
+        }
+
+        if (cTemp.exists("Min_GenCovRatio")) {
+            Float f = cTemp.getFloat("Min_GenCovRatio");
+            if (f != null) {
+                minMPGCovRatio = f;
+            }
+        }
+
+        if (cTemp.exists("GenScoreThresh")) {
+            Integer i = cTemp.getInteger("GenScoreThresh");
+            if (i != null) {
+                genScoreThresh = i;
+            }
+        }
+
+        if (cTemp.exists("LowLightCutoff")) {
+            Float f = cTemp.getFloat("LowLightCutoff");
+            if (f != null) {
+                genScoreCovRatioThresh = f;
+            }
+        }
+
+        return cTemp;
 
     }
 

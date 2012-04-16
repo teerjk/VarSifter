@@ -8,7 +8,7 @@
 
             <H2>Downloads</H2>
             <P>
-              VarSifter is available by anonymous FTP at ftp://ftp.nhgri.nih.gov/pub/software/VarSifter/".
+              VarSifter is available by anonymous FTP at ftp://ftp.nhgri.nih.gov/pub/software/VarSifter/.
             </P>
             <H2>Requirements</H2>
             <P>
@@ -138,6 +138,10 @@
 
               Preferences are available by clicking the "File" menu, and then "Preferences". Currently, you can set genotype score and (genotype score / coverage) cutoffs here in the top part of the window. Note that these are minimum scores, and must be seen in the indicated number of samples to include a variant. The two filters in the bottom part of the window control the minimum score for the Aff/Norm, Case/Control filters, and the lowlighting cutoff. To apply any of these settings, you must click "Apply Preferences", and then refilter with "Apply Filter"!! Currently, if the coverage is listed as 0, the genotype is not counted, even with a high score (since we cannot know what the coverage is.) 
             </P>
+            <H2>Configuration File</H2>
+            <P>
+              VarSifter now includes a configuration file: VarSifter.config.  This file must be located in the same directory as the VarSifter .jar file.  The file itself is documented, and include option=value pairs. To use a feature, remove the '#' in front of an option, and change the value as you see fit.  The file currently contains options to set IGV settings, including where VarSifter will look for bamfiles to load to IGV. It also contains settings for score threshold used when filtering. Although these score thresholds can be set in the "Preferences" window (above), setting them once in the file will change the starting value in VarSifter (so you would not have to set them every time you open VarSifter.)
+            </P>
             <H2>Sample Export</H2>
             <P>
               A list of samples matching certain classes of genotype can be exported by clicking "Export Samples" from the "Tools" menubar entry. Select the type of genotypes you are interested in; for example, "Heterozygous Variant" and "Homozygous Variant" will output a list of samples with those variant types. You can also set Genotype Score and Score/Coverage ratio thresholds for quality control. Finally, you can select the type of information that will be output (ie, check "Sample Name" and "Genotype Score" to get a semicolon-delimited list of name and score for each sample matching your variant criteria). Click "OK", and specify a file to save to. The output will contain one line for every variant in your current view (the results of your current filter). For each line, Chr, LeftFlank, RightFlank, ref_allele, var_allele, and muttype are printed as tab-delimited text.  If a sample has met your variant criteria for this line, its information is added to the end of the line. If no samples meet criteria, the line is printed without any sample information.
@@ -159,6 +163,13 @@
             <P>
               Queries can be saved by clicking 'Save Query'. This creates a binary Java object file. The query can be loaded by clicking 'Load Query', and choosing the appropriate file. Note that a saved query will only work on the EXACT data file it was created from! VarSifter checks this by comparing the data file names. Therefore, you should always use different names when creating/saving VarSifter data files.
             </P>
+            <H2>IGV Interaction</H2>
+            <P>
+              Thanks to Timothy Gall for the IGV interaction feature! VarSifter can interact with IGV to quickly load files and navigate to desired positions. To use this feature, you need IGV running, with an open port for communication.  To navigate to a position, simply double-click a row in the main annotation window.  For this to work, VarSifter and IGV must be using the same port for communication (in VarSifter, this can be set in the config file VarSifter.config.  Note that IGV must be running, and should have the same genome version open as that used for your data.
+            </P>
+            <P>
+              Opening bamfiles (or any data file readable by IGV) for a given sample requires one of two setup options.  The first option is to uncomment the "IGV_bampath" entry in the VarSifter.config file, and enter a directory containing your bamfiles. Note that bamfiles must be named exactly as displayed in the Sample window, with '.bam' at the end, and a similarly names index '.bam.bai' file must also be present in this directory.  The second option is to uncomment the "IGV_bamlist" entry in the VarSifter.config file, and provide the full path to a file containing key=value pairs describing the file for each sample.  Each key is the exact sample name as displayed in the Sample window, and each value is the full path to the bamfile for that sample. The index '.bai' file must also be in the directory with the '.bam' file.  Once this is setup, open both VarSifter and IGV. To load a bamfile, double click the row for the desired sample. (You may have to click somewhere on the annotation window first to avoid an error.)
+            </P>
             <H2>VCF Files</H2>
             <P>
 
@@ -175,7 +186,7 @@
               When you have finished entering this information, click 'OK'. You will be asked if you want to save this configuration. If you choose "Yes", a config file will be written. The next time you open this data file, VarSifter will identify the saved config file, and ask if you wish to use it, avoiding the need to enter all of this information again. Config files are saved by appending ".vcf_config" to the original VCF file name.
             </P>
             <P>
-              Unfortunately, the version 4.0 VCF specification does not define specific tags for annotations, such as Gene Name, or variant type. If this information is included in a VCF file, custom queries can be used to filter those annotations.
+              Unfortunately, the version 4.0 VCF specification does not define specific tags for annotations, such as Gene Name, or variant type. Despite this, VarSifter now provides ways for the user to determine which fields should be considered as "Gene_name" or "type". In the input information window for VCF files ("File Settings"), there are two columns, one for "Gene_name" and one for "Type_field".  Click the button corresponding to the data description you want.  Note that "Type_field", which corresponds with the mutation "type" field used to populate the set of filters on the top righthand side of the screen, can take a delimited list of different types (and allows searching against each type for a given row.)  To ensure proper splitting of the delimited values, make sure you enter the apporpriate character in the "Sub-delimiter" field.  Note that the program can only handle 31 unique values.  Additionally, VarSifter can recognize the snpEFF tag, and will ask if you want to parse snpEFF data according to its specification.  In the future, more specific data formats may be handled.
             </P>
             <P>
               VarSifter saves VCF files as VS files, described below.

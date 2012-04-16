@@ -55,12 +55,13 @@ $(ZIP_FILE): $(JAR_FILE)
 	cp jung/collections-generic-4.01.jar $$dir; \
 	cp jung/json-simple-1.1.1.jar $$dir; \
 	cp *.json $$dir; \
+	cp *.config $$dir; \
 	cp $< $$dir; \
 	zip -r $@ $$dir; \
 	rm -rf $$dir/
 
 $(SRC_FILE): clean
-	tar -cvzf $@ *.java images/* misc/* components/*.java Makefile manifest.txt BUILD.txt;
+	tar -cvzf $@ *.java images/* misc/* components/*.java Makefile manifest.txt BUILD.txt *.json *.config;
 
 
 docs:
