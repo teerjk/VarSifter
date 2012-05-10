@@ -4,6 +4,7 @@ import javax.swing.*;
 import javax.swing.event.*;
 import javax.swing.border.*;
 import java.util.BitSet;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.ArrayList;
@@ -46,6 +47,7 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
     private VarData vdat;
     private VarSifter gui;
     Map<String, Integer> dataTypeAt;
+    Map<String, Integer> sampleIndexOf; // The index in the main sample array (vdat.sampleNames) of the given sample name
     int annoSize;
     DelegateForest<CustomVertex, Integer> graph;
 
@@ -137,11 +139,19 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
     public CustomQueryView(VarData inVdat, VarSifter inGui) {
         vdat = inVdat;
         gui = inGui;
-        sampleNames = vdat.returnSampleNames();
+        String[] origSampleNames = vdat.returnSampleNames();  // The original names - DON'T CHANGE THIS!!
+        sampleNames = new String[origSampleNames.length];
         annotNames = vdat.returnDataNames();
         dataTypeAt = vdat.returnDataTypeAt();
+        sampleIndexOf = new HashMap<String,Integer>(origSampleNames.length);
         annoSize = dataTypeAt.size();
         annotMap = vdat.returnAnnotMap();
+
+        for (int i=0; i<origSampleNames.length; i++) {
+            String n = origSampleNames[i];
+            sampleIndexOf.put(n, i);
+            sampleNames[i] = n;
+        }
 
         graph = new DelegateForest<CustomVertex,Integer>();
         layout = new TreeLayout<CustomVertex,Integer>(graph);
@@ -361,6 +371,26 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
         annotList.addListSelectionListener(this);
         stringAnnotList.addListSelectionListener(this);
 
+        // Sort the samples. Just click on the "Sample:" label above the sample list to have the sample list sorted.
+        // Click again to sort in reverse order
+        // (Thanks to Timothy Gall)
+        sSampleLabel.addMouseListener(new MouseAdapter() {
+            boolean isForward = false;
+            public void mousePressed(MouseEvent e) {
+                if (e.getClickCount() > 0) {
+                    if (isForward) {
+                        java.util.Arrays.sort(sampleNames, java.util.Collections.reverseOrder());
+                        isForward = false;
+                    }
+                    else {
+                        java.util.Arrays.sort(sampleNames);
+                        isForward = true;
+                    }
+                    sampleList.repaint();
+                }
+            }
+        });
+
         // Mask buttons
         enableButtons(new int[] {ACTION,ANNOT_ACTION,ANNOT_COMP,LOGICAL,ANNOT_VAL,FIXED_SAMPLE}, false);
         applyAnnotComp.setEnabled(false);
@@ -551,8 +581,8 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
                 }
                 int selIndex = sampleList.getSelectedIndex();
                 String labelTemp = sampleNames[selIndex];
+                String queryTemp = ("sampData[i][" + sampleIndexOf.get(labelTemp) + "][0]");
                 labelTemp = labelTemp.replaceFirst("\\.NA$", "");
-                String queryTemp = ("sampData[i][" + selIndex + "][0]");
                 buildQueryVertex(labelTemp, queryTemp);
                 sampleList.clearSelection();
             }
