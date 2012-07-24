@@ -97,6 +97,8 @@ public class CompileCustomQuery {
         out.append( "      String homNonRefAllele = annotMapper[nonRefIndex].getString(allData[i][nonRefIndex]);\n");
         out.append( "      int homRefGen;\n");
         out.append( "      int homNonRefGen;\n");
+        out.append( "      int hemiRefGen = sampleMapper[0].getIndexOf(homRefAllele);\n");
+        out.append( "      int hemiVarGen = sampleMapper[0].getIndexOf(homNonRefAllele);\n");
         out.append( "      if (muttype == indel || homRefAllele.length() > 1) {\n");
         out.append( "        homRefGen = sampleMapper[0].getIndexOf(homRefAllele + \":\" + homRefAllele);\n");
         out.append( "        homNonRefGen = sampleMapper[0].getIndexOf(homNonRefAllele + \":\" + homNonRefAllele);\n");

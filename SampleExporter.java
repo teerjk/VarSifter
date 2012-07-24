@@ -4,7 +4,7 @@ import java.util.Map;
 
 
 /**
-*   The SampleExporter class opens a dialog to determine what types of varaints should be exported, and allows
+*   The SampleExporter class opens a dialog to determine what types of variants should be exported, and allows
 *   retrieval of results one line at a time (one per variant location) with those samples using the getNext() method.
 */
 public class SampleExporter {
@@ -16,18 +16,20 @@ public class SampleExporter {
     private JCheckBox homVarCB = new JCheckBox("Homozygous Variant");
     private JCheckBox hetVarCB = new JCheckBox("Heterozygous Variant");
     private JCheckBox otherCB  = new JCheckBox("Other");
+    private JCheckBox annotCB  = new JCheckBox("Annotations");
     private JCheckBox nameCB   = new JCheckBox("Sample Name", true);
     private JCheckBox genCB    = new JCheckBox("Genotype");
     private JCheckBox scoreCB  = new JCheckBox("Genotype Score");
     private JCheckBox covCB    = new JCheckBox("Genotype Coverage");
     private JCheckBox[] genOptions = {homRefCB, homVarCB, hetVarCB, otherCB};
-    private JCheckBox[] outOptions = {nameCB, genCB, scoreCB, covCB};
+    private JCheckBox[] outOptions = {annotCB, nameCB, genCB, scoreCB, covCB};
     private JTextField genScoreField = new JTextField(10);
     private JTextField genScoreCovRatioField = new JTextField(10);
 
     private boolean toFilter = false; //Only filter if this is true (ie, OK was clicked)
 
     private VarData vdat;
+    private String[] annotNames;
     private String[] names;
     private AbstractMapper[] annotMapper;
     private AbstractMapper[] sampleMapper;
@@ -49,6 +51,7 @@ public class SampleExporter {
     */
     public SampleExporter(VarData inVDat) {
         this.vdat = inVDat;
+        annotNames = vdat.returnDataNames();
         names = vdat.returnSampleNames();
         Map<String, Integer> dataTypeAt = vdat.returnDataTypeAt();
         annotMapper = vdat.returnAnnotMap();
@@ -108,6 +111,14 @@ public class SampleExporter {
         out.append(VarSifter.newLine);
         out.append("#Score_threshold: " + genScoreField.getText() + " score_coverage: " + 
             genScoreCovRatioField.getText());
+        if (annotCB.isSelected()) {
+            out.append(VarSifter.newLine);
+            for (String s : annotNames) {
+                out.append(s + "\t");
+            }
+            out.deleteCharAt(out.length() - 1);
+        }            
+
         return out.toString();
     }
 
@@ -160,8 +171,15 @@ public class SampleExporter {
         StringBuilder outTemp = new StringBuilder();
         int[][] sampDataLine = vdat.returnSample(lastLine);
 
-        for (int ind : new int[]{chrIndex, lfIndex, rfIndex, refIndex, varIndex, mutTypeIndex}) {
-            outTemp.append(annotMapper[ind].getString(outData[lastLine][ind]) + "\t");
+        if (annotCB.isSelected()) {
+            for (int ind=0; ind < annotNames.length; ind++) {
+                outTemp.append(annotMapper[ind].getString(outData[lastLine][ind]) + "\t");
+            }
+        }
+        else {
+            for (int ind : new int[]{chrIndex, lfIndex, rfIndex, refIndex, varIndex, mutTypeIndex}) {
+                outTemp.append(annotMapper[ind].getString(outData[lastLine][ind]) + "\t");
+            }
         }
 
         for (int j=0; j<names.length; j++) {

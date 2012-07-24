@@ -70,6 +70,8 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
                               "Homozygous Variant",
                               "Homozygous",
                               "Heterozygous",
+                              "Hemizygous Reference",
+                              "Hemizygous Variant",
                               "NA"
                             };
     private JList sampleList;
@@ -603,8 +605,14 @@ public class CustomQueryView extends JPanel implements ActionListener, ListSelec
                         buildQueryFromBitSet("isHet");
                         buildQueryVertex(fixedSamples[3], "");
                         break;
-                    case 4: //NA
-                        buildQueryVertex(fixedSamples[4], "NA_Allele");
+                    case 4: //Hemizygous reference
+                        buildQueryVertex(fixedSamples[4], "hemiRefGen");
+                        break;
+                    case 5: //Hemizygous variant
+                        buildQueryVertex(fixedSamples[5], "hemiVarGen");
+                        break;
+                    case 6: //NA
+                        buildQueryVertex(fixedSamples[6], "NA_Allele");
                         break;
                 }
                 fixedSampleList.clearSelection();
