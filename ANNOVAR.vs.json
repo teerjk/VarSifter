@@ -1,0 +1,15 @@
+{
+    "main": {
+        "format": "ANNOVAR",
+        "columnKey": "ANN",
+    },
+    "multidelim": ",",    
+    "data": {
+        "multidelim": "/",
+        "data": {
+            "singledelim": ":",
+            "type": 0,
+            "Gene_name": 1,
+        }
+    }
+}

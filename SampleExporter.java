@@ -262,8 +262,8 @@ public class SampleExporter {
             outString.append(names[sampIndex] + ";"); //Sample name!
         }
         for (int i=0; i<VarData.S_FIELDS; i++) {
-            // Check whether to output; Add 1 to outOptions index (as name has been added to beginning)
-            if (outOptions[i+1].isSelected()) { 
+            // Check whether to output; Add 2 to outOptions index (as annotation and name have been added to beginning)
+            if (outOptions[i+2].isSelected()) { 
                 // Add 1 to sampLine second dimension (sampIndex[][THIS]), as the name has been added to beginning.
                 outString.append(sampleMapper[i].getString(sampLine[sampIndex][i+1]) + ";");
             }

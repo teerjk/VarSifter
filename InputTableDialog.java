@@ -83,7 +83,8 @@ public class InputTableDialog {
             data[i][j+3] = new JRadioButton();
             typeButtonGroup.add( (JRadioButton)data[i][j+3] );
 
-            if (tempMap.containsKey("Number") && !tempMap.get("Number").equals(".")) {
+            if (tempMap.containsKey("Number") && !tempMap.get("Number").equals(".") 
+                && !tempMap.get("Number").equals("A")) {
                 ((JCheckBox)data[i][j]).setEnabled(false);
             }
             if (tempMap.containsKey("ID") && tempMap.get("ID").equals("AF")) {
