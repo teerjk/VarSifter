@@ -23,7 +23,7 @@ import components.TableSorter;
 */
 public class VarSifter extends JFrame implements ListSelectionListener, ActionListener, TableModelListener {
     
-    final static String version = "1.6_BETA2";
+    final static String version = "1.6";
     final static String id = "$Id$";
 
     final static int VARIANT_FILE = 0;
@@ -165,6 +165,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     private float genScoreCovRatioThresh = SCORE_COV_THRESH;
     private int IGVport = 60151;
     private String IGVhost = "127.0.0.1";
+    private String geneDelim = ";";
 
     private Map<String, Integer> typeMap;
     private AbstractMapper[] annotMapper;
@@ -272,7 +273,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             spinnerData[vdat.MIN_MPG] = ((Integer)minMPGSpinner.getValue()).intValue();
             spinnerData[vdat.MIN_MPG_COV] = ((Integer)minMPGCovRatioSpinner.getValue()).intValue();
            
-            df = new DataFilter(mask, geneFile, bedFile, spinnerData, getRegex(), minMPG, minMPGCovRatio, genScoreThresh);
+            df = new DataFilter(mask, geneFile, bedFile, spinnerData, getRegex(), minMPG, minMPGCovRatio, genScoreThresh, geneDelim);
             vdat.filterData(df);
             redrawOutTable(null);
             
@@ -321,7 +322,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
                 }
             }
 
-            vdat.filterData(new DataFilter(emptyBS, null, null, spinnerData, geneRegex, minMPG, minMPGCovRatio, genScoreThresh));
+            vdat.filterData(new DataFilter(emptyBS, null, null, spinnerData, geneRegex, minMPG, minMPGCovRatio, genScoreThresh, geneDelim));
             VarData tempVdat = vdat.returnSubVarData(vdat, null);
             VarSifter vs = new VarSifter(tempVdat);
             
@@ -434,7 +435,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             }
             BitSet[] tempBS = { mask[0], (BitSet)(mask[1].clone()) };
             tempBS[1].set(MENDHETREC);
-            vdat.filterData(new DataFilter(tempBS, geneFile, bedFile, spinnerData, geneRegex, minMPG, minMPGCovRatio, genScoreThresh));
+            vdat.filterData(new DataFilter(tempBS, geneFile, bedFile, spinnerData, geneRegex, minMPG, minMPGCovRatio, genScoreThresh, geneDelim));
             int temp[][] = vdat.returnOutData();
 
             //Must return the filtered state to what it was, to avoid data mapping errors!
@@ -478,7 +479,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             String geneRegex = (getRegex() == null) ? "." : getRegex();
             BitSet[] tempBS = { mask[0], (BitSet)(mask[1].clone()) };
             tempBS[1].set(MENDHETREC);
-            vdat.filterData(new DataFilter(tempBS, geneFile, bedFile, spinnerData, geneRegex, minMPG, minMPGCovRatio, genScoreThresh));
+            vdat.filterData(new DataFilter(tempBS, geneFile, bedFile, spinnerData, geneRegex, minMPG, minMPGCovRatio, genScoreThresh, geneDelim));
             int temp[][] = vdat.returnOutData();
 
             //Must return the filtered state to what it was, to avoid data mapping errors!
@@ -1243,7 +1244,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             drawCaseControlSpinner();
             drawMinMPGSampleSpinner();
             drawMinMPGCovRatioSampleSpinner();
-            df = new DataFilter(mask, geneFile, bedFile, spinnerData, getRegex(), minMPG, minMPGCovRatio, genScoreThresh);
+            df = new DataFilter(mask, geneFile, bedFile, spinnerData, getRegex(), minMPG, minMPGCovRatio, genScoreThresh, geneDelim);
         }
 
         if (sorter != null) {
@@ -1651,7 +1652,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
 
                 if (saveAll) {
                     // Remove all filters so all data included. MUST reset filter after writing!!
-                    vdat.filterData(new DataFilter(emptyBS, null, null, emptySpinnerData, null, 0, 0, 0));
+                    vdat.filterData(new DataFilter(emptyBS, null, null, emptySpinnerData, null, 0, 0, 0, geneDelim));
                 }
                 
                 PrintWriter pw = new PrintWriter(new BufferedWriter(new FileWriter(fcFile)));
@@ -1773,6 +1774,10 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             if (f != null) {
                 genScoreCovRatioThresh = f;
             }
+        }
+
+        if (cTemp.exists("GeneDelim")) {
+            geneDelim = cTemp.get("Gene_Delim");
         }
 
         return cTemp;

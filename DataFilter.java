@@ -16,7 +16,7 @@ public class DataFilter {
     private int minMPG;
     private float minMPGCovRatio;
     private int genScoreThresh;
-
+    private String geneDelim;
 
     /**
     *   Constructor to create object
@@ -29,6 +29,7 @@ public class DataFilter {
     *   @param inMinMPG Defined inimum MPG score
     *   @param inMinMPGCovRatio Defined minimum (MPG score / coverage)
     *   @param inGenScoreThresh Genotype Score threshold used for certain tests
+    *   @param inGeneDelim  Internal gene delimiter string
     */
     public DataFilter(BitSet[] inMask,
                       String inGeneFile,
@@ -37,7 +38,8 @@ public class DataFilter {
                       String inGeneQuery,
                       int inMinMPG,
                       float inMinMPGCovRatio,
-                      int inGenScoreThresh
+                      int inGenScoreThresh,
+                      String inGeneDelim
                       ) {
 
         mask = inMask;
@@ -48,6 +50,7 @@ public class DataFilter {
         minMPG = inMinMPG;
         minMPGCovRatio = inMinMPGCovRatio;
         genScoreThresh = inGenScoreThresh;
+        geneDelim = inGeneDelim;
     }
 
 
@@ -127,5 +130,14 @@ public class DataFilter {
     */
     public int getGenScoreThresh() {
         return genScoreThresh;
+    }
+
+
+    /**
+    *   Return internal gene delimter
+    *   @return Gene delimiter String
+    */
+    public String getGeneDelim() {
+        return geneDelim;
     }
 }

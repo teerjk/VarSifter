@@ -689,6 +689,7 @@ public class VarData {
         int minMPG = df.getMinMPG();
         float minMPGCovRatio = df.getMinMPGCovRatio();
         genScoreThresh = df.getGenScoreThresh();
+        String geneDelim = df.getGeneDelim();
 
         dataIsIncluded.set(0,data.length);
         final int TOTAL_FILTERS = 11 + 1; //Number of non-type filters plus 1 (all type filters)
@@ -896,14 +897,33 @@ public class VarData {
                 }
             }
 
-            //Gene Filter File (include)                        
-            if (mask[1].get(7) && geneSet.contains(annotMapper[geneIndex].getString(data[i][geneIndex]).toLowerCase())) {
-                filterSet[8].set(i);
+            //Gene Filter File (include, exclude)                        
+            if (mask[1].get(7)) {
+                String[] dataGenes = 
+                    annotMapper[geneIndex].getString(data[i][geneIndex]).toLowerCase().split(geneDelim);
+                
+                for (String dG : dataGenes) {
+                    if (geneSet.contains(dG)) {
+                        filterSet[8].set(i);
+                        break;
+                    }
+                }
             }
             
             //Gene Filter File (exclude)
-            if (mask[1].get(8) && !geneSet.contains(annotMapper[geneIndex].getString(data[i][geneIndex]).toLowerCase())) {
-                filterSet[9].set(i);
+            if (mask[1].get(8)) {
+                String[] dataGenes = 
+                    annotMapper[geneIndex].getString(data[i][geneIndex]).toLowerCase().split(geneDelim);
+                boolean foundDG = false;
+                for (String dG : dataGenes) {
+                    if (geneSet.contains(dG)) {
+                        foundDG = true;
+                        break;
+                    }
+                }
+                if (!foundDG) {
+                    filterSet[9].set(i);
+                }
             }
             
             //Bed Filter File (include)
