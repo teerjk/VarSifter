@@ -23,7 +23,7 @@ import components.TableSorter;
 */
 public class VarSifter extends JFrame implements ListSelectionListener, ActionListener, TableModelListener {
     
-    final static String version = "1.6";
+    final static String version = "1.7BETA";
     final static String id = "$Id$";
 
     final static int VARIANT_FILE = 0;

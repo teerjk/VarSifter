@@ -87,6 +87,9 @@ public class InputTableDialog {
                 && !tempMap.get("Number").equals("A")) {
                 ((JCheckBox)data[i][j]).setEnabled(false);
             }
+            if (tempMap.containsKey("Number") && tempMap.get("Number").equals("A")) {
+                ((JCheckBox)data[i][j]).setSelected(true);
+            }
             if (tempMap.containsKey("ID") && tempMap.get("ID").equals("AF")) {
                 ((JCheckBox)data[i][j]).setSelected(true);
             }

@@ -15,11 +15,12 @@ public class CustomAnnotation {
 
     private List<String> delims = new ArrayList<String>();
     private List<Integer> levels = new ArrayList<Integer>();
-    private String geneNameString = "";
-    private String typeString = "";
+    private String geneNameString[] = {""};
+    private String typeString[] = {""};
     private Set<String> allowedTypes = new HashSet<String>();
     private int geneNameIndex;
     private int typeIndex;
+    private boolean isMultiAllelic = false;
 
     final static String EMPTY = "-";
     final static String TYPE_DELIM = "/";
@@ -129,38 +130,65 @@ public class CustomAnnotation {
     /**
     *   Add a data string for parsing
     *   @param inS The data string from the annotation column: this will be parsed, allowing field extraction.
+    *   @param alleleCount The number of alleles in this line
     */
-    public void loadAnnot(String inS) {
-        Set<String> typeSet = new HashSet<String>();
-        Set<String> geneNameSet = new HashSet<String>();
-        parseAnnotString( inS, typeSet, geneNameSet, 0 );
+    public void loadAnnot(String inS, int alleleCount) {
+        List<Set<String>> typeSet     = new ArrayList<Set<String>>();
+        List<Set<String>> geneNameSet = new ArrayList<Set<String>>();
+        //Set<String> typeSet = new HashSet<String>();
+        //Set<String> geneNameSet = new HashSet<String>();
+        parseAnnotString( inS, typeSet, geneNameSet, 0, 0);
 
-        if (typeSet.size() > 0) {
-            StringBuilder tSB = new StringBuilder();
-            String[] tArray = typeSet.toArray(new String[typeSet.size()]);
-            java.util.Arrays.sort(tArray);
-            for (String s: tArray) {
-                tSB.append(s + TYPE_DELIM);
-            }
-            tSB.deleteCharAt(tSB.length() - 1);
-            typeString = tSB.toString();
-        }
-        else {
-            typeString = EMPTY;
+        //initialize type, gene for each allele. Later, fill with data, and access based on whether 
+        // annotation was multiallelic or not
+        typeString = new String[alleleCount];
+        geneNameString = new String[alleleCount];
+        for (int i=0; i < alleleCount; i++) {
+            typeString[i] = EMPTY;
+            geneNameString[i] = EMPTY;
         }
 
-        if (geneNameSet.size() > 0) {
-            StringBuilder gnSB = new StringBuilder();
-            String[] gnArray = geneNameSet.toArray(new String[geneNameSet.size()]);
-            java.util.Arrays.sort(gnArray);
-            for (String s: gnArray) {
-                gnSB.append(s + ";");
+        //TESTING
+        //System.err.println(isMultiAllelic);
+        //System.err.println("alleles: " + alleleCount);
+        //if (typeSet.size() != alleleCount && typeSet.size() != 1) {
+        //    System.err.println("WARN: " + alleleCount + " alleles, but " + typeSet.size() + " annotations "
+        //        + inS);
+        //}
+
+        for (int i=0; i < typeSet.size(); i++) {
+            Set<String> alleleTypeSet = typeSet.get(i);
+            if ( alleleTypeSet.size() > 0) {
+                StringBuilder tSB = new StringBuilder();
+                String[] tArray = alleleTypeSet.toArray(new String[alleleTypeSet.size()]);
+                java.util.Arrays.sort(tArray);
+                for (String s: tArray) {
+                    tSB.append(s + TYPE_DELIM);
+                }
+                tSB.deleteCharAt(tSB.length() - 1);
+                typeString[i] = tSB.toString();
             }
-            gnSB.deleteCharAt(gnSB.length() - 1);
-            geneNameString = gnSB.toString();
+            else {
+                typeString[i] = EMPTY;
+            }
         }
-        else {
-            geneNameString = EMPTY;
+
+        for (int i=0; i < geneNameSet.size(); i++) {
+            Set<String> alleleGeneNameSet = geneNameSet.get(i);
+
+            if (alleleGeneNameSet.size() > 0) {
+                StringBuilder gnSB = new StringBuilder();
+                String[] gnArray = alleleGeneNameSet.toArray(new String[alleleGeneNameSet.size()]);
+                java.util.Arrays.sort(gnArray);
+                for (String s: gnArray) {
+                    gnSB.append(s + ";");
+                }
+                gnSB.deleteCharAt(gnSB.length() - 1);
+                geneNameString[i] = gnSB.toString();
+            }
+            else {
+                geneNameString[i] = EMPTY;
+            }
         }
 
     }
@@ -186,26 +214,60 @@ public class CustomAnnotation {
     *   @param tSet A Set containing annotation types.
     *   @param gnSet A Set containing gene names.
     *   @param levelIndex The level to split on (when multiple levels present.) 0-based.
+    *   @param alleleIndex The allele to examine.  Use '0' is not multiallelic
     */
-    private void parseAnnotString(String substring, Set<String> tSet, Set<String> gnSet, int levelIndex) {
+    private void parseAnnotString(String substring, List<Set<String>> tSet, List<Set<String>> gnSet, int levelIndex, int alleleIndex) {
         String[] splitAnnot;
         splitAnnot = substring.split(delims.get(levelIndex));
+
+        //initial multiallele division, setup
+        if (levelIndex == 0) {
+            if (isMultiAllelic) {
+                //parse specially - each allele gets a different index
+                levelIndex++;
+                for (int i=0; i<splitAnnot.length; i++) {
+                    tSet.add(i, new HashSet<String>());
+                    gnSet.add(i, new HashSet<String>());
+                    parseAnnotString(splitAnnot[i], tSet, gnSet, levelIndex, i);
+                    //exit here, to avoid re-parsing
+                }
+                return;
+            }
+            else {
+                //parse normally, in case there is no multidelim level
+                tSet.add(0, new HashSet<String>());
+                gnSet.add(0, new HashSet<String>());
+            }
+
+        }
 
         switch (levels.get(levelIndex).intValue()) {
             case MULTIDELIM:
                 levelIndex++;
                 for (String s : splitAnnot) {
-                    parseAnnotString(s, tSet, gnSet, levelIndex);
+                    parseAnnotString(s, tSet, gnSet, levelIndex, alleleIndex);
                 }
                 break;
             case SINGLEDELIM:
                 if ( typeIndex < splitAnnot.length
                      && (allowedTypes.isEmpty() || allowedTypes.contains(splitAnnot[typeIndex])) ) {
-                    tSet.add( splitAnnot[typeIndex] );
+                    //tSet.get(alleleIndex).add( splitAnnot[typeIndex] );
+                    if (splitAnnot[typeIndex] == "") {
+                        splitAnnot[typeIndex] = EMPTY;
+                    }
+                    Set<String> tempS = tSet.get(alleleIndex);
+                    tempS.add( splitAnnot[typeIndex] );
+                    tSet.set(alleleIndex, tempS);
                 }
                 try {
                     if (geneNameIndex < splitAnnot.length) {
-                        gnSet.add( splitAnnot[geneNameIndex] );
+                        //gnSet.get(alleleIndex).add( splitAnnot[geneNameIndex] );
+                        if (splitAnnot[geneNameIndex] == "") {
+                            splitAnnot[geneNameIndex] = EMPTY;
+                        }
+                        Set<String> tempS = gnSet.get(alleleIndex);
+                        tempS.add( splitAnnot[geneNameIndex] );
+                        gnSet.set(alleleIndex, tempS);
                     }
                 }
                 catch (Exception e) {
@@ -221,18 +283,49 @@ public class CustomAnnotation {
 
     /**
     *   Extracts the Gene Name
+    *   @param i Allele index (0-based)
     *   @return A String with gene names.
     */
-    public String getGeneName() {
-        return geneNameString;
+    public String getGeneName(int i) {
+        if (! isMultiAllelic) {
+            i=0;
+        }
+        //try {
+            return geneNameString[i];
+        //}
+        //catch (Exception e) {
+        //    System.err.println("Error in getGeneName()");
+        //    for (String s : geneNameString) {
+        //        System.err.println("gene " + s);
+        //    }
+        //    for (String s : typeString) {
+        //        System.err.println("type" + s);
+        //    }
+        //    System.exit(1);
+        //}
+        //return "0";
+
     }
 
     /**
     *   Extracts the annotation type
+    *   @param i Allele index (0-based)
     *   @return A String with annotation types.
     */
-    public String getType() {
-        return typeString;
+    public String getType(int i) {
+        if (! isMultiAllelic) {
+            i=0;
+        }
+        return typeString[i];
+    }
+
+
+    /**
+    *   Set parsing to split on multiple alleles (using "multidelim" in highest level of json file)
+    *   @param isMA True if the annotation column to parse is multi-allelic
+    **/
+    public void setMultiAllelic(boolean isMA) {
+        isMultiAllelic = isMA;
     }
 
 
@@ -246,9 +339,9 @@ public class CustomAnnotation {
         String[] tests = {test1, test2, test3};
         
         for (String t: tests) {
-            ca.loadAnnot(t);
+            ca.loadAnnot(t, t.split(",").length );
             System.out.println(t);
-            System.out.println("type: " + ca.getType() + "  GeneName: " + ca.getGeneName());
+            System.out.println("type: " + ca.getType(0) + "  GeneName: " + ca.getGeneName(0));
         }
     }
 }

@@ -267,6 +267,7 @@ public class VCFVarData extends VarData {
                     String[] toKeep = {geneNameKey, typeKey}; 
                     if (ca != null) {
                         toKeep = new String[] {ca.columnKey};
+                        ca.setMultiAllelic( Boolean.parseBoolean(infoMetaVCF.get(ca.columnKey).get("MultiAllele")) );
                     }
                     ColumnSelectionDialog csd = new ColumnSelectionDialog(
                         tempNames.toArray(new String[tempNames.size()]), 
@@ -483,34 +484,35 @@ public class VCFVarData extends VarData {
                         }
                     }
 
+
+                    // First, load INFO fields to hash (so they are available for parsing)
+                    String[] infoTemp = tempLine[7].split(";");
+                    Map<String, String> infoHash = new HashMap<String, String>(tempNames.size() + 2);
+                    for (String s : infoTemp) {
+                        String[] pairs = s.split("=",2);
+                        if (pairs.length == 2) {
+                            infoHash.put(pairs[0], pairs[1]);
+                        }
+                        else if (pairs.length == 1) {
+                            infoHash.put(pairs[0], "1");
+                        }
+                    }
+
+                    // Load Custom Annotation data string to object
+                    if (ca != null) {
+                        if (infoHash.containsKey(ca.columnKey)) {
+                            ca.loadAnnot(infoHash.get(ca.columnKey), altAlleleCount);
+                        }
+                        else {
+                            ca.loadAnnot("", altAlleleCount);
+                        }
+                    }
+
                     //Run loop once for each alt allele
                     for (int altI = 0; altI < altAlleleCount; altI++) {
 
                         int tempLineCount = lineCount + altI;
                         data[tempLineCount] = new int[dataNames.length];
-
-                        // First, load INFO fields to hash (so they are available for parsing)
-                        String[] infoTemp = tempLine[7].split(";");
-                        Map<String, String> infoHash = new HashMap<String, String>(tempNames.size() + 2);
-                        for (String s : infoTemp) {
-                            String[] pairs = s.split("=",2);
-                            if (pairs.length == 2) {
-                                infoHash.put(pairs[0], pairs[1]);
-                            }
-                            else if (pairs.length == 1) {
-                                infoHash.put(pairs[0], "1");
-                            }
-                        }
-
-                        // Load Custom Annotation data string to object
-                        if (ca != null) {
-                            if (infoHash.containsKey(ca.columnKey)) {
-                                ca.loadAnnot(infoHash.get(ca.columnKey));
-                            }
-                            else {
-                                ca.loadAnnot("");
-                            }
-                        }
 
 
                         //Chr
@@ -525,7 +527,7 @@ public class VCFVarData extends VarData {
 
                         //Gene_name
                         if (ca != null) {
-                            data[tempLineCount][3] = annotMapper[3].addData(ca.getGeneName());
+                            data[tempLineCount][3] = annotMapper[3].addData(ca.getGeneName(altI));
                         }
                         else if ( !geneNameKey.equals("") ) {
                             if ( infoHash.get(geneNameKey) != null ) {
@@ -542,8 +544,8 @@ public class VCFVarData extends VarData {
 
                         //type
                         if (ca != null) {
-                            // This does not yet split based on allele
-                            data[tempLineCount][4] = annotMapper[4].addData(ca.getType());
+                            // This is now split based on allele
+                            data[tempLineCount][4] = annotMapper[4].addData(ca.getType(altI));
                         }
                         else if ( !typeKey.equals("") ) {
                             if ( infoHash.get(typeKey) != null ) {
