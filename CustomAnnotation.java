@@ -135,8 +135,6 @@ public class CustomAnnotation {
     public void loadAnnot(String inS, int alleleCount) {
         List<Set<String>> typeSet     = new ArrayList<Set<String>>();
         List<Set<String>> geneNameSet = new ArrayList<Set<String>>();
-        //Set<String> typeSet = new HashSet<String>();
-        //Set<String> geneNameSet = new HashSet<String>();
         parseAnnotString( inS, typeSet, geneNameSet, 0, 0);
 
         //initialize type, gene for each allele. Later, fill with data, and access based on whether 
@@ -214,7 +212,7 @@ public class CustomAnnotation {
     *   @param tSet A Set containing annotation types.
     *   @param gnSet A Set containing gene names.
     *   @param levelIndex The level to split on (when multiple levels present.) 0-based.
-    *   @param alleleIndex The allele to examine.  Use '0' is not multiallelic
+    *   @param alleleIndex The allele to examine.  Use '0' if not multiallelic
     */
     private void parseAnnotString(String substring, List<Set<String>> tSet, List<Set<String>> gnSet, int levelIndex, int alleleIndex) {
         String[] splitAnnot;

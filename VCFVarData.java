@@ -756,7 +756,7 @@ public class VCFVarData extends VarData {
                                 samples[tempLineCount][i - (annotCount + 1)][0] = sampleMapper[0].addData(geno);
 
                                 // Qual score
-                                if (sampHash.get("GQ") == null || sampTemp.length == 1 || sampTemp[sampHash.get("GQ")].equals(".")) {
+                                if (sampHash.get("GQ") == null || sampTemp.length <= sampHash.get("GQ") || sampTemp[sampHash.get("GQ")].equals(".")) {
                                     samples[tempLineCount][i - (annotCount + 1)][1] 
                                     = (sampleMapper[1].getDataType() == FLOAT)
                                     ? sampleMapper[1].addData(Float.parseFloat("NaN"))
@@ -770,7 +770,7 @@ public class VCFVarData extends VarData {
                                 }
 
                                 // Read depth
-                                if (sampHash.get("DP") == null || sampTemp.length == 1 || sampTemp[sampHash.get("DP")].equals(".")) {
+                                if (sampHash.get("DP") == null || sampTemp.length <= sampHash.get("DP") || sampTemp[sampHash.get("DP")].equals(".")) {
                                     samples[tempLineCount][i - (annotCount + 1)][2] = 0;
                                 }
                                 else {
