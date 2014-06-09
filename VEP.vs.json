@@ -1,0 +1,45 @@
+{
+    "main": {
+        "format": "VEP",
+        "columnKey": "CSQ"
+    },
+    "multidelim": ",",
+    "data": {
+        "singledelim": "\\|",
+        "type": 4,
+        "type_allowed": [
+	"transcript_ablation",
+	"splice_donor_variant",
+	"splice_acceptor_variant",
+	"stop_gained",
+	"frameshift_variant",
+	"stop_lost",
+	"initiator_codon_variant",
+	"inframe_insertion",
+	"inframe_deletion",
+	"missense_variant",
+	"transcript_amplification",
+	"splice_region_variant",
+	"incomplete_terminal_codon_variant",
+	"synonymous_variant",
+	"stop_retained_variant",
+	"coding_sequence_variant",
+	"mature_miRNA_variant",
+	"5_prime_UTR_variant",
+	"3_prime_UTR_variant",
+	"non_coding_exon_variant",
+	"nc_transcript_variant",
+	"intron_variant",
+	"NMD_transcript_variant",
+	"upstream_gene_variant",
+	"downstream_gene_variant",
+	"TFBS_ablation",
+	"TFBS_amplification",
+	"TF_binding_site_variant",
+	"regulatory_region_variant",
+	"regulatory_region_ablation",
+	"regulatory_region_amplification"
+       ],
+            "Gene_name": 23
+    }
+}
