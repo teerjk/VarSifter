@@ -5,9 +5,9 @@
 - - - -
 
 ### Getting started ###
-VarSifter is a Java tool to visualize sequence variation data on a desktop computer. To get started, download the latest version from the "Downloads" link, and extract it to a folder you will be able to find again. Windows users: Double-click the VarSifter.bat file. Mac users: double-click the VarSifter.command file. 
+VarSifter is a Java tool to visualize sequence variation data on a desktop computer. To get started, download the latest version from the "Downloads" link, and extract it to a folder you will be able to find again. Windows users: Double-click the VarSifter.bat file. Mac users: double-click the VarSifter.command file. VarSifter reads uncompressed VCF files and a custom tab-delimited text file.
 
-Please see the wiki for an in-depth user guide, tips, and troubleshooting.
+An in-depth user guide, tips, and troubleshooting can be found in the "wiki" folder of the "Source" link.
 
 - - - -
 
