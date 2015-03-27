@@ -15,7 +15,8 @@ import java.util.List;
 */
 public class VarData {
     
-    final static int S_FIELDS = 3;   //Number of columns for each sample
+    //TODO:DONE alter this
+    protected int S_FIELDS = 3;   //Number of columns for each sample
 
     final int AFF_NORM_PAIR = 0;
     final int CASE = 1;
@@ -46,6 +47,7 @@ public class VarData {
     protected String[] dataNames = {""};
     protected String[] sampleNamesOrig = {""};   // All sample names, for writing purposes
     protected String[] sampleNames = {""};
+    protected String[] sampleValueName = {""};
 
     //data fields
     protected int[][] data;           // Fields: [line][var_annotation col]
@@ -56,6 +58,8 @@ public class VarData {
     protected List<String> commentList = new ArrayList<String>(); //comment stored here for printing
     protected List<AbstractMapper> annotMapperBuilder = new ArrayList<AbstractMapper>();  //Build an array of AbstractMappers for annotations
     protected AbstractMapper[] annotMapper = new AbstractMapper[0];                  //the annotation AbstractMapper array
+    //TODO:DONE alter this
+    //ORIG: protected AbstractMapper[] sampleMapper = new AbstractMapper[0];      //The SampleMapper array
     protected AbstractMapper[] sampleMapper = new AbstractMapper[S_FIELDS];      //The SampleMapper array
 
     protected int[] compHetFields;
@@ -204,6 +208,8 @@ public class VarData {
         int sampleCount = 0;
         boolean loadAll = false;
         final Pattern samPat = Pattern.compile("\\.NA(?:\\.\\w+)?$");
+        final Pattern samLeadPat = Pattern.compile("\\.NA$");
+        final Pattern samPostPat = Pattern.compile("\\.NA\\.(\\w+)$");
         final Pattern edPat = Pattern.compile("Comments");
         final Pattern samAff = Pattern.compile("aff");
         final Pattern samNorm = Pattern.compile("norm");
@@ -320,6 +326,7 @@ public class VarData {
                 String temp[] = line.split("\t", 0);
                 List<String> sampleTemp = new ArrayList<String>();
                 List<String> sampleTempOrig = new ArrayList<String>();
+                List<String> sampleTempValueName = new ArrayList<String>(); // the sample value types, in order
                 List<String> dataTemp = new ArrayList<String>();
                 List<Integer> affPos = new ArrayList<Integer>();
                 List<Integer> normPos = new ArrayList<Integer>();
@@ -339,14 +346,24 @@ public class VarData {
                     
                     int dataCount = 0;
                     sampleCount = 0;
-                    
+                    int sampleValueCount = 0;
+
                     for (int i=0; i < temp.length; i++) {
                         // Is column a sample?
                         if ((samPat.matcher(temp[i])).find()) {
 
-                            if (sampleCount % S_FIELDS == 0) {  //Sample name, not score, cov, etc
+                            /* TODO:DONE match by a "name" tag, determine samPos using "samFieldCount" instead of
+                             * S_FIELDS/
+                             */
+                            if ((samLeadPat.matcher(temp[i])).find()) {  //Sample name, not score, cov, etc
+                                int samPos = sampleTemp.size();
                                 sampleTemp.add(temp[i]);
-                                int samPos = (i - dataCount)/S_FIELDS;
+                                sampleValueCount = 0;
+
+                                //start building the sampleValueName order only if this is the first sample
+                                if (sampleTemp.size() == 1) {
+                                    sampleTempValueName.add("Genotype");
+                                }
                                 
                                 if ((samAff.matcher(temp[i])).find()) {
                                     affPos.add(samPos);
@@ -361,6 +378,38 @@ public class VarData {
                                 else if ((controlPat.matcher(temp[i])).find()) {
                                     controlPos.add(samPos);
                                 }
+                            }
+                            else {  //other custom sample fields
+                                sampleValueCount++;
+                                Matcher samPostPatMat = samPostPat.matcher(temp[i]);
+                                String samType = null;
+                                if (samPostPatMat.find()) {
+                                    samType = samPostPatMat.group(1);
+                                }
+                                
+                                if (samType != null) {
+                                    //add to the sampleValueName order only if this is the first sample
+                                    if (sampleTemp.size() == 1) {
+                                        sampleTempValueName.add(samType);
+                                    }
+                                    else {
+                                        if (sampleValueCount >= sampleTempValueName.size() ||
+                                                !(sampleTempValueName.get(sampleValueCount)).equals(samType)) {
+                                            VarSifter.showError("Sample columns must be same type and order"
+                                                + " across all samples!");
+                                            System.exit(1);
+                                        }
+                                    }
+                                    
+                                }
+                                else {
+                                    VarSifter.showError("Cannot parse sample headers.");
+                                    System.exit(1);
+                                }
+                            /* TODO:DONE
+                             * else if {} //Get the postfix, use as a new "sample" data element
+                             */
+                             
                             }
                             sampleCount++;
                             sampleTempOrig.add(temp[i]);
@@ -454,48 +503,118 @@ public class VarData {
                         noSamples = true;
                     }
 
+                    S_FIELDS = sampleTempValueName.size();
+                    sampleMapper = new AbstractMapper[S_FIELDS];
+
                     //Genotype
                     sampleMapper[0] = new StringMapper();
                     
-                    //Genotype Qual (Integer or Float?)
-                    boolean isFloat = false;
-                    for (int j=dataCount+1; j <= temp.length; j+=3) {
-                        if (classList[j] == FLOAT) {
-                            isFloat = true;
-                        }
-                        else if (classList[j] == INTEGER) {
-                            //OK, do nothing
-                        }
-                        else {
-                            VarSifter.showError("<html> It looks like you have a non-integer, non-floating point value"
-                                + "<p>in the genotype score column! Row: " + lineCount + " Col: " + (j+1));
-                            System.out.println("Error: non-integer, non-floating point number in genotype score"
-                                + "column, exiting!");
-                            System.exit(1);
-                        }
-                    }
-                    sampleMapper[1] = (isFloat) ? new FloatMapper() : new IntMapper();
+                    /* TODO:DONE make a general data loader for these fields, instead of hard coded parsing
+                     * of score, coverage. Will likely have to make a map, so order is consistent even 
+                     * if columns are out of order.
+                     */
+                    //Map other sample values
+                    for (int j=1; j < S_FIELDS; j++) {
+                        int thisClass = -1;
+                        for (int k=dataCount+j; k < temp.length; k+=S_FIELDS) {
+                            if (thisClass < 0) {
+                                thisClass = classList[k];
+                            }                            
+                            //else if (classList[k] != thisClass && thisClass <= FLOAT && classList[k] <= FLOAT) {
+                            //    VarSifter.showMessage("<html>Sample value columns have different numeric "
+                            //        + "types<p>Initial type: " + thisClass + " Other type: " + classList[k]
+                            //        + "<p>Row: " + lineCount + " Col: " + (k+1) + "/" 
+                            //        + sampleTempValueName.get(j)
+                            //        + "<p>VarSifter will continue to load, but you may want to check your "
+                            //        + "data file");
+                            //    thisClass = Math.max(thisClass, classList[k]);
+                            //}
+                            else if (classList[k] != thisClass) {
+                                VarSifter.showError("<html>Sample value columns have different data types<p>"
+                                    + "Initial type: " + thisClass + " Other type: " + classList[k] + "<p>"
+                                    + "Row: " + lineCount + " Col: " + (k+1) + "/" 
+                                    + sampleTempValueName.get(j));
+                                System.exit(1);
+                            }
 
-                    //Genotype coverage
-                    for (int j=dataCount+2; j <= temp.length; j+=3) {
-                        if (classList[j] != INTEGER) {
-                            VarSifter.showError("<html>It looks like you have a non-integer value in the genotype " 
-                                + "<p>coverage column! Row: " 
-                                + lineCount + " Col: " + (j+1));
-                            System.out.println("Error: non-integer in genotype coverage column, exiting!");
-                            System.exit(1);
+                            //Assume second, third entries are score, coverage
+                            if (j == 1 && (thisClass != INTEGER && thisClass != FLOAT)) {
+                                VarSifter.showError("<html> It looks like you have a non-integer, non-floating point value"
+                                    + "<p>in the genotype score column! Row: " + lineCount + " Col: " 
+                                    + (k+1) + "/" + sampleTempValueName.get(j));
+                                System.out.println("Error: non-integer, non-floating point number in genotype score"
+                                    + "column, exiting!");
+                                System.exit(1);
+                            }
+                            if (j == 2 && thisClass != INTEGER) {
+                                VarSifter.showError("<html>It looks like you have a non-integer value in the genotype " 
+                                    + "<p>coverage column! Row: " 
+                                    + lineCount + " Col: " + (k+1) + "/" + sampleTempValueName.get(j));
+                                System.out.println("Error: non-integer in genotype coverage column, exiting!");
+                                System.exit(1);
+                            }
                         }
-                    }
-                    sampleMapper[2] = new IntMapper();
+                        
+                        //Assign class type - for now, no MULTISTRINGMAPPER
+                        switch (thisClass) {
+                            case INTEGER:
+                                sampleMapper[j] = new IntMapper();
+                                break;
+                            case FLOAT:
+                                sampleMapper[j] = new FloatMapper();
+                                break;
+                            case STRING:
+                                sampleMapper[j] = new StringMapper();
+                                break;
+                        }
 
+                    }
+                    
+
+                    ////Genotype Qual (Integer or Float?)
+                    //boolean isFloat = false;
+                    //for (int j=dataCount+1; j <= temp.length; j+=3) {
+                    //    if (classList[j] == FLOAT) {
+                    //        isFloat = true;
+                    //    }
+                    //    else if (classList[j] == INTEGER) {
+                    //        //OK, do nothing
+                    //    }
+                    //    else {
+                    //        VarSifter.showError("<html> It looks like you have a non-integer, non-floating point value"
+                    //            + "<p>in the genotype score column! Row: " + lineCount + " Col: " + (j+1));
+                    //        System.out.println("Error: non-integer, non-floating point number in genotype score"
+                    //            + "column, exiting!");
+                    //        System.exit(1);
+                    //    }
+                    //}
+                    //sampleMapper[1] = (isFloat) ? new FloatMapper() : new IntMapper();
+
+                    ////Genotype coverage
+                    //for (int j=dataCount+2; j <= temp.length; j+=3) {
+                    //    if (classList[j] != INTEGER) {
+                    //        VarSifter.showError("<html>It looks like you have a non-integer value in the genotype " 
+                    //            + "<p>coverage column! Row: " 
+                    //            + lineCount + " Col: " + (j+1));
+                    //        System.out.println("Error: non-integer in genotype coverage column, exiting!");
+                    //        System.exit(1);
+                    //    }
+                    //}
+                    //sampleMapper[2] = new IntMapper();
+
+                    //TODO:DONE may not need to do this if no longer hard coded
                     if (noSamples) {
                         sampleNames = new String[] {"NA"};
                         sampleNamesOrig = new String[] {"NA","NA","NA"};
                         sampleMapper[0].addData("NA");
+                        sampleMapper[1] = new IntMapper();
+                        sampleMapper[2] = new IntMapper();
+                        sampleValueName = new String[] {"NA", "NA", "NA", "NA"};
                     }
                     else {
                         sampleNames = sampleTemp.toArray(new String[sampleTemp.size()]);
                         sampleNamesOrig = sampleTempOrig.toArray(new String[sampleTempOrig.size()]);
+                        sampleValueName = sampleTempValueName.toArray(new String[sampleTempValueName.size()]);
                     }
                     
                     dataNames = dataTemp.toArray(new String[dataTemp.size()]);
@@ -580,11 +699,13 @@ public class VarData {
                 samples[lineCount] = new int[sampleNames.length][S_FIELDS];
                 
                 if (noSamples) {
+                    //TODO:DONE may not have to handle this
                     samples[lineCount][0][0] = sampleMapper[0].getIndexOf("NA");
                     samples[lineCount][0][1] = -1;
                     samples[lineCount][0][2] = -1;
                 }
                 else {
+                    //TODO:DONE load sample info, based on included fields (no longer hard coded)
                     for (int i = 0; i < sampleNames.length; i++) {
                         for (int j=0; j<S_FIELDS; j++) {
                             int dataIndex = dataNames.length + (i * S_FIELDS) + j;
@@ -837,6 +958,7 @@ public class VarData {
                 filterSet[5].set(i);
             }
 
+            //TODO: may need to adjust sample filtering
             //Affected different from Normal
             if (mask[1].get(5)) {
                 int count = 0;
@@ -863,6 +985,7 @@ public class VarData {
                 }
             }
 
+            //TODO: may need to adjust sample filtering
             // Variant allele in >=x cases, <=y controls
             if (mask[1].get(6)) {
                 int caseCount = 0;
@@ -957,6 +1080,7 @@ public class VarData {
                 }
             }
 
+            //TODO: may need to adjust sample filtering
             // Qual filters
             if (minMPG != 0 || minMPGCovRatio != 0) {
                 int minMPGCount = 0;
@@ -987,6 +1111,7 @@ public class VarData {
                         
         }
 
+        //TODO: may need to adjust sample filtering
         //Custom Query - outside data loop (it will loop by itself
 
         if (mask[1].get(10)) {
@@ -1435,6 +1560,7 @@ public class VarData {
             tempOutSamples = new int[0][];
         }
         else {
+            //TODO:DONE:OK since I'm using S_FIELDS: adjust output of data - no hard coding of fields
             tempOutSamples = new int[sampleNames.length][S_FIELDS+1];
             for (int j = 0; j < sampleNames.length; j++) {
                 for (int k = 0; k < S_FIELDS; k++) {
@@ -1461,6 +1587,14 @@ public class VarData {
     */
     public String[] returnSampleNamesOrig() {
         return sampleNamesOrig;
+    }
+
+    /**
+    *   Return sample value names (the names of the column headers, including "genotype" for first column)
+    *   @return An array of sample value names (labels after .NA.)
+    */
+    public String[] returnSampleValueNames() {
+        return sampleValueName;
     }
 
 

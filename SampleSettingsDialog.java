@@ -38,6 +38,7 @@ public class SampleSettingsDialog {
     private VarData vdat;
     private String[] sampleNames;
     private String[] sampleNamesOrig;
+    private String[] sampleValueName;
     private int[] affAt;
     private int[] normAt;
     private int[] caseAt;
@@ -58,6 +59,7 @@ public class SampleSettingsDialog {
         this.vdat = inVdat;
         this.sampleNames = inVdat.sampleNames;
         this.sampleNamesOrig = inVdat.sampleNamesOrig;
+        this.sampleValueName = inVdat.returnSampleValueNames();
         this.affAt = inVdat.affAt;
         this.normAt = inVdat.normAt;
         this.caseAt = inVdat.caseAt;
@@ -169,14 +171,14 @@ public class SampleSettingsDialog {
 
             for (int i=0; i<dtm.getRowCount(); i++) {
                 Integer iInt = Integer.valueOf(i);
-                int origIndex = i * VarData.S_FIELDS;
+                int origIndex = i * sampleValueName.length;
 
                 for (int j=2; j<colNames.length; j++) {
                     if ( ((JCheckBox)dtm.getValueAt(i,j)).isSelected() ) {
                         newSettings.get(j).add(iInt);
                         if (! oldSettings.get(j).contains(iInt) ) {
                             sampleNames[i] = sampleNames[i].replaceFirst(sampleKey, colNameKeys[j] + sampleKey);
-                            for (int k=0; k<VarData.S_FIELDS; k++) {
+                            for (int k=0; k<sampleValueName.length; k++) {
                                 sampleNamesOrig[origIndex + k] = 
                                     sampleNamesOrig[origIndex + k].replaceFirst(sampleKey, colNameKeys[j] + sampleKey);
                             }
@@ -185,7 +187,7 @@ public class SampleSettingsDialog {
                     else { 
                         if ( oldSettings.get(j).contains(iInt) ) {
                             sampleNames[i] = sampleNames[i].replaceFirst(colNameKeys[j], "");
-                            for (int k=0; k<VarData.S_FIELDS; k++) {
+                            for (int k=0; k<sampleValueName.length; k++) {
                                 sampleNamesOrig[origIndex + k] = 
                                     sampleNamesOrig[origIndex + k].replaceFirst(colNameKeys[j], "");
                             }

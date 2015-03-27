@@ -23,7 +23,7 @@ import components.TableSorter;
 */
 public class VarSifter extends JFrame implements ListSelectionListener, ActionListener, TableModelListener {
     
-    final static String version = "1.7";
+    final static String version = "1.8BETA";
     final static String id = "$Id$";
 
     final static int VARIANT_FILE = 0;
@@ -33,7 +33,8 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
 
     public final static boolean isDebug = false;
 
-    final String[] sampleTableLabels = {"Sample", "Genotype", "Genotype score", "coverage"};
+    //TODO will need to make this extendable
+    //final String[] sampleTableLabels = {"Sample", "Genotype", "Genotype score", "coverage"};
 
 
     final Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
@@ -46,6 +47,8 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     private TableSorter sorter;
     private JTable sampleTable;
     private TableSorter sampleSorter;
+    //TODO: CONFIRM the values are needed here
+    private String[] sampleTableLabels = {"Sample", "Genotype", "Genotype score", "coverage"};
     private JScrollPane dataScroller;
     private JScrollPane sampleScroller;
     private ListSelectionModel lsm;
@@ -238,6 +241,10 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         setBounds(w-(3* w/4), (h/2), (w/2), (h/2));
         //setBounds(0, (h/4), (w/2), (h/2));
         vdat = vdatTemp;
+        String[] sampValName = vdat.returnSampleValueNames();
+        sampleTableLabels = new String[sampValName.length + 1];
+        sampleTableLabels[0] = "Sample";
+        System.arraycopy(sampValName, 0, sampleTableLabels, 1, sampValName.length);
         outTable = new JTable();
         sampleTable = new JTable();
         redrawOutTable(null);
@@ -1223,6 +1230,10 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
         
         if (newData != null) {
             vdat = getNewVarData(newData);
+            String[] sampValName = vdat.returnSampleValueNames();
+            sampleTableLabels = new String[sampValName.length + 1];
+            sampleTableLabels[0] = "Sample";
+            System.arraycopy(sampValName, 0, sampleTableLabels, 1, sampValName.length);
             typeMap = null;
         }
 
@@ -1659,6 +1670,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
                 String[] dataNames = vdat.returnDataNames();
                 String[] sampleNamesOrig = vdat.returnSampleNamesOrig();
                 String[] sampleNames = vdat.returnSampleNames();
+                String[] sampleValueName = vdat.returnSampleValueNames();
                 String[] commentList = vdat.returnCommentList();
 
                 //comments
@@ -1689,7 +1701,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
                     // append sample info to outString
                     int[][] outSamples = vdat.returnSample(i);
                     for (int j=0; j < sampleNames.length; j++) {
-                        for (int k=0; k < VarData.S_FIELDS; k++) {
+                        for (int k=0; k < sampleValueName.length; k++) {
                             outString.append(sampleMapper[k].getString(outSamples[j][k+1]) + "\t");
                         }
                     }

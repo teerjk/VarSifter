@@ -19,7 +19,7 @@ compile_check: clean
 	${JAVAC6} -J-Xmx1G -cp jung/*:. -Xlint:unchecked VarSifter.java
 
 compile6: clean
-	${JAVAC6} -J-Xmx1G -cp jung/*:. -target 5 VarSifter.java
+	${JAVAC6} -J-Xmx1G -cp jung/*:. -source 1.5 -target 1.5 VarSifter.java
 
 build: $(CLASS_LIST) $(JAR_FILE)
 zip: $(CLASS_LIST) $(JAR_FILE) $(ZIP_FILE)

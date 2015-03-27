@@ -9,6 +9,7 @@ import java.util.regex.*;
 public class CompHetTableModel extends AbstractTableModel {
     private Object data[][];
     private String[] columnNames;
+    private String[] sampleValueName;
     private AbstractMapper[] annotMapper;
     private AbstractMapper[] sampleMapper;
 
@@ -21,6 +22,7 @@ public class CompHetTableModel extends AbstractTableModel {
     public CompHetTableModel(int[][] inData, String[] colN, VarData v) {
         annotMapper = v.returnAnnotMap();
         sampleMapper = v.returnSampleMap();
+        sampleValueName = v.returnSampleValueNames();
 
         int[] compHetFields = v.returnCompHetFields();
         int chl = compHetFields.length;
@@ -64,7 +66,7 @@ public class CompHetTableModel extends AbstractTableModel {
 
                 //samples - 1st member of pair
                 for (int j = chl; j < (chl+sampleFieldsLength); j++) {
-                    AbstractMapper sM = sampleMapper[ (j-chl) % VarData.S_FIELDS ];
+                    AbstractMapper sM = sampleMapper[ (j-chl) % sampleValueName.length ];
                     switch (sM.getDataType()) {
                         case VarData.INTEGER:
                             data[i][j] = Integer.valueOf(inData[i][j]);
@@ -104,7 +106,7 @@ public class CompHetTableModel extends AbstractTableModel {
 
                 //Samples - 2nd member of pair
                 for (int j = (chl*2) - 2 + sampleFieldsLength; j < inData[i].length; j++) {
-                    AbstractMapper sM = sampleMapper[ (j - ((chl*2)-2) - sampleFieldsLength) % VarData.S_FIELDS ];
+                    AbstractMapper sM = sampleMapper[ (j - ((chl*2)-2) - sampleFieldsLength) % sampleValueName.length ];
                     switch (sM.getDataType()) {
                         case VarData.INTEGER:
                             data[i][j] = Integer.valueOf(inData[i][j]);

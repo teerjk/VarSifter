@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Collections;
 
 /**
 *   A VarData subclass for loading VCF files
@@ -19,6 +20,17 @@ public class VCFVarData extends VarData {
     private Map<String, Map<String, String>> formatMetaVCF = new HashMap<String, Map<String, String>>();
 
     private CustomAnnotation ca = null;
+
+    private static final Map<String, Integer> VCFTypeMap;
+    static {
+        Map<String, Integer> t = new HashMap<String, Integer>();
+        t.put("Integer", INTEGER);
+        t.put("Float", FLOAT);
+        t.put("Flag", INTEGER);
+        t.put("Character", STRING);
+        t.put("String", STRING);
+        VCFTypeMap = Collections.unmodifiableMap(t);
+    }
 
     /**
     *   Interpret VCF file - load VarData data structures
@@ -88,6 +100,15 @@ public class VCFVarData extends VarData {
                                        STRING
                                      };
 
+        final String[] fixedSampleValueNames = { "GT",
+                                                 "GQ",
+                                                 "DP"
+                                               };
+        final int[] fixedSampleValueClassList = { STRING,
+                                                  INTEGER,
+                                                  INTEGER
+                                                };
+        
         if (fixedNames.length != fixedClassList.length) {
             System.out.println("fixedName size different from fixed class list size! Tell developer!!");
             System.exit(1);
@@ -312,9 +333,10 @@ public class VCFVarData extends VarData {
                     }
 
                     sampleCount = tempLine.length - (annotCount + 1);
-                    sampleMapper[0] = new StringMapper();
-                    sampleMapper[1] = new IntMapper();
-                    sampleMapper[2] = new IntMapper();
+                    //!!! Below TODO items may need to be done in the sampleCount test just below !!!
+                    //TODO:DONE need to initialize sampleMapper based on total fields
+                    //TODO:DONE populate String[] sampleValueName: GT first, then others (GQ, DP if present?)
+                    //TODO:DONE fill sampleMapper based on FORMAT tags
                     classList = new int[ fixedNames.length + tempNames.size() ];
                     dataNames = new String[fixedNames.length + tempNames.size()];
 
@@ -323,18 +345,110 @@ public class VCFVarData extends VarData {
                         sampleCount = 0;
                         sampleNames = new String[] {"NA"};
                         sampleNamesOrig = new String[] {"NA","NA","NA"};
+                        sampleValueName = sampleNamesOrig;
+
+                        //Populate sampleMapper with defaults, overwrite below if FORMAT tag exists
+                        for (int i=0; i < fixedSampleValueClassList.length; i++) {
+                             switch (fixedSampleValueClassList[i]) {
+                                case INTEGER:
+                                    sampleMapper[i] = new IntMapper();
+                                    break;
+                                case FLOAT:
+                                    sampleMapper[i] = new FloatMapper();
+                                    break;
+                                case STRING:
+                                    sampleMapper[i] = new StringMapper();
+                                    break;
+                            }
+                        }
+
                         sampleMapper[0].addData("NA");
                     }
                     else {
+                        //OK, we have samples, so let's set everything up
+                        // First, determine sampleValue count, including fixed fields (even if not in header)
+                        int sampleValueSize = formatMetaVCF.size();
+                        for (String tag: fixedSampleValueNames) {
+                            if (! formatMetaVCF.containsKey(tag) ) {
+                                sampleValueSize++;
+                            }
+                        }
+                        S_FIELDS = sampleValueSize;
+                        sampleMapper = new AbstractMapper[S_FIELDS];
+                        sampleValueName = new String[S_FIELDS];
+
+                        //Populate sampleValueName, fixed fields first, then additional
+                        System.arraycopy(fixedSampleValueNames, 0, sampleValueName, 0, fixedSampleValueNames.length);
+                        //Populate sampleMapper with defaults, overwrite below if FORMAT tag exists
+                        for (int i=0; i < fixedSampleValueClassList.length; i++) {
+                             switch (fixedSampleValueClassList[i]) {
+                                case INTEGER:
+                                    sampleMapper[i] = new IntMapper();
+                                    break;
+                                case FLOAT:
+                                    sampleMapper[i] = new FloatMapper();
+                                    break;
+                                case STRING:
+                                    sampleMapper[i] = new StringMapper();
+                                    break;
+                            }
+                        }
+                           
+                        int svnOffset = fixedSampleValueNames.length;
+                        int svnIndex = 0;
+                        for (String tag: formatMetaVCF.keySet()) {
+                            int realIndex = svnIndex + svnOffset; //assume tag not in fixed list
+                            boolean isFixed = false;
+                            for (int i=0; i < fixedSampleValueNames.length; i++) {
+                                if (tag.equals(fixedSampleValueNames[i])) {
+                                    isFixed = true;
+                                    realIndex = i; //Ok, tag IS in fixed list - set realIndex
+                                }
+                            }
+                            if (isFixed) {
+                                svnOffset--;
+                            }
+                            else {
+                                sampleValueName[realIndex] = tag;
+                            }
+                            int type = VCFTypeMap.get(formatMetaVCF.get(tag).get("Type"));
+                            String number = formatMetaVCF.get(tag).get("Number");
+                            
+                            // !!! Will need to explictly handle R, A (probably not G, .)
+                            if (! number.equals("1")) {
+                                type = STRING;
+                            }
+                            
+                            //TESTING
+                            //System.out.println("tag:type:number " + tag + " " + type + " " + number);
+                            
+                            switch (type) {
+                                case INTEGER:
+                                    sampleMapper[realIndex] = new IntMapper();
+                                    break;
+                                case FLOAT:
+                                    sampleMapper[realIndex] = new FloatMapper();
+                                    break;
+                                case STRING:
+                                    sampleMapper[realIndex] = new StringMapper();
+                                    break;
+                            }
+
+                            svnIndex++;
+                        }
+
                         sampleNames = new String[sampleCount];
-                        sampleNamesOrig = new String[sampleCount*3];
+                        sampleNamesOrig = new String[sampleCount*S_FIELDS];
                     }
 
                     for (int i=0; i < sampleCount; i++) {
+                        //TODO:DONE alter this 
                         sampleNames[i] = tempLine[i + annotCount + 1];
-                        sampleNamesOrig[ (i * S_FIELDS) + 0 ] = sampleNames[i] + ".NA";
-                        sampleNamesOrig[ (i * S_FIELDS) + 1 ] = sampleNames[i] + ".NA.score";
-                        sampleNamesOrig[ (i * S_FIELDS) + 2 ] = sampleNames[i] + ".NA.coverage";
+                        
+                        for (int j=0; j < sampleValueName.length; j++) {
+                            sampleNamesOrig[ (i * S_FIELDS + j) ] 
+                                = sampleNames[i] + "." + sampleValueName[j];
+                        }
                     }
 
                     //Fill dataNames
@@ -356,6 +470,7 @@ public class VCFVarData extends VarData {
                         String subdelim = infoMetaVCF.get(tempNames.get(i)).get("Sub-delimiter");
 
                         //assign class
+                        //TODO: use VCFTypeMap instead of this hard coding
                         if ( !subdelim.equals("") ) {
                             classList[i + fixedClassList.length] = STRING;
                         }
@@ -375,17 +490,18 @@ public class VCFVarData extends VarData {
                     }
                     dataNamesOrig = dataNames;
 
+                    //TODO:DONE - REMOVE - may not need this anymore?
                     //change genotype qual mapper to float if needed
-                    if (formatMetaVCF.containsKey("GQ")) {
+                    //if (formatMetaVCF.containsKey("GQ")) {
 
-                        String tempType = formatMetaVCF.get("GQ").get("Type");
-                        String tempNum = formatMetaVCF.get("GQ").get("Number");
+                    //    String tempType = formatMetaVCF.get("GQ").get("Type");
+                    //    String tempNum = formatMetaVCF.get("GQ").get("Number");
 
-                        //assign class
-                        if (tempType.equals("Float") && tempNum.equals("1")) {
-                            sampleMapper[1] = new FloatMapper();
-                        }
-                    }
+                    //    //assign class
+                    //    if (tempType.equals("Float") && tempNum.equals("1")) {
+                    //        sampleMapper[1] = new FloatMapper();
+                    //    }
+                    //}
 
 
                     //TESTING
@@ -453,6 +569,16 @@ public class VCFVarData extends VarData {
         
             //Ensure required columns are present (hopefully, as they are filled in by this class).
             checkReqHeaders();
+
+            //TESTING FORMAT fields
+            //System.out.println("S_FIELDS: " + S_FIELDS);
+            //System.out.print("sampleValueName_type:");
+            //for (int s = 0; s < sampleValueName.length; s++) {
+            //    System.out.print(" " + sampleValueName[s] + "_" + sampleMapper[s].getDataType());
+            //}
+            //System.out.println();
+            //System.out.println("sampleMapper count: " + sampleMapper.length);
+            
 
             //System.out.println(lineCount); //TESTING
             lineCount = 0;
@@ -700,7 +826,7 @@ public class VCFVarData extends VarData {
 
 
                         // Handle Samples
-                        samples[tempLineCount] = new int[sampleNames.length][3];
+                        samples[tempLineCount] = new int[sampleNames.length][S_FIELDS];
 
                         if (noSamples) {
                             samples[tempLineCount][0][0] = sampleMapper[0].getIndexOf("NA");
@@ -727,6 +853,7 @@ public class VCFVarData extends VarData {
                                 Matcher m = genoSep_pat.matcher(geno);
                                 
                                 // Genotype
+                                //   !!! Will need to fix this for "normalized" VCF (from vt)
                                 if (geno.contains(".")) {
                                     geno = "NA";
                                 }
@@ -755,28 +882,62 @@ public class VCFVarData extends VarData {
 
                                 samples[tempLineCount][i - (annotCount + 1)][0] = sampleMapper[0].addData(geno);
 
+                                //TODO:DONE - REMOVE - may not need separate "Qual score", "coverage" loaders
                                 // Qual score
-                                if (sampHash.get("GQ") == null || sampTemp.length <= sampHash.get("GQ") || sampTemp[sampHash.get("GQ")].equals(".")) {
-                                    samples[tempLineCount][i - (annotCount + 1)][1] 
-                                    = (sampleMapper[1].getDataType() == FLOAT)
-                                    ? sampleMapper[1].addData(Float.parseFloat("NaN"))
-                                    : sampleMapper[1].addData(0);
-                                }
-                                else {
-                                    samples[tempLineCount][i - (annotCount + 1)][1] 
-                                        = (sampleMapper[1].getDataType() == FLOAT) 
-                                        ? sampleMapper[1].addData(Float.parseFloat(sampTemp[sampHash.get("GQ")])) 
-                                        : sampleMapper[1].addData(Integer.parseInt(sampTemp[sampHash.get("GQ")]));
+                                //if (sampHash.get("GQ") == null || sampTemp.length <= sampHash.get("GQ") || sampTemp[sampHash.get("GQ")].equals(".")) {
+                                //    samples[tempLineCount][i - (annotCount + 1)][1] 
+                                //    = (sampleMapper[1].getDataType() == FLOAT)
+                                //    ? sampleMapper[1].addData(Float.parseFloat("NaN"))
+                                //    : sampleMapper[1].addData(0);
+                                //}
+                                //else {
+                                //    samples[tempLineCount][i - (annotCount + 1)][1] 
+                                //        = (sampleMapper[1].getDataType() == FLOAT) 
+                                //        ? sampleMapper[1].addData(Float.parseFloat(sampTemp[sampHash.get("GQ")])) 
+                                //        : sampleMapper[1].addData(Integer.parseInt(sampTemp[sampHash.get("GQ")]));
+                                //}
+
+                                //// Read depth
+                                //if (sampHash.get("DP") == null || sampTemp.length <= sampHash.get("DP") || sampTemp[sampHash.get("DP")].equals(".")) {
+                                //    samples[tempLineCount][i - (annotCount + 1)][2] = 0;
+                                //}
+                                //else {
+                                //    samples[tempLineCount][i - (annotCount + 1)][2] 
+                                //        = Integer.parseInt(sampTemp[sampHash.get("DP")]);
+                                //}
+
+                                //TODO:DONE Load other sample fields
+                                // Start at index 1, as 0 is GT (handled above)
+                                for (int j = 1; j < S_FIELDS; j++) {
+                                    String tag = sampleValueName[j];
+                                    switch (sampleMapper[j].getDataType()) {
+                                        case INTEGER:
+                                            samples[tempLineCount][i - (annotCount + 1)][j]
+                                                = (sampHash.get(tag) != null 
+                                                    && sampTemp.length > sampHash.get(tag)
+                                                    && !sampTemp[sampHash.get(tag)].equals(".") ) 
+                                                ? sampleMapper[j].addData(Integer.parseInt(sampTemp[sampHash.get(tag)]))
+                                                : sampleMapper[j].addData(0);
+                                            break;
+                                        case FLOAT:
+                                            samples[tempLineCount][i - (annotCount + 1)][j]
+                                                = (sampHash.get(tag) != null 
+                                                    && sampTemp.length > sampHash.get(tag)
+                                                    && !sampTemp[sampHash.get(tag)].equals(".") )
+                                                ? sampleMapper[j].addData(Float.parseFloat(sampTemp[sampHash.get(tag)]))
+                                                : sampleMapper[j].addData(Float.parseFloat("NaN"));
+                                            break;
+                                        case STRING:
+                                            samples[tempLineCount][i - (annotCount + 1)][j]
+                                                = (sampHash.get(tag) != null 
+                                                    && sampTemp.length > sampHash.get(tag)
+                                                    && !sampTemp[sampHash.get(tag)].equals(".") )
+                                                ? sampleMapper[j].addData(sampTemp[sampHash.get(tag)])
+                                                : sampleMapper[j].addData(CustomAnnotation.EMPTY);
+                                            break;
+                                    }
                                 }
 
-                                // Read depth
-                                if (sampHash.get("DP") == null || sampTemp.length <= sampHash.get("DP") || sampTemp[sampHash.get("DP")].equals(".")) {
-                                    samples[tempLineCount][i - (annotCount + 1)][2] = 0;
-                                }
-                                else {
-                                    samples[tempLineCount][i - (annotCount + 1)][2] 
-                                        = Integer.parseInt(sampTemp[sampHash.get("DP")]);
-                                }
                             }
                         }
                         

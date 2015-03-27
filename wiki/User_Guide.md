@@ -149,7 +149,7 @@ VarSifter is also designed to read in "vs" files, a text file with some specific
 
 The order and requirement of column types is designed to be flexible, but some rules must be followed, and some fields are required for VarSifter to work correctly. Sample fields must come last, and each sample must have three fields in this order: genotype, genotype score, and coverage.
 
-**The headers for each column of sample data must currently end in ".NA" or ".NA.<word>" where <word> is letters or numbers. No other headers can have this combination!!**
+**The headers for each column of sample data must currently end in ".NA" or ".NA.WORD" where WORD is letters or numbers. No other headers can have this combination!!**
 
 The order of samples in the file dictates order in VarSifter.
 

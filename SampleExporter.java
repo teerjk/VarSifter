@@ -18,11 +18,8 @@ public class SampleExporter {
     private JCheckBox otherCB  = new JCheckBox("Other");
     private JCheckBox annotCB  = new JCheckBox("Annotations");
     private JCheckBox nameCB   = new JCheckBox("Sample Name", true);
-    private JCheckBox genCB    = new JCheckBox("Genotype");
-    private JCheckBox scoreCB  = new JCheckBox("Genotype Score");
-    private JCheckBox covCB    = new JCheckBox("Genotype Coverage");
     private JCheckBox[] genOptions = {homRefCB, homVarCB, hetVarCB, otherCB};
-    private JCheckBox[] outOptions = {annotCB, nameCB, genCB, scoreCB, covCB};
+    private JCheckBox[] outOptions;
     private JTextField genScoreField = new JTextField(10);
     private JTextField genScoreCovRatioField = new JTextField(10);
 
@@ -31,6 +28,7 @@ public class SampleExporter {
     private VarData vdat;
     private String[] annotNames;
     private String[] names;
+    private String[] sampleValueName;
     private AbstractMapper[] annotMapper;
     private AbstractMapper[] sampleMapper;
     private int[][] outData;
@@ -84,6 +82,15 @@ public class SampleExporter {
         filtPane.setLayout(new BoxLayout(filtPane, BoxLayout.Y_AXIS));
         filtPane.add(scorePane);
         filtPane.add(scoreCovPane);
+
+        //Set outOptions using available sample fields
+        this.sampleValueName = vdat.returnSampleValueNames();
+        outOptions = new JCheckBox[sampleValueName.length + 2];
+        outOptions[0] = annotCB;
+        outOptions[1] = nameCB;
+        for (int i=0; i<sampleValueName.length; i++) {
+            outOptions[i+2] = new JCheckBox(sampleValueName[i]);
+        }
 
         Object[] params = {title, genOptions, new JSeparator(SwingConstants.HORIZONTAL), filtPane, 
                            new JSeparator(SwingConstants.HORIZONTAL), outTitle, outOptions};
@@ -261,7 +268,7 @@ public class SampleExporter {
         if (nameCB.isSelected()) {
             outString.append(names[sampIndex] + ";"); //Sample name!
         }
-        for (int i=0; i<VarData.S_FIELDS; i++) {
+        for (int i=0; i<sampleValueName.length; i++) {
             // Check whether to output; Add 2 to outOptions index (as annotation and name have been added to beginning)
             if (outOptions[i+2].isSelected()) { 
                 // Add 1 to sampLine second dimension (sampIndex[][THIS]), as the name has been added to beginning.
