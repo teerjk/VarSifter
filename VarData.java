@@ -151,6 +151,7 @@ public class VarData {
                     int[][][] samplesIn,
                     String[] sampleNamesOrigIn,
                     String[] sampleNamesIn,
+                    String[] sampleValueNameIn,
                     BitSet dataIsEditableIn,
                     Map<String, Integer> dataTypeAtIn,
                     int[] affAtIn,
@@ -168,6 +169,7 @@ public class VarData {
         samples = samplesIn;
         sampleNamesOrig = sampleNamesOrigIn;
         sampleNames = sampleNamesIn;
+        sampleValueName = sampleValueNameIn;
         dataIsEditable = (BitSet)dataIsEditableIn.clone();
         dataTypeAt = new HashMap<String, Integer>(dataTypeAtIn);
         affAt = affAtIn;
@@ -178,6 +180,8 @@ public class VarData {
         annotMapper = annotMapperIn;
         sampleMapper = sampleMapperIn;
         commentList = commentListIn;
+
+        S_FIELDS = sampleValueName.length;
 
         dataIsIncluded = new BitSet(data.length);
 
@@ -502,72 +506,74 @@ public class VarData {
                     if (sampleCount == 0) {
                         noSamples = true;
                     }
+                    else {
 
-                    S_FIELDS = sampleTempValueName.size();
-                    sampleMapper = new AbstractMapper[S_FIELDS];
+                        S_FIELDS = sampleTempValueName.size();
+                        sampleMapper = new AbstractMapper[S_FIELDS];
 
-                    //Genotype
-                    sampleMapper[0] = new StringMapper();
-                    
-                    /* TODO:DONE make a general data loader for these fields, instead of hard coded parsing
-                     * of score, coverage. Will likely have to make a map, so order is consistent even 
-                     * if columns are out of order.
-                     */
-                    //Map other sample values
-                    for (int j=1; j < S_FIELDS; j++) {
-                        int thisClass = -1;
-                        for (int k=dataCount+j; k < temp.length; k+=S_FIELDS) {
-                            if (thisClass < 0) {
-                                thisClass = classList[k];
-                            }                            
-                            //else if (classList[k] != thisClass && thisClass <= FLOAT && classList[k] <= FLOAT) {
-                            //    VarSifter.showMessage("<html>Sample value columns have different numeric "
-                            //        + "types<p>Initial type: " + thisClass + " Other type: " + classList[k]
-                            //        + "<p>Row: " + lineCount + " Col: " + (k+1) + "/" 
-                            //        + sampleTempValueName.get(j)
-                            //        + "<p>VarSifter will continue to load, but you may want to check your "
-                            //        + "data file");
-                            //    thisClass = Math.max(thisClass, classList[k]);
-                            //}
-                            else if (classList[k] != thisClass) {
-                                VarSifter.showError("<html>Sample value columns have different data types<p>"
-                                    + "Initial type: " + thisClass + " Other type: " + classList[k] + "<p>"
-                                    + "Row: " + lineCount + " Col: " + (k+1) + "/" 
-                                    + sampleTempValueName.get(j));
-                                System.exit(1);
-                            }
-
-                            //Assume second, third entries are score, coverage
-                            if (j == 1 && (thisClass != INTEGER && thisClass != FLOAT)) {
-                                VarSifter.showError("<html> It looks like you have a non-integer, non-floating point value"
-                                    + "<p>in the genotype score column! Row: " + lineCount + " Col: " 
-                                    + (k+1) + "/" + sampleTempValueName.get(j));
-                                System.out.println("Error: non-integer, non-floating point number in genotype score"
-                                    + "column, exiting!");
-                                System.exit(1);
-                            }
-                            if (j == 2 && thisClass != INTEGER) {
-                                VarSifter.showError("<html>It looks like you have a non-integer value in the genotype " 
-                                    + "<p>coverage column! Row: " 
-                                    + lineCount + " Col: " + (k+1) + "/" + sampleTempValueName.get(j));
-                                System.out.println("Error: non-integer in genotype coverage column, exiting!");
-                                System.exit(1);
-                            }
-                        }
+                        //Genotype
+                        sampleMapper[0] = new StringMapper();
                         
-                        //Assign class type - for now, no MULTISTRINGMAPPER
-                        switch (thisClass) {
-                            case INTEGER:
-                                sampleMapper[j] = new IntMapper();
-                                break;
-                            case FLOAT:
-                                sampleMapper[j] = new FloatMapper();
-                                break;
-                            case STRING:
-                                sampleMapper[j] = new StringMapper();
-                                break;
-                        }
+                        /* TODO:DONE make a general data loader for these fields, instead of hard coded parsing
+                         * of score, coverage. Will likely have to make a map, so order is consistent even 
+                         * if columns are out of order.
+                         */
+                        //Map other sample values
+                        for (int j=1; j < S_FIELDS; j++) {
+                            int thisClass = -1;
+                            for (int k=dataCount+j; k < temp.length; k+=S_FIELDS) {
+                                if (thisClass < 0) {
+                                    thisClass = classList[k];
+                                }                            
+                                //else if (classList[k] != thisClass && thisClass <= FLOAT && classList[k] <= FLOAT) {
+                                //    VarSifter.showMessage("<html>Sample value columns have different numeric "
+                                //        + "types<p>Initial type: " + thisClass + " Other type: " + classList[k]
+                                //        + "<p>Row: " + lineCount + " Col: " + (k+1) + "/" 
+                                //        + sampleTempValueName.get(j)
+                                //        + "<p>VarSifter will continue to load, but you may want to check your "
+                                //        + "data file");
+                                //    thisClass = Math.max(thisClass, classList[k]);
+                                //}
+                                else if (classList[k] != thisClass) {
+                                    VarSifter.showError("<html>Sample value columns have different data types<p>"
+                                        + "Initial type: " + thisClass + " Other type: " + classList[k] + "<p>"
+                                        + "Row: " + lineCount + " Col: " + (k+1) + "/" 
+                                        + sampleTempValueName.get(j));
+                                    System.exit(1);
+                                }
 
+                                //Assume second, third entries are score, coverage
+                                if (j == 1 && (thisClass != INTEGER && thisClass != FLOAT)) {
+                                    VarSifter.showError("<html> It looks like you have a non-integer, non-floating point value"
+                                        + "<p>in the genotype score column! Row: " + lineCount + " Col: " 
+                                        + (k+1) + "/" + sampleTempValueName.get(j));
+                                    System.out.println("Error: non-integer, non-floating point number in genotype score"
+                                        + "column, exiting!");
+                                    System.exit(1);
+                                }
+                                if (j == 2 && thisClass != INTEGER) {
+                                    VarSifter.showError("<html>It looks like you have a non-integer value in the genotype " 
+                                        + "<p>coverage column! Row: " 
+                                        + lineCount + " Col: " + (k+1) + "/" + sampleTempValueName.get(j));
+                                    System.out.println("Error: non-integer in genotype coverage column, exiting!");
+                                    System.exit(1);
+                                }
+                            }
+                            
+                            //Assign class type - for now, no MULTISTRINGMAPPER
+                            switch (thisClass) {
+                                case INTEGER:
+                                    sampleMapper[j] = new IntMapper();
+                                    break;
+                                case FLOAT:
+                                    sampleMapper[j] = new FloatMapper();
+                                    break;
+                                case STRING:
+                                    sampleMapper[j] = new StringMapper();
+                                    break;
+                            }
+
+                        }
                     }
                     
 
@@ -606,6 +612,8 @@ public class VarData {
                     if (noSamples) {
                         sampleNames = new String[] {"NA"};
                         sampleNamesOrig = new String[] {"NA","NA","NA"};
+                        sampleMapper = new AbstractMapper[3];
+                        sampleMapper[0] = new StringMapper();
                         sampleMapper[0].addData("NA");
                         sampleMapper[1] = new IntMapper();
                         sampleMapper[2] = new IntMapper();
@@ -1625,6 +1633,7 @@ public class VarData {
                            subsetSamples,
                            sampleNamesOrig,
                            sampleNames,
+                           sampleValueName,
                            dataIsEditable,
                            dataTypeAt,
                            affAt,

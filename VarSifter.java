@@ -48,7 +48,8 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
     private JTable sampleTable;
     private TableSorter sampleSorter;
     //TODO: CONFIRM the values are needed here
-    private String[] sampleTableLabels = {"Sample", "Genotype", "Genotype score", "coverage"};
+    //private String[] sampleTableLabels = {"Sample", "Genotype", "Genotype score", "coverage"};
+    private String[] sampleTableLabels;
     private JScrollPane dataScroller;
     private JScrollPane sampleScroller;
     private ListSelectionModel lsm;
@@ -735,6 +736,7 @@ public class VarSifter extends JFrame implements ListSelectionListener, ActionLi
             }
 
             col.setPreferredWidth( (Math.max(headerWidth, cellWidth) + 25) );
+
         }
     }
 
