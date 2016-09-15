@@ -415,7 +415,7 @@ public class VCFVarData extends VarData {
                             String number = formatMetaVCF.get(tag).get("Number");
                             
                             // !!! Will need to explictly handle R, A (probably not G, .)
-                            if (! number.equals("1")) {
+                            if (! number.equals("1") && ! tag.equals("GQ") && ! tag.equals("DP") ) {
                                 type = STRING;
                             }
                             
