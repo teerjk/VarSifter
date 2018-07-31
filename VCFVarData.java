@@ -147,45 +147,15 @@ public class VCFVarData extends VarData {
                     String descTemp = tempMeta.get("Description");
 
                     if (dataTypeAt.containsKey(descTemp)) {
-                        Matcher m = colSuffixPat.matcher(descTemp);
-
-                        if (m.find()) {
-                            char suffix = m.group(1).toCharArray()[0];
-                            if (suffix == 'z') {
-                                VarSifter.showError("<html>INFO column has already been seen or has the same "
-                                    + "Description as a reserved name in VarSifter,<p>"
-                                    + "As VarSifter uses the Description to identify the column, this will not work.<p><p>"
-                                    + "Cannot increment column name suffix to make it unique:<p>"
-                                    + "ID=" + tempMeta.get("ID") + "     Description=" 
-                                    + descTemp + "<p>Please rename this column.</html>");
+                        descTemp = (descTemp + "_" + tempMeta.get("ID"));
+                        if (dataTypeAt.containsKey(descTemp)) {
+                            VarSifter.showError("<html>INFO column has already been seen or has the same "
+                                + "Description as a reserved name in VarSifter,<p>"
+                                + "As VarSifter uses the Description to identify the column, this will not work.<p><p>"
+                                + "Failed to add a unique identifier, so please change the following:"
+                                + "ID=" + tempMeta.get("ID") + "     Description="
+                                + tempMeta.get("Description") + "</html>");
                                 System.exit(1);
-                            }
-                            else {
-                                suffix++;
-                                descTemp = descTemp.substring(0, (descTemp.length() - 2));
-                                descTemp = (descTemp + "_" + suffix);
-                                if (dataTypeAt.containsKey(descTemp)) {
-                                    VarSifter.showError("<html>INFO column has already been seen or has the same "
-                                        + "Description as a reserved name in VarSifter,<p>"
-                                        + "As VarSifter uses the Description to identify the column, this will not work.<p><p>"
-                                        + "Failed to add a unique identifier, so please change the following:"
-                                        + "ID=" + tempMeta.get("ID") + "     Description=" 
-                                        + tempMeta.get("Description") + "</html>");
-                                    System.exit(1);
-                                }
-                            }
-                        }
-                        else {
-                            descTemp += "_a";
-                            if (dataTypeAt.containsKey(descTemp)) {
-                                VarSifter.showError("<html>INFO column has already been seen or has the same "
-                                    + "Description as a reserved name in VarSifter,<p>"
-                                    + "As VarSifter uses the Description to identify the column, this will not work.<p><p>"
-                                    + "Failed to add a unique identifier, so please change the following:"
-                                    + "ID=" + tempMeta.get("ID") + "     Description="
-                                    + tempMeta.get("Description") + "</html>");
-                                    System.exit(1);
-                            }
                         }
                                 
                         VarSifter.showMessage("<html>INFO column has the same Description as a reserved name in VarSifter,<p>"
@@ -196,7 +166,6 @@ public class VCFVarData extends VarData {
                             + "<p>New Description: " + descTemp
                             + "</html>");
                         tempMeta.put("Description", descTemp);
-
 
                     }
                     dataTypeAt.put(tempMeta.get("Description"), pos);
