@@ -2,7 +2,7 @@
 
 1. Download the source in your desired working directory:
 
-    `hg clone https://bitbucket.org/teerjk/varsifter/`
+    `git clone https://github.com/teerjk/VarSifter.git`
     
 2. Create a folder in working directory called 'jung'
 

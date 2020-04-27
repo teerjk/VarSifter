@@ -8,7 +8,7 @@ VarSifter is a program designed to view massively parallel sequencing variation 
 
 ## Downloads
 
-VarSifter is available from the [download link](https://bitbucket.org/teerjk/varsifter/downloads) (should be on left side of the screen.)
+VarSifter is available from the [download link](https://github.com/teerjk/VarSifter/releases).
 
 ## Requirements
 
